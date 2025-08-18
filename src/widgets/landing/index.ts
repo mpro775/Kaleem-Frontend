@@ -3,7 +3,6 @@ export { default as SEOHead } from "./seo/SEOHead";
 export { default as JsonLd } from "./seo/JsonLd";
 
 export { default as Navbar } from "./ui/Navbar";
-export { default as StickyCta } from "./ui/StickyCta";
 export { default as CookieConsent } from "./ui/CookieConsent";
 export { default as Footer } from "./ui/Footer";
 

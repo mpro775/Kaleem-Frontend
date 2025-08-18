@@ -103,7 +103,9 @@ const pricingData: { monthly: Plan[]; yearly: Plan[] } = {
 };
 
 // تصميم مخصص لبطاقة الأسعار
-const PlanCard = styled(Paper)(({ popular }: { popular: boolean }) => ({
+const PlanCard = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'popular',
+})<{ popular: boolean }>(({ popular }) => ({
   padding: theme.spacing(4),
   borderRadius: "24px",
   border: "1px solid transparent",
@@ -137,7 +139,9 @@ const PricingSwitch = styled(Box)({
   borderRadius: "16px",
 });
 
-const SwitchButton = styled(Button)(({ active }: { active: boolean }) => ({
+const SwitchButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})<{ active: boolean }>(({ active }) => ({
   borderRadius: "12px",
   padding: "8px 24px",
   color: active ? "#ffffff" : "#2c1c5b",

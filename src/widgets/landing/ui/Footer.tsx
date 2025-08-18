@@ -10,6 +10,7 @@ import {
   Divider,
   Chip,
   Tooltip,
+  type Theme,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import TwitterIcon from "@mui/icons-material/Twitter";
@@ -37,10 +38,7 @@ const FooterRoot = styled(Box)(({ theme }) => ({
   borderTop: `1px solid ${theme.palette.divider}`,
 }));
 
-const SectionTitle = styled(Typography).attrs({
-  component: 'h6',
-  variant: 'h6'
-})(({ theme }) => ({
+const SectionTitle = styled(Typography)(({ theme }: { theme: Theme }) => ({
   fontWeight: 800,
   marginBottom: theme.spacing(2),
   letterSpacing: 0.2,
@@ -133,7 +131,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           <Column sx={{ maxWidth: 420 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
               {/* لو عندك شعار صورة، استبدل النص التالي بـ <Box component="img" src="/assets/logo.svg" sx={{ height: 28 }} /> */}
-              <Typography variant="h6" sx={{ fontWeight: 900 }}>
+              <Typography variant="h6" component="h2" sx={{ fontWeight: 900 }}>
                 {brand}
               </Typography>
               <Chip
@@ -200,7 +198,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
 
           {/* أعمدة الروابط */}
           <Column>
-            <SectionTitle>المنتج</SectionTitle>
+            <SectionTitle component="h6">المنتج</SectionTitle>
             {product.map((l) => (
               <FooterA key={l.label} href={l.href}>
                 {l.label}
@@ -212,7 +210,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           </Column>
 
           <Column>
-            <SectionTitle>الموارد</SectionTitle>
+            <SectionTitle component="h6">الموارد</SectionTitle>
             {resources.map((l) => (
               <FooterA
                 key={l.label}
@@ -227,7 +225,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           </Column>
 
           <Column>
-            <SectionTitle>الشركة</SectionTitle>
+            <SectionTitle component="h6">الشركة</SectionTitle>
             {company.map((l) => (
               <FooterA key={l.label} href={l.href}>
                 {l.label}
@@ -236,7 +234,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           </Column>
 
           <Column>
-            <SectionTitle>النشرة البريدية</SectionTitle>
+            <SectionTitle component="h6">النشرة البريدية</SectionTitle>
             <Typography color="text.secondary" sx={{ mb: 1.5 }}>
               نصائح ومزايا جديدة — رسالة واحدة بالشهر.
             </Typography>

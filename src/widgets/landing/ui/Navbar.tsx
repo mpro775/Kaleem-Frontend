@@ -1,126 +1,185 @@
 // Navbar.tsx
-import { AppBar, Toolbar, Box, Button, useTheme } from "@mui/material";
+import { AppBar, Toolbar, Box, Button, useTheme, IconButton, Drawer, List, ListItemButton, ListItemText, Divider, Typography } from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import CloseIcon from "@mui/icons-material/Close";
 import { useNavigate } from "react-router-dom";
-import logo from "../../assets/logo.png"; // تأكد من أن مسار الشعار صحيح
+import logo from "@/assets/logo.png"; // تأكد من أن مسار الشعار صحيح
+import React from "react";
 
 // تعريف واجهة للـ Props (على الرغم من أنها فارغة حاليًا، إلا أنها ممارسة جيدة)
 
 const Navbar: React.FC = () => {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const navLinks: string[] = [
-    "الرئيسية",
-    "من نحن",
-    "خدماتنا",
-    "الباقات",
-    "أعمالنا",
-  ];
+	const navigate = useNavigate();
+	const theme = useTheme();
+	const navLinks: { label: string; href?: string }[] = [
+		{ label: "الرئيسية", href: "#" },
+		{ label: "من نحن", href: "#about" },
+		{ label: "خدماتنا", href: "#features" },
+		{ label: "الباقات", href: "#pricing" },
+		{ label: "أعمالنا", href: "#cases" },
+	];
 
-  return (
-    <AppBar
-      position="sticky"
-      sx={{
-        bgcolor: "#fff",
-        border: "none",
-        boxShadow: "none",
-        px: { xs: 2, md: 6 },
-      }}
-    >
-      <Toolbar
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          p: "0 !important",
-        }}
-      >
-        {/* Logo */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            cursor: "pointer",
-          }}
-          onClick={() => navigate("/")}
-        >
-          <img src={logo} alt="Kleem" style={{ width: "auto", height: 50 }} />
-        </Box>
+	const [open, setOpen] = React.useState(false);
+	const toggle = (v: boolean) => () => setOpen(v);
 
-        {/* Navigation Links */}
-        <Box sx={{ display: { xs: "none", md: "flex" }, gap: 3 }}>
-          {navLinks.map((label: string, i: number) => (
-            <Button
-              variant="outlined"
-              key={label}
-              sx={{
-                backgroundColor: "#fff !important",
-                color: "#563fa6 !important",
-                border: "0px solid #563fa6 !important",
-                fontWeight: "bold",
-                boxShadow: "none !important",
-                fontSize: "15px !important",
-                backgroundImage: "none !important",
-                "&::after": {
-                  content: i === 0 ? '""' : "none",
-                  position: "absolute",
-                  bottom: -5,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: "40%",
-                  height: "3px",
-                  backgroundColor: "#563fa6",
-                  borderRadius: "2px",
-                },
-              }}
-            >
-              {label}
-            </Button>
-          ))}
-        </Box>
+	const handleAnchor = (href?: string) => () => {
+		if (!href) return;
+		if (href.startsWith("#")) {
+			const id = href.slice(1);
+			const el = document.getElementById(id);
+			if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+			setOpen(false);
+			return;
+		}
+		navigate(href);
+		setOpen(false);
+	};
 
-        {/* CTA Buttons */}
-        <Box sx={{ display: "flex", gap: 1.5 }}>
-          <Button
-            variant="contained"
-            sx={{
-              background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-              px: 4,
-              fontWeight: "bold",
-              borderRadius: 1,
-              boxShadow: "none",
-              "&:hover": {
-                backgroundColor: "#4527a0",
-              },
-            }}
-            onClick={() => navigate("/signup")}
-          >
-            اطلب الخدمة
-          </Button>
-          <Button
-            variant="outlined"
-            sx={{
-              backgroundColor: "#fff !important",
-              color: "#563fa6 !important",
-              border: "1px solid #563fa6 !important",
-              px: 3,
-              fontWeight: "bold",
-              boxShadow: "none !important",
-              fontSize: "15px !important",
-              backgroundImage: "none !important",
-              borderRadius: 1,
-              "&:hover": {
-                backgroundColor: "rgba(86, 63, 166, 0.04)",
-                borderColor: "#563fa6",
-              },
-            }}
-            onClick={() => navigate("/contact")}
-          >
-            تواصل معنا
-          </Button>
-        </Box>
-      </Toolbar>
-    </AppBar>
-  );
+	return (
+		<AppBar
+			position="sticky"
+			sx={{
+				bgcolor: "rgba(255,255,255,0.9)",
+				backdropFilter: "blur(8px)",
+				borderBottom: (t) => `1px solid ${t.palette.divider}`,
+				boxShadow: "none",
+				px: { xs: 2, md: 6 },
+			}}
+		>
+			<Toolbar
+				sx={{
+					display: "flex",
+					justifyContent: "space-between",
+					p: "0 !important",
+					minHeight: 68,
+				}}
+			>
+				{/* Logo */}
+				<Box
+					sx={{ display: "flex", alignItems: "center", gap: 1, cursor: "pointer" }}
+					onClick={() => navigate("/")}
+				>
+					<img src={logo} alt="Kleem" style={{ width: "auto", height: 44 }} />
+				</Box>
+
+				{/* Navigation Links (Desktop) */}
+				<Box sx={{ display: { xs: "none", md: "flex" }, gap: 2 }}>
+					{navLinks.map((l, i) => (
+						<Button
+						variant="contained"
+							key={l.label}
+							onClick={handleAnchor(l.href)}
+							sx={{
+								color: "#563fa6",
+                background: "white",
+                borderRadius: 2,
+                boxShadow: "none",
+								fontWeight: 600,
+								px: 1.5,
+								position: "relative",
+							
+							
+							}}
+						>
+							{l.label}
+						</Button>
+					))}
+				</Box>
+
+				{/* CTA Buttons (Desktop) */}
+				<Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1.2 }}>
+					<Button
+						variant="contained"
+						sx={{
+							background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+							px: 3,
+							fontWeight: 700,
+							borderRadius: 2,
+							boxShadow: "none",
+							'&:hover': { backgroundColor: "#4527a0" },
+						}}
+						onClick={() => navigate("/signup")}
+					>
+						اطلب الخدمة
+					</Button>
+					<Button
+						variant="outlined"
+						sx={{
+							color: "#563fa6",
+							border: "1px solid #563fa6",
+							px: 2.5,
+							fontWeight: 700,
+							borderRadius: 2,
+							backgroundImage: "none",
+							'&:hover': { backgroundColor: "rgba(86,63,166,.06)" },
+						}}
+						onClick={() => navigate("/contact")}
+					>
+						تواصل معنا
+					</Button>
+				</Box>
+
+				{/* Hamburger (Mobile) */}
+				<Box sx={{ display: { xs: "flex", md: "none" } }}>
+					<IconButton onClick={toggle(true)} aria-label="فتح القائمة">
+						<MenuIcon />
+					</IconButton>
+				</Box>
+			</Toolbar>
+
+			{/* Drawer Mobile */}
+			<Drawer anchor="right" open={open} onClose={toggle(false)}>
+				<Box sx={{ width: 290, p: 2 }} role="presentation">
+					<Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+							<img src={logo} alt="Kleem" style={{ width: 28, height: 28 }} />
+							<Typography fontWeight={800}>كليم</Typography>
+						</Box>
+						<IconButton aria-label="إغلاق" onClick={toggle(false)}>
+							<CloseIcon />
+						</IconButton>
+					</Box>
+					<Divider />
+					<List>
+						{navLinks.map((l) => (
+							<ListItemButton key={l.label} onClick={handleAnchor(l.href)}>
+								<ListItemText primary={l.label} />
+							</ListItemButton>
+						))}
+					</List>
+					<Box sx={{ display: "flex", flexDirection: "column", gap: 1.2, mt: 1 }}>
+						<Button
+							fullWidth
+							variant="contained"
+							sx={{
+								background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+								fontWeight: 700,
+								borderRadius: 2,
+								boxShadow: "none",
+							}}
+							onClick={() => {
+								navigate("/signup");
+								setOpen(false);
+							}}
+						>
+							اطلب الخدمة
+						</Button>
+						<Button
+							fullWidth
+							variant="outlined"
+							sx={{ color: "#563fa6", border: "1px solid #563fa6", borderRadius: 2 }}
+							onClick={() => {
+								navigate("/contact");
+								setOpen(false);
+							}}
+						>
+							تواصل معنا
+						</Button>
+					</Box>
+				</Box>
+			</Drawer>
+		</AppBar>
+	);
 };
 
 export default Navbar;

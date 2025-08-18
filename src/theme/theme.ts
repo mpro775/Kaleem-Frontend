@@ -48,9 +48,7 @@ const theme = createTheme(
             background: "linear-gradient(90deg, #6a3f9c 0%, #4b247a 100%)",
             color: "#fff",
             boxShadow: "0 3px 10px 0 rgba(76,60,170,0.10)",
-            "&:hover": {
-              background: "linear-gradient(90deg, #6a3f9c 0%, #502e91 100%)",
-            },
+           
           },
         },
       },

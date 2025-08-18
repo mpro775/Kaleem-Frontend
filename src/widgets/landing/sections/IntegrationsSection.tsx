@@ -5,10 +5,10 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import ExtensionIcon from "@mui/icons-material/Extension";
 
-import SallaIcon from "../../assets/Salla.svg";
-import ZidIcon from "../../assets/Zid.svg";
-import ShopifyIcon from "../../assets/Shopify.svg";
-import WooCommerceIcon from "../../assets/WooCommerce.svg";
+import SallaIcon from "@/assets/Salla.svg";
+import ZidIcon from "@/assets/Zid.svg";
+import ShopifyIcon from "@/assets/Shopify.svg";
+import WooCommerceIcon from "@/assets/WooCommerce.svg";
 
 type Item = {
   title: string;
