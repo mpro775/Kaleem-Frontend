@@ -1,100 +1,86 @@
-import { useEffect, useState } from "react";
-import axios from "../../api/axios";
+import { useState } from "react";
 import { Box, Tabs, Tab, CircularProgress, Alert } from "@mui/material";
-import type { ChecklistGroup, Overview } from "../../types/analytics";
-import ChecklistPanel from "../../components/home/ChecklistPanel";
-import DashboardHeader from "../../components/home/DashboardHeader";
-import MetricsCards from "../../components/home/MetricsCards";
-import ProductsChart from "../../components/home/ProductsChart";
-import KeywordsChart from "../../components/home/KeywordsChart";
-import ChannelsPieChart from "../../components/home/ChannelsPieChart";
-import DashboardAdvice from "../../components/home/DashboardAdvice";
-import { useAuth } from "../../context/AuthContext";
-import MessagesTimelineChart from "../../components/home/MessagesTimelineChart";
+import type { ChecklistGroup } from "@/types/analytics";
+import ChecklistPanel from "@/widgets/merchant/dashboard/ChecklistPanel";
+import DashboardHeader from "@/widgets/merchant/dashboard/DashboardHeader";
+import MetricsCards from "@/widgets/merchant/dashboard/MetricsCards";
+import ProductsChart from "@/widgets/merchant/dashboard/ProductsChart";
+import KeywordsChart from "@/widgets/merchant/dashboard/KeywordsChart";
+import ChannelsPieChart from "@/widgets/merchant/dashboard/ChannelsPieChart";
+import MessagesTimelineChart from "@/widgets/merchant/dashboard/MessagesTimelineChart";
+import DashboardAdvice from "@/widgets/merchant/dashboard/DashboardAdvice";
+import { useAuth } from "@/context/AuthContext";
+import {
+  useChecklist,
+  useMessagesTimeline,
+  useOverview,
+  useProductsCount,
+  useSkipChecklist,
+} from "@/features/mechant/analytics/model";
 
-const HomeDashboard = () => {
-  const [timeRange, setTimeRange] = useState<"week" | "month" | "quarter">(
-    "week"
-  );
+type Period = "week" | "month" | "quarter";
+
+export default function Dashboard() {
+  const [timeRange, setTimeRange] = useState<Period>("week");
   const [activeTab, setActiveTab] = useState(0);
   const { user } = useAuth();
   const merchantId = user?.merchantId;
-  // البيانات الحقيقية
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [checklist, setChecklist] = useState<ChecklistGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-const [productsCount, setProductsCount] = useState(0);
-useEffect(() => {
-  axios.get("/analytics/products-count").then(res => setProductsCount(res.data.total));
-}, [merchantId]);
 
-  const [messagesTimeline, setMessagesTimeline] = useState([]);
-const fetchTimeline = async () => {
-  try {
-    const res = await axios.get(`/analytics/messages-timeline?period=${timeRange}&groupBy=day`);
-    setMessagesTimeline(res.data);
-  } catch {
-    // يمكنك التعامل مع الخطأ هنا
-  }
-};
-useEffect(() => {
-  fetchTimeline();
-}, [timeRange, merchantId]);
+  // Queries
+  const {
+    data: overview,
+    isLoading: loadingOverview,
+    error: errorOverview,
+    refetch,
+  } = useOverview(timeRange);
+  const {
+    data: checklist,
+    isLoading: loadingChecklist,
+    error: errorChecklist,
+  } = useChecklist(merchantId ?? undefined);
+  const { data: timeline, isLoading: loadingTimeline } = useMessagesTimeline(
+    timeRange,
+    "day"
+  );
+  const { data: productsCountFallback } = useProductsCount();
+  const { mutateAsync: skipItem, isPending: skipping } =
+    useSkipChecklist(merchantId ?? undefined);
 
-  // جلب البيانات
-  const fetchAll = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [overviewRes, checklistRes] = await Promise.all([
-        axios.get(`/analytics/overview?period=${timeRange}`),
-        axios.get(`/merchants/${merchantId}/checklist`),
-      ]);
-      setOverview(overviewRes.data);
-      setChecklist(checklistRes.data);
-      setLoading(false);
-    } catch {
-      setError("حدث خطأ أثناء جلب البيانات.");
-      setLoading(false);
-    }
-  };
-  const handleSkip = async (itemKey: string) => {
-    try {
-      await axios.post(`/merchants/${merchantId}/checklist/${itemKey}/skip`);
-      fetchAll(); // أعد جلب checklist من الباك-إند ليتم تحديث الحالة
-    } catch {
-      // يمكنك عرض رسالة خطأ
-    }
-  };
+  // حالات عامة
+  const loading = loadingOverview || loadingChecklist || loadingTimeline;
+  const error =
+    (errorOverview as any)?.message || (errorChecklist as any)?.message || null;
 
-  useEffect(() => {
-    fetchAll();
-    // eslint-disable-next-line
-  }, [timeRange, merchantId]);
+  // اشتقاقات
+  const percentageChange = overview?.sessions?.changePercent ?? 0;
 
-  const percentageChange =
-    overview && overview.sessions ? overview.sessions.changePercent : 0;
-  // استخراج بيانات المخططات
   const products = Array.isArray(overview?.topProducts)
-    ? overview.topProducts.map((p) => ({
-        name: p.name,
-        value: p.count,
+    ? overview!.topProducts.map((p: { name: string; count: number }) => ({ name: p.name, value: p.count }))
+    : [];
+
+  const keywords = Array.isArray(overview?.topKeywords)
+    ? overview!.topKeywords.map((kw: { keyword: string; count: number }) => ({
+        keyword: kw.keyword,
+        count: kw.count,
       }))
     : [];
- const keywords = Array.isArray(overview?.topKeywords)
-  ? overview.topKeywords.map((kw) => ({
-      keyword: kw.keyword,
-      count: kw.count,
-    }))
-  : [];
 
   const channelUsage = Array.isArray(overview?.channels?.breakdown)
-    ? overview.channels.breakdown.map((c) => ({
+    ? overview!.channels.breakdown.map((c: { channel: string; count: number }) => ({
         channel: c.channel,
         count: c.count,
       }))
     : [];
+
+  const productsCount = overview?.productsCount ?? productsCountFallback ?? 0;
+
+  const handleSkip = async (itemKey: string) => {
+    try {
+      await skipItem(itemKey);
+    } catch {
+      /* يمكن عرض Toast هنا عند الفشل */
+    }
+  };
 
   return (
     <Box sx={{ p: 3, background: "#f9fafb", minHeight: "100vh" }}>
@@ -110,31 +96,40 @@ useEffect(() => {
           <CircularProgress />
         </Box>
       )}
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {String(error) || "حدث خطأ أثناء جلب البيانات."}
         </Alert>
       )}
+
       {!loading && !error && (
         <>
-          <ChecklistPanel checklist={checklist} onSkip={handleSkip} />
+          <ChecklistPanel
+            checklist={(checklist as ChecklistGroup[]) ?? []}
+            onSkip={handleSkip}
+            loading={skipping}
+          />
+
           <DashboardHeader
             timeRange={timeRange}
             setTimeRange={setTimeRange}
-            onRefresh={fetchAll}
+            onRefresh={() => refetch()}
           />
-  <MetricsCards
-  sessionsCount={overview?.sessions?.count ?? 0}
-  percentageChange={percentageChange}
-  productsCount={overview?.productsCount ?? productsCount}
-  keywordsCount={keywords.length}
-  channelsCount={channelUsage.length}
-/>
-<MessagesTimelineChart data={messagesTimeline} />
+
+          <MetricsCards
+            sessionsCount={overview?.sessions?.count ?? 0}
+            percentageChange={percentageChange}
+            productsCount={productsCount}
+            keywordsCount={keywords.length}
+            channelsCount={channelUsage.length}
+          />
+
+          <MessagesTimelineChart data={timeline ?? []} />
 
           <Tabs
             value={activeTab}
-            onChange={(_e, newValue) => setActiveTab(newValue)}
+            onChange={(_e, v) => setActiveTab(v)}
             variant="scrollable"
             scrollButtons="auto"
             sx={{ mb: 3 }}
@@ -143,14 +138,14 @@ useEffect(() => {
             <Tab label="الكلمات المفتاحية" />
             <Tab label="القنوات" />
           </Tabs>
+
           {activeTab === 0 && <ProductsChart products={products} />}
           {activeTab === 1 && <KeywordsChart keywords={keywords} />}
           {activeTab === 2 && <ChannelsPieChart channelUsage={channelUsage} />}
+
           <DashboardAdvice />
         </>
       )}
     </Box>
   );
-};
-
-export default HomeDashboard;
+}

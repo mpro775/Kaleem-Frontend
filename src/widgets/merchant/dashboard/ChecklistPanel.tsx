@@ -12,17 +12,19 @@ import type { ChecklistGroup } from "../../types/analytics";
 export default function ChecklistPanel({
   checklist = [],
   onSkip,
+  loading,
 }: {
   checklist: ChecklistGroup[];
   onSkip?: (itemKey: string) => void;
-}) {
+  loading?: boolean;
+  }) {
   const theme = useTheme();
   const allItems = checklist.flatMap(group => group.items);
   const completed = allItems.filter(i => i.isComplete || i.isSkipped).length;
   const total = allItems.length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  if (percent === 100) return null;
+  if (percent === 100 || loading) return null;
 
   return (
     <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, mb: 4, position: "relative", overflow: "visible", boxShadow: theme.shadows[2], }}>
