@@ -1,9 +1,8 @@
-import { useEffect, useState, useRef } from "react";
-import axios from "../../api/axios";
+// src/pages/Dashboard/ChatWidgetConfigSinglePage.tsx
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Typography,
-  Paper,
   TextField,
   Select,
   MenuItem,
@@ -12,10 +11,7 @@ import {
   Button,
   Stack,
   IconButton,
-  Card,
   CardContent,
-  styled,
-  useTheme,
   Alert,
   Tooltip,
   CircularProgress,
@@ -25,83 +21,50 @@ import {
   ContentCopy,
   CheckCircle,
   Palette,
-  Settings,
+  Settings as SettingsIcon,
   Code,
   Visibility,
   Edit,
   Save,
   Cancel,
 } from "@mui/icons-material";
+import { useTheme } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
+
+import SectionCard from "@/features/mechant/widget-config/ui/SectionCard";
+import ColorPickerButton from "@/features/mechant/widget-config/ui/ColorPickerButton";
+import PreviewPane from "@/features/mechant/widget-config/ui/PreviewPane";
+
 import { API_BASE } from "../../context/config";
-
-// إعدادات واجهة الدردشة حسب الـ DTO
-type EmbedMode = "bubble" | "iframe" | "bar" | "conversational";
-
-interface ChatWidgetSettings {
-  botName?: string;
-  brandColor?: string;
-  welcomeMessage?: string;
-  fontFamily?: string;
-  headerBgColor?: string;
-  widgetSlug?: string;
-  bodyBgColor?: string;
-  // يمكن إضافة المزيد من الحقول مستقبلاً
-}
-
-interface Settings extends ChatWidgetSettings {
-  embedMode: EmbedMode;
-  botName: string;
-  shareUrl: string;
-}
-
-const ColorPickerButton = styled(Button)(() => ({
-  minWidth: 40,
-  height: 40,
-  borderRadius: "50%",
-  padding: 0,
-  position: "relative",
-  overflow: "hidden",
-  "& input[type='color']": {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    opacity: 0,
-    cursor: "pointer",
-  },
-}));
-
-const SectionCard = styled(Card)(() => ({
-  borderRadius: "12px",
-  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-  transition: "all 0.3s ease",
-  "&:hover": {
-    boxShadow: "0 8px 30px rgba(0, 0, 0, 0.1)",
-  },
-}));
+import type {
+  EmbedMode,
+  SettingsView,
+  ChatWidgetSettings,
+} from "@/features/mechant/widget-config/types";
+import { useWidgetSettings } from "@/features/mechant/widget-config/model";
+import {
+  generateSlug,
+  saveWidgetSettings,
+} from "@/features/mechant/widget-config/api";
+import {
+  buildChatLink,
+  buildEmbedScript,
+} from "@/features/mechant/widget-config/utils";
 
 export default function ChatWidgetConfigSinglePage() {
   const theme = useTheme();
   const { user } = useAuth();
-
   const merchantId = user?.merchantId ?? "";
-  const handleGenerateSlug = async () => {
-    const { data } = await axios.post(
-      `/merchants/${merchantId}/widget-settings/slug`
-    );
-    setSettings((prev) => ({
-      ...prev,
-      widgetSlug: data.widgetSlug,
-    }));
-    if (draftSettings) {
-      setDraftSettings((prev) =>
-        prev ? { ...prev, widgetSlug: data.widgetSlug } : null
-      );
-    }
-  };
-  const [settings, setSettings] = useState<Settings>({
+
+  const ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
+  const WIDGET_HOST = ORIGIN;
+
+  const {
+    data: serverSettings,
+    loading,
+    error,
+  } = useWidgetSettings(merchantId);
+  const [settings, setSettings] = useState<SettingsView>({
     botName: "Musaid Bot",
     welcomeMessage: "",
     brandColor: "#FF8500",
@@ -110,156 +73,135 @@ export default function ChatWidgetConfigSinglePage() {
     headerBgColor: "#FF8500",
     bodyBgColor: "#FFF5E6",
     embedMode: "bubble",
-    shareUrl: `${API_BASE.replace(/\/api$/, "")}/chat/${merchantId}`,
+    shareUrl: `${ORIGIN}/chat/${merchantId}`,
   });
-  const chatLink = settings?.widgetSlug
-    ? `http://localhost:5173/chat/${settings.widgetSlug}`
-    : "—";
-  const [draftSettings, setDraftSettings] = useState<Settings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState<SettingsView | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const [previewLoaded, setPreviewLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  console.log(previewLoaded);
-  // تحميل الإعدادات الفعلية من الـ API
+
   useEffect(() => {
-    setLoading(true);
-    axios
-      .get<ChatWidgetSettings>(
-        `${API_BASE}/merchants/${merchantId}/widget-settings`
-      )
-      .then((res) => {
-        setSettings((prev) => ({
-          ...prev,
-          ...res.data,
-          botName: prev.botName, // لتثبيت الاسم في حالة لم يتغير
-          widgetSlug: res.data.widgetSlug, // <-- تأكد أن هذا هو اسم الحقل من الباك
-          // اعد بناء shareUrl حسب السلاج الجديد
-          shareUrl: res.data.widgetSlug
-            ? `http://localhost:5173/chat/${res.data.widgetSlug}`
-            : prev.shareUrl,
-        }));
-        setLoading(false);
-      })
-      .catch(() => {
-        setApiError("فشل تحميل الإعدادات. حاول مجددًا.");
-        setLoading(false);
-      });
-  }, [merchantId, API_BASE]);
-
-  const token = localStorage.getItem("token") || "";
-  // تحديد الإعدادات المعتمدة (مسودة أو أصلية)
-  const effective = draftSettings ?? settings;
-
-  // إعادة تحميل معاينة الـ widget عند تغيير الإعدادات
-  useEffect(() => {
-    const container = previewRef.current;
-    if (!container) return;
-    container.innerHTML = "";
-    setPreviewLoaded(false);
-
-    // Inject إعدادات الدردشة
-    const s1 = document.createElement("script");
-    s1.innerHTML = `
-      window.MusaidChat = {
-        merchantId: '${merchantId}',
-        apiBaseUrl: '${API_BASE}',
-         token: '${token}', 
-        themeColor: '${effective.brandColor}',
-        greeting: '${effective.welcomeMessage}',
-        fontFamily: '${effective.fontFamily}',
-        headerBgColor: '${effective.headerBgColor}',
-        bodyBgColor: '${effective.bodyBgColor}',
-        mode: '${effective.embedMode}'
+    if (!serverSettings) return;
+    setSettings((prev) => {
+      const widgetSlug = serverSettings.widgetSlug ?? prev.widgetSlug;
+      return {
+        ...prev,
+        ...serverSettings,
+        shareUrl: widgetSlug ? `${ORIGIN}/chat/${widgetSlug}` : prev.shareUrl,
+        widgetSlug,
       };
-    `;
-    const s2 = document.createElement("script");
-    s2.src = `/widget.js?mode=${effective.embedMode}`;
-    s2.async = true;
+    });
+  }, [serverSettings, ORIGIN]);
 
-    container.appendChild(s1);
-    container.appendChild(s2);
-    setPreviewLoaded(true);
-    // eslint-disable-next-line
-  }, [effective, merchantId, API_BASE]);
+  const effective = draft ?? settings;
 
-  // التعامل مع تغييرات الحقول
-  const handleChange = <K extends keyof Settings>(
+  const embedTag = useMemo(
+    () =>
+      buildEmbedScript({
+        merchantId,
+        apiBaseUrl: API_BASE,
+        mode: effective.embedMode,
+        brandColor: effective.brandColor,
+        welcomeMessage: effective.welcomeMessage,
+        fontFamily: effective.fontFamily,
+        headerBgColor: effective.headerBgColor,
+        bodyBgColor: effective.bodyBgColor,
+        widgetSlug: settings.widgetSlug,
+        widgetHost: WIDGET_HOST,
+      }),
+    [
+      merchantId,
+      effective.embedMode,
+      effective.brandColor,
+      effective.welcomeMessage,
+      effective.fontFamily,
+      effective.headerBgColor,
+      effective.bodyBgColor,
+      settings.widgetSlug,
+      WIDGET_HOST,
+    ]
+  );
+
+  const chatLink = useMemo(
+    () => buildChatLink(ORIGIN, settings.widgetSlug),
+    [ORIGIN, settings.widgetSlug]
+  );
+
+  const handleChange = <K extends keyof SettingsView>(
     key: K,
-    value: Settings[K]
+    value: SettingsView[K]
   ) => {
-    if (draftSettings) {
-      setDraftSettings((ds) => ({ ...ds!, [key]: value }));
-    } else {
-      setSettings((s) => ({ ...s, [key]: value }));
-    }
-    if (key === "embedMode") {
-      setPreviewLoaded(false);
-    }
+    if (draft) setDraft((d) => ({ ...d!, [key]: value }));
+    else setSettings((s) => ({ ...s, [key]: value }));
   };
 
-  // تفعيل وضع التحرير (نسخة مؤقتة)
-  const cloneSettings = () => {
-    setDraftSettings({ ...settings });
-    setPreviewLoaded(false);
-  };
+  const startEdit = () => setDraft({ ...settings });
+  const cancelEdit = () => setDraft(null);
 
-  // إلغاء التعديلات
-  const discardDraft = () => {
-    setDraftSettings(null);
-    setPreviewLoaded(false);
-  };
-
-  // حفظ التغييرات إلى الـ API
   const saveAll = async () => {
-    if (!draftSettings) return;
-    setLoading(true);
+    if (!draft || !merchantId) return;
     setApiError(null);
     try {
-      const dataToSend: ChatWidgetSettings = {
-        botName: draftSettings.botName, // << أضف هذا السطر!
-        brandColor: draftSettings.brandColor,
-        welcomeMessage: draftSettings.welcomeMessage,
-        fontFamily: draftSettings.fontFamily,
-        headerBgColor: draftSettings.headerBgColor,
-        bodyBgColor: draftSettings.bodyBgColor,
-        widgetSlug: draftSettings.widgetSlug,
+      const dto: ChatWidgetSettings = {
+        botName: draft.botName,
+        brandColor: draft.brandColor,
+        welcomeMessage: draft.welcomeMessage,
+        fontFamily: draft.fontFamily,
+        headerBgColor: draft.headerBgColor,
+        bodyBgColor: draft.bodyBgColor,
+        widgetSlug: draft.widgetSlug,
       };
-      await axios.put(`/merchants/${merchantId}/widget-settings`, dataToSend);
-      setSettings({ ...settings, ...draftSettings });
-      setDraftSettings(null);
+      await saveWidgetSettings(merchantId, dto);
+      setSettings(draft);
+      setDraft(null);
       setShowSuccess(true);
-      console.log("dataToSend", dataToSend);
     } catch {
       setApiError("فشل حفظ الإعدادات. حاول مجددًا.");
     }
-    setLoading(false);
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(embedScript);
+  const handleGenerateSlug = async () => {
+    if (!merchantId) return;
+    try {
+      const slug = await generateSlug(merchantId);
+      setSettings((prev) => ({
+        ...prev,
+        widgetSlug: slug,
+        shareUrl: `${ORIGIN}/chat/${slug}`,
+      }));
+      if (draft)
+        setDraft((prev) => ({
+          ...prev!,
+          widgetSlug: slug,
+          shareUrl: `${ORIGIN}/chat/${slug}`,
+        }));
+    } catch {
+      setApiError("تعذّر توليد رابط جديد");
+    }
+  };
+
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1600);
   };
 
-  if (loading)
+  if (!merchantId) {
+    return (
+      <Box sx={{ mt: 6, textAlign: "center" }}>
+        <Alert severity="warning">لا يوجد تاجر مسجّل.</Alert>
+      </Box>
+    );
+  }
+
+  if (loading) {
     return (
       <Box sx={{ mt: 6, textAlign: "center" }}>
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>جاري التحميل…</Typography>
       </Box>
     );
-
-  // كود التضمين للموقع الخارجي
-  const embedScript =
-    `<script>window.MusaidChat={merchantId:'${merchantId}',API_BASE:'${API_BASE}'` +
-    `,themeColor:'${effective.brandColor}',greeting:'${effective.welcomeMessage}'` +
-    `,fontFamily:'${effective.fontFamily}',headerBgColor:'${effective.headerBgColor}'` +
-    `,bodyBgColor:'${effective.bodyBgColor}',mode:'${effective.embedMode}'};</script>\n` +
-    `<script>window.MusaidChat={merchantId:'${merchantId}',apiBaseUrl:'${API_BASE}'...};</script>\n` +
-    `<script src="/widget.js?mode=${effective.embedMode}"></script>`;
+  }
 
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, md: 4 } }}>
@@ -275,6 +217,13 @@ export default function ChatWidgetConfigSinglePage() {
           {apiError}
         </Alert>
       )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          فشل جلب الإعدادات من الخادم.
+        </Alert>
+      )}
+
+      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -286,16 +235,8 @@ export default function ChatWidgetConfigSinglePage() {
         <Typography variant="h4" fontWeight={700}>
           إعدادات الدردشة
         </Typography>
-        {!draftSettings ? (
-          <Button
-            variant="contained"
-            startIcon={<Edit />}
-            onClick={cloneSettings}
-            sx={{
-              bgcolor: "primary.main",
-              "&:hover": { bgcolor: "primary.dark" },
-            }}
-          >
+        {!draft ? (
+          <Button variant="contained" startIcon={<Edit />} onClick={startEdit}>
             تعديل الإعدادات
           </Button>
         ) : (
@@ -303,27 +244,18 @@ export default function ChatWidgetConfigSinglePage() {
             <Button
               variant="outlined"
               startIcon={<Cancel />}
-              onClick={discardDraft}
-              disabled={loading}
+              onClick={cancelEdit}
             >
               إلغاء
             </Button>
-            <Button
-              variant="contained"
-              startIcon={<Save />}
-              onClick={saveAll}
-              sx={{
-                bgcolor: "success.main",
-                "&:hover": { bgcolor: "success.dark" },
-              }}
-              disabled={loading}
-            >
+            <Button variant="contained" startIcon={<Save />} onClick={saveAll}>
               حفظ التغييرات
             </Button>
           </Stack>
         )}
       </Box>
 
+      {/* Content */}
       <Box
         sx={{
           display: "flex",
@@ -331,44 +263,38 @@ export default function ChatWidgetConfigSinglePage() {
           gap: 3,
         }}
       >
-        {/* العمود الأيسر - الإعدادات */}
-        <Box sx={{ flex: 1, mb: { xs: 3, md: 0 } }}>
+        {/* Left column */}
+        <Box sx={{ flex: 1 }}>
           <Stack spacing={3}>
-            {/* الإعدادات العامة */}
             <SectionCard>
               <CardContent>
                 <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-                  <Settings color="primary" />
+                  <SettingsIcon color="primary" />
                   <Typography variant="h6" fontWeight={600}>
                     الإعدادات العامة
                   </Typography>
                 </Stack>
-
                 <Stack spacing={2}>
                   <TextField
                     label="اسم البوت"
                     fullWidth
-                    value={effective.botName}
+                    value={effective.botName ?? ""}
                     onChange={(e) => handleChange("botName", e.target.value)}
-                    variant="outlined"
                   />
-
                   <TextField
                     label="الرسالة الترحيبية"
                     fullWidth
                     multiline
                     rows={3}
-                    value={effective.welcomeMessage}
+                    value={effective.welcomeMessage ?? ""}
                     onChange={(e) =>
                       handleChange("welcomeMessage", e.target.value)
                     }
-                    variant="outlined"
                   />
                 </Stack>
               </CardContent>
             </SectionCard>
 
-            {/* إعدادات المظهر */}
             <SectionCard>
               <CardContent>
                 <Stack direction="row" alignItems="center" spacing={1} mb={3}>
@@ -377,17 +303,15 @@ export default function ChatWidgetConfigSinglePage() {
                     المظهر والتنسيق
                   </Typography>
                 </Stack>
-
                 <Stack spacing={2}>
                   <FormControl fullWidth>
                     <InputLabel>نوع الخط</InputLabel>
                     <Select
-                      value={effective.fontFamily}
+                      value={effective.fontFamily ?? "Tajawal"}
                       label="نوع الخط"
                       onChange={(e) =>
                         handleChange("fontFamily", e.target.value)
                       }
-                      variant="outlined"
                     >
                       <MenuItem value="Tajawal">Tajawal</MenuItem>
                       <MenuItem value="Inter">Inter</MenuItem>
@@ -400,53 +324,33 @@ export default function ChatWidgetConfigSinglePage() {
                   <Typography variant="body2" fontWeight={500}>
                     تخصيص الألوان:
                   </Typography>
-
                   <Box sx={{ display: "flex", gap: 2 }}>
                     <Tooltip title="لون العلامة التجارية">
                       <Stack alignItems="center" spacing={1}>
                         <ColorPickerButton
-                          sx={{ bgcolor: effective.brandColor }}
-                        >
-                          <input
-                            type="color"
-                            value={effective.brandColor}
-                            onChange={(e) =>
-                              handleChange("brandColor", e.target.value)
-                            }
-                          />
-                        </ColorPickerButton>
+                          colorHex={effective.brandColor ?? "#FF8500"}
+                          onChange={(v) => handleChange("brandColor", v)}
+                        />
                         <Typography variant="caption">العلامة</Typography>
                       </Stack>
                     </Tooltip>
+
                     <Tooltip title="لون خلفية الرأس">
                       <Stack alignItems="center" spacing={1}>
                         <ColorPickerButton
-                          sx={{ bgcolor: effective.headerBgColor }}
-                        >
-                          <input
-                            type="color"
-                            value={effective.headerBgColor}
-                            onChange={(e) =>
-                              handleChange("headerBgColor", e.target.value)
-                            }
-                          />
-                        </ColorPickerButton>
+                          colorHex={effective.headerBgColor ?? "#FF8500"}
+                          onChange={(v) => handleChange("headerBgColor", v)}
+                        />
                         <Typography variant="caption">الرأس</Typography>
                       </Stack>
                     </Tooltip>
+
                     <Tooltip title="لون خلفية الجسم">
                       <Stack alignItems="center" spacing={1}>
                         <ColorPickerButton
-                          sx={{ bgcolor: effective.bodyBgColor }}
-                        >
-                          <input
-                            type="color"
-                            value={effective.bodyBgColor}
-                            onChange={(e) =>
-                              handleChange("bodyBgColor", e.target.value)
-                            }
-                          />
-                        </ColorPickerButton>
+                          colorHex={effective.bodyBgColor ?? "#FFF5E6"}
+                          onChange={(v) => handleChange("bodyBgColor", v)}
+                        />
                         <Typography variant="caption">الخلفية</Typography>
                       </Stack>
                     </Tooltip>
@@ -455,7 +359,6 @@ export default function ChatWidgetConfigSinglePage() {
               </CardContent>
             </SectionCard>
 
-            {/* خيارات التضمين */}
             <SectionCard>
               <CardContent>
                 <Stack direction="row" alignItems="center" spacing={1} mb={3}>
@@ -474,7 +377,6 @@ export default function ChatWidgetConfigSinglePage() {
                       onChange={(e) =>
                         handleChange("embedMode", e.target.value as EmbedMode)
                       }
-                      variant="outlined"
                     >
                       <MenuItem value="bubble">فقاعة عائمة</MenuItem>
                       <MenuItem value="iframe">إطار مدمج</MenuItem>
@@ -486,18 +388,44 @@ export default function ChatWidgetConfigSinglePage() {
                   <TextField
                     label="رابط المشاركة"
                     fullWidth
-                    value={effective.shareUrl}
+                    value={settings.shareUrl}
                     InputProps={{ readOnly: true }}
-                    variant="outlined"
                   />
                   <TextField
                     label="رابط صفحة الدردشة (slug)"
                     fullWidth
-                    value={effective.widgetSlug || ""}
+                    value={settings.widgetSlug ?? ""}
                     InputProps={{ readOnly: true }}
-                    variant="outlined"
                   />
                   <Button onClick={handleGenerateSlug}>توليد رابط جديد</Button>
+
+                  {/* رابط الدردشة */}
+                  <Box>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      mb={1}
+                    >
+                      <Typography variant="body2" fontWeight={500}>
+                        رابط الدردشة
+                      </Typography>
+                      <Tooltip title={copied ? "تم النسخ!" : "نسخ الرابط"}>
+                        <IconButton
+                          size="small"
+                          onClick={() => copy(chatLink)}
+                          color={copied ? "success" : "default"}
+                        >
+                          {copied ? <CheckCircle /> : <ContentCopy />}
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                    <TextField
+                      value={chatLink}
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Box>
+
+                  {/* كود التضمين */}
                   <Box>
                     <Stack
                       direction="row"
@@ -510,7 +438,7 @@ export default function ChatWidgetConfigSinglePage() {
                       <Tooltip title={copied ? "تم النسخ!" : "نسخ الكود"}>
                         <IconButton
                           size="small"
-                          onClick={copyToClipboard}
+                          onClick={() => copy(embedTag)}
                           color={copied ? "success" : "default"}
                         >
                           {copied ? <CheckCircle /> : <ContentCopy />}
@@ -518,21 +446,10 @@ export default function ChatWidgetConfigSinglePage() {
                       </Tooltip>
                     </Stack>
                     <TextField
-                      value={chatLink}
-                      InputProps={{ readOnly: true }}
-                    />
-
-                    <Button
-                      onClick={() => navigator.clipboard.writeText(chatLink)}
-                    >
-                      نسخ رابط الدردشة
-                    </Button>
-
-                    <TextField
                       fullWidth
                       multiline
                       minRows={4}
-                      value={embedScript}
+                      value={embedTag}
                       InputProps={{ readOnly: true }}
                       sx={{
                         fontFamily: "monospace",
@@ -540,7 +457,6 @@ export default function ChatWidgetConfigSinglePage() {
                         bgcolor: theme.palette.grey[100],
                         borderRadius: 1,
                       }}
-                      variant="outlined"
                     />
                   </Box>
                 </Stack>
@@ -549,7 +465,7 @@ export default function ChatWidgetConfigSinglePage() {
           </Stack>
         </Box>
 
-        {/* العمود الأيمن - المعاينة */}
+        {/* Right column - Preview */}
         <Box sx={{ flex: 1 }}>
           <SectionCard>
             <CardContent>
@@ -559,18 +475,7 @@ export default function ChatWidgetConfigSinglePage() {
                   معاينة الدردشة
                 </Typography>
               </Stack>
-
-              <Paper
-                ref={previewRef}
-                sx={{
-                  height: 500,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  bgcolor: "background.paper",
-                }}
-              />
+              <PreviewPane embedTag={embedTag} />
             </CardContent>
           </SectionCard>
         </Box>

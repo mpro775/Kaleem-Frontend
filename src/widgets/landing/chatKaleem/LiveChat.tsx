@@ -7,7 +7,7 @@ import { useTheme } from '@mui/material/styles';
 
 import type { ChatMessage } from './types';
 import { KLEEM_COLORS } from './constants';
-import { fetchKleemSession, getKleemSessionId, rateKleemMessage, sendKleemMessage } from '../../api/kleem';
+import { fetchKleemSession, getKleemSessionId, rateKleemMessage, sendKleemMessage } from '../../../api/kleem';
 import ChatInput from './ChatInput';
 import ChatBubble from './ChatBubble';
 

@@ -14,11 +14,11 @@ import {
   Facebook,
   QrCode2,
 } from "@mui/icons-material";
-import { useMemo, useState, type JSX } from "react";
-import ChannelCard from "@/components/channel/ChannelCard";
-import WhatsappQrConnect from "@/components/channel/WhatsappQrConnect";
-import TelegramConnectDialog from "@/components/channel/TelegramConnectDialog";
-import WebchatConnectDialog from "@/components/channel/WebchatConnectDialog";
+import {  useState, type JSX } from "react";
+import ChannelCard from "@/widgets/merchant/channels/ChannelCard";
+import WhatsappQrConnect from "@/widgets/merchant/channels/WhatsappQrConnect";
+import TelegramConnectDialog from "@/widgets/merchant/channels/TelegramConnectDialog";
+import WebchatConnectDialog from "@/widgets/merchant/channels/WebchatConnectDialog";
 import { useAuth } from "@/context/AuthContext";
 import { CHANNELS, type ChannelKey } from "@/features/mechant/channels/constants";
 import { useChannels, useUpdateChannel } from "@/features/mechant/channels/model";
