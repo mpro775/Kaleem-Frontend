@@ -1,4 +1,4 @@
-// src/pages/LandingPage.tsx
+// src/pages/Home.tsx
 import { Box } from "@mui/material";
 import {
   SEOHead, JsonLd,
@@ -9,7 +9,7 @@ import {
   FAQSection, FinalCtaSection, CookieConsent, Footer,
 } from "@/widgets/landing";
 
-const LandingPage = () => {
+const Home = () => {
   return (
     <Box dir="rtl">
       <SEOHead />
@@ -35,4 +35,4 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage;
+export default Home;

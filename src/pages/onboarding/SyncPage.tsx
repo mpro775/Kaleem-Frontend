@@ -1,22 +1,19 @@
+// src/pages/onboarding/SyncPage.tsx
 import { useEffect, useState } from "react";
 import {
   Box,
   Button,
-  Container,
-  Paper,
   Typography,
   CircularProgress,
   Alert,
 } from "@mui/material";
-import { useTheme } from "@mui/material";
-import { motion } from "framer-motion";
-import bgShape from "../../assets/bg-shape.png";
-import logo from "../../assets/logo.png";
-import { useAuth } from "../../context/AuthContext";
-import { getIntegrationsStatus } from "../../api/integrationsApi";
-import { syncCatalog } from "../../api/catalogApi";
+import { useTheme } from "@mui/material/styles";
+import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { getErrorMessage } from "../../utils/error";
+import { getIntegrationsStatus } from "@/api/integrationsApi";
+import { syncCatalog } from "@/api/catalogApi";
+import { getAxiosMessage } from "@/shared/lib/errors";
+import OnboardingLayout from "@/widgets/onboarding/OnboardingLayout";
 
 export default function SyncPage() {
   const theme = useTheme();
@@ -30,7 +27,6 @@ export default function SyncPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let mounted = true;
     (async () => {
       if (!token) return;
       try {
@@ -41,11 +37,7 @@ export default function SyncPage() {
       } catch {
         /* تجاهل */
       }
-      if (!mounted) return;
     })();
-    return () => {
-      mounted = false;
-    };
   }, [token]);
 
   const handleSync = async () => {
@@ -55,138 +47,76 @@ export default function SyncPage() {
     setImported(null);
     setUpdated(null);
     setStatusText("جارٍ المزامنة وبناء الفكتور…");
-
     try {
       const res = await syncCatalog(user.merchantId, token);
       setImported(res.imported || 0);
       setUpdated(res.updated || 0);
       setStatusText("اكتملت المزامنة!");
-    } catch (e: unknown) {
-      setError(getErrorMessage(e, "فشلت المزامنة"));
+    } catch (e) {
+      setError(getAxiosMessage(e, "فشلت المزامنة"));
       setStatusText("فشلت المزامنة");
     } finally {
       setLoading(false);
     }
   };
 
-  const goDashboard = () => navigate("/dashboard");
-
   return (
-    <Box
-      sx={{
-        position: "relative",
-        minHeight: "100vh",
-        background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-        overflow: "hidden",
-        py: 8,
-      }}
+    <OnboardingLayout
+      step={3}
+      total={3}
+      title={
+        <Typography variant="h4" fontWeight="bold" sx={{ color: "#502E91" }}>
+          مزامنة المنتجات
+        </Typography>
+      }
+      subtitle={
+        <Typography variant="body1" sx={{ color: "#8589A0" }}>
+          جلب المنتجات وبناء فكتور للبحث الذكي
+        </Typography>
+      }
     >
-      <Box
-        component="img"
-        src={bgShape}
-        alt=""
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Typography sx={{ color: "#7E66AC", mb: 2 }}>{statusText}</Typography>
+
+      {imported !== null && updated !== null && (
+        <Typography sx={{ color: "#8589A0", mb: 2 }}>
+          تم استيراد <b>{imported}</b> وتحديث <b>{updated}</b> منتجًا.
+        </Typography>
+      )}
+
+      <Button
+        variant="contained"
+        onClick={handleSync}
+        disabled={loading}
+        fullWidth
         sx={{
-          position: "absolute",
-          top: { xs: -60, md: -80 },
-          left: { xs: -60, md: -80 },
-          width: { xs: 160, md: 300 },
-          opacity: 0.18,
-          zIndex: 0,
+          fontWeight: "bold",
+          py: 1.5,
+          borderRadius: 2,
+          mb: 2,
+          background: "linear-gradient(90deg, #A498CB, #502E91)",
         }}
-      />
-      <Box
-        component="img"
-        src={bgShape}
-        alt=""
-        sx={{
-          position: "absolute",
-          bottom: { xs: -80, md: -100 },
-          right: { xs: -60, md: -100 },
-          width: { xs: 200, md: 400 },
-          opacity: 0.12,
-          zIndex: 0,
-          transform: "rotate(180deg)",
-        }}
-      />
+      >
+        {loading ? (
+          <CircularProgress size={22} color="inherit" />
+        ) : (
+          "مزامنة الآن"
+        )}
+      </Button>
 
-      <Container maxWidth="sm" sx={{ position: "relative", zIndex: 2 }}>
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.7 }}
-        >
-          <Paper
-            elevation={8}
-            sx={{
-              borderRadius: 5,
-              overflow: "hidden",
-              py: 5,
-              px: { xs: 2, sm: 5 },
-              mt: 4,
-              textAlign: "center",
-            }}
-          >
-            <Box sx={{ mb: 2 }}>
-              <Box component="img" src={logo} alt="Kaleem Logo" />
-            </Box>
-            <Typography
-              variant="h4"
-              fontWeight="bold"
-              sx={{ color: "#502E91", mb: 1 }}
-            >
-              مزامنة المنتجات
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#8589A0", mb: 3 }}>
-              سيجري جلب المنتجات من المزوّد الخارجي وبناء فكتور للبحث الذكي
-            </Typography>
-
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            <Typography sx={{ color: "#7E66AC", mb: 2 }}>
-              {statusText}
-            </Typography>
-
-            {imported !== null && updated !== null && (
-              <Typography sx={{ color: "#8589A0", mb: 2 }}>
-                تم استيراد <b>{imported}</b> وتحديث <b>{updated}</b> منتجًا.
-              </Typography>
-            )}
-
-            <Button
-              variant="contained"
-              onClick={handleSync}
-              disabled={loading}
-              fullWidth
-              sx={{
-                fontWeight: "bold",
-                py: 1.5,
-                borderRadius: 2,
-                mb: 2,
-                background: "linear-gradient(90deg, #A498CB, #502E91)",
-              }}
-            >
-              {loading ? (
-                <CircularProgress size={22} color="inherit" />
-              ) : (
-                "مزامنة الآن"
-              )}
-            </Button>
-
-            <Button
-              variant="outlined"
-              onClick={goDashboard}
-              fullWidth
-              sx={{ fontWeight: "bold", py: 1.5, borderRadius: 2 }}
-            >
-              الذهاب إلى لوحة التحكم
-            </Button>
-          </Paper>
-        </motion.div>
-      </Container>
-    </Box>
+      <Button
+        variant="outlined"
+        onClick={() => navigate("/dashboard")}
+        fullWidth
+        sx={{ fontWeight: "bold", py: 1.5, borderRadius: 2 }}
+      >
+        الذهاب إلى لوحة التحكم
+      </Button>
+    </OnboardingLayout>
   );
 }
