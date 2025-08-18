@@ -1,8 +1,8 @@
 import { Box, Paper, Typography, Tabs, Tab } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
-import DocumentsTab from "../../components/documents/DocumentsTab";
-import LinksTab from "../../components/documents/LinksTab";
-import FaqsTab from "../../components/documents/FaqsTab";
+import DocsTab from "@/features/mechant/knowledge/ui/DocsTab";
+import LinksTab from "@/features/mechant/knowledge/ui/LinksTab";
+import FaqsTab from "@/features/mechant/knowledge/ui/FaqsTab";
 import { useState } from "react";
 
 export default function KnowledgePage() {
@@ -24,7 +24,7 @@ export default function KnowledgePage() {
           <Tab label="الأسئلة الشائعة" />
         </Tabs>
       </Paper>
-      {tab === 0 && <DocumentsTab merchantId={merchantId} />}
+      {tab === 0 && <DocsTab merchantId={merchantId} />}
       {tab === 1 && <LinksTab merchantId={merchantId} />}
       {tab === 2 && <FaqsTab merchantId={merchantId} />}
     </Box>
