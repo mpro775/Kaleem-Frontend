@@ -1,3 +1,4 @@
+// src/pages/Dashboard/MerchantSettingsPage.tsx
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -8,23 +9,12 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import { useAuth } from "../../context/AuthContext";
-import GeneralInfoForm from "../../components/marchent_Info/GeneralInfoForm";
-import AddressForm from "../../components/marchent_Info/AddressForm";
-import PoliciesForm from "../../components/marchent_Info/PoliciesForm";
-import WorkingHoursForm from "../../components/marchent_Info/WorkingHoursForm";
-import SocialLinksSection from "../../components/store/SocialLinksSection";
-import type { MerchantInfo } from "../../types/merchant";
-import { getMerchantInfo, updateMerchantInfo } from "../../api/merchantApi";
+import { useAuth } from "@/context/AuthContext";
+import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
+import { updateMerchantInfo, getMerchantInfo } from "@/api/merchantApi";
 
-
-const SECTIONS = [
-  { label: "المعلومات العامة", component: GeneralInfoForm },
-  { label: "العنوان", component: AddressForm },
-  { label: "ساعات العمل", component: WorkingHoursForm, AddressForm},
-  { label: "السياسات", component: PoliciesForm },
-  { label: "روابط التواصل الاجتماعي", component: SocialLinksSection }, // هنا التغيير!
-];
+import { SECTIONS } from "@/features/mechant/merchant-settings/sections";
+import { filterUpdatableFields } from "@/features/mechant/merchant-settings/utils";
 
 export default function MerchantSettingsPage() {
   const { user } = useAuth();
@@ -41,6 +31,7 @@ export default function MerchantSettingsPage() {
     severity: "success" | "error";
   }>({ open: false, message: "", severity: "success" });
 
+  // جلب بيانات التاجر
   useEffect(() => {
     if (!merchantId) return;
     setLoading(true);
@@ -48,60 +39,20 @@ export default function MerchantSettingsPage() {
       .then(setData)
       .finally(() => setLoading(false));
   }, [merchantId]);
-const filterUpdatableFields = (data: MerchantInfo): Partial<MerchantInfo> => {
-  // فقط الحقول المسموح بها في الـ DTO
-  const {
-    name,
-    logoUrl,
-    slug,
-    phone,
-    storefrontUrl,
-    businessDescription,
-    addresses,
-    workingHours,
-    returnPolicy,
-    exchangePolicy,
-    shippingPolicy,
-      socialLinks,
-    customCategory,
-    // ... أضف أي حقل مسموح
-  } = data;
-  return {
-    name,
-    logoUrl,
-    phone,
-    slug,
-    storefrontUrl,
-    businessDescription,
-    addresses,
-    workingHours,
-    returnPolicy,
-    exchangePolicy,
-      socialLinks,
-    shippingPolicy,
-    customCategory,
-  };
-};
+
   const handleSectionSave = async (sectionData: Partial<MerchantInfo>) => {
     try {
-      if (!merchantId) return;
+      if (!merchantId || !data) return;
       setSaveLoading(true);
-      const newData: MerchantInfo = { ...data!, ...sectionData };
-await updateMerchantInfo(merchantId, filterUpdatableFields(newData));
+
+      const newData: MerchantInfo = { ...data, ...sectionData };
+      await updateMerchantInfo(merchantId, filterUpdatableFields(newData));
       setData(newData);
-      setSnackbar({
-        open: true,
-        message: "تم الحفظ بنجاح",
-        severity: "success",
-      });
+
+      setSnackbar({ open: true, message: "تم الحفظ بنجاح", severity: "success" });
     } catch (e: unknown) {
-      let msg = "حدث خطأ أثناء الحفظ";
-      if (e instanceof Error) msg = e.message;
-      setSnackbar({
-        open: true,
-        message: msg,
-        severity: "error",
-      });
+      const msg = e instanceof Error ? e.message : "حدث خطأ أثناء الحفظ";
+      setSnackbar({ open: true, message: msg, severity: "error" });
     } finally {
       setSaveLoading(false);
     }
@@ -121,16 +72,16 @@ await updateMerchantInfo(merchantId, filterUpdatableFields(newData));
       sx={{
         p: 0,
         borderRadius: 3,
-        width: "100%", // العرض بالكامل
-        maxWidth: "1400px", // أو أقل قليلاً إذا أحببت (مناسب للشاشات الكبيرة)
-        minHeight: "80vh", // ليملأ معظم ارتفاع الشاشة
+        width: "100%",
+        maxWidth: "1400px",
+        minHeight: "80vh",
         mx: "auto",
         my: 6,
         overflow: "hidden",
       }}
     >
       <Box display="flex" minHeight={500} dir="rtl">
-        {/* التابات الجانبية */}
+        {/* Tabs جانبية */}
         <Tabs
           orientation="vertical"
           value={tab}
@@ -164,7 +115,7 @@ await updateMerchantInfo(merchantId, filterUpdatableFields(newData));
           ))}
         </Tabs>
 
-        {/* محتوى كل تاب */}
+        {/* محتوى التاب */}
         <Box flex={1} p={4} bgcolor="#fff">
           {SECTIONS.map(({ component: SectionComp }, i) =>
             tab === i ? (
@@ -178,6 +129,7 @@ await updateMerchantInfo(merchantId, filterUpdatableFields(newData));
           )}
         </Box>
       </Box>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={3000}

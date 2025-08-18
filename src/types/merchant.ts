@@ -1,11 +1,7 @@
-import type { Address, SubscriptionPlan } from "./shared";
-import type { Channels } from "./channels";
-import type { WorkingHour } from "./workingHour";
-export interface MerchantSectionProps {
-  initialData: MerchantInfo;
-  onSave: (sectionData: Partial<MerchantInfo>) => Promise<void>;
-  loading?: boolean;
-}
+import type { Address, SubscriptionPlan } from "@/types/shared";
+import type { Channels } from "@/types/channels";
+import type { WorkingHour } from "@/types/workingHour";
+
 export type Storefront = {
   _id: string;
   merchant: string; // الـ merchantId
@@ -25,14 +21,7 @@ export interface Banner {
   active?: boolean;
   order?: number;
 }
-export interface SocialLinks {
-  facebook?: string;
-  twitter?: string;
-  instagram?: string;
-  linkedin?: string;
-  youtube?: string;
-  [key: string]: string | undefined;
-}
+
 
 export interface IncludeSections {
   products: boolean;
@@ -119,24 +108,4 @@ export interface PreviewPromptDto {
 export interface PreviewResponse {
   preview: string;
 }
-export interface MerchantInfo {
-  _id: string;
-  name: string;
-  logoUrl?: string;
-  phone?: string;
-  slug?: string;
-  banners?: Banner[];
 
-  storefrontUrl?: string;
-  businessDescription?: string;
-  addresses: Address[];
-  workingHours: WorkingHour[];
-  returnPolicy?: string;
-  email?: string;
-  exchangePolicy?: string;
-  shippingPolicy?: string;
-  categories: string[];
-  customCategory?: string;
-  socialLinks?: SocialLinks;
-  // يمكنك إضافة أي حقل آخر تريده من السكيمة حسب الحاجة
-}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, TextField, Button, Avatar, Typography, CircularProgress, Stack, Snackbar, Alert } from "@mui/material";
-import type { MerchantInfo } from "../../types/merchant";
+import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 
 interface GeneralInfoFormProps {
   initialData: MerchantInfo;

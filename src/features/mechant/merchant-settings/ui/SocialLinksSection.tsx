@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { MerchantInfo, SocialLinks } from "../../types/merchant";
-import SocialLinksEditor from "./SocialLinksEditor";
+import type { MerchantInfo, SocialLinks } from "@/features/mechant/merchant-settings/types";
+import SocialLinksEditor from "@/features/mechant/merchant-settings/ui/SocialLinksEditor";
 
 interface Props {
   initialData: MerchantInfo;

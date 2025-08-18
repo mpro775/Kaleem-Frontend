@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import { fetchSessionMessages, sendMessage } from "../../api/messages"; // أو المسار الصحيح لديك
-import type { ChatMessage } from "../../types/chat";
-import { useChatWebSocket } from "../../hooks/useChatWebSocket";
+import { fetchSessionMessages, sendMessage } from "@/api/messages"; // أو المسار الصحيح لديك
+import type { ChatMessage } from "@/types/chat";
+import { useChatWebSocket } from "@/hooks/useChatWebSocket";
 
 type WidgetSettings = {
   merchantId: string;

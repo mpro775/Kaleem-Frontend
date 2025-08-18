@@ -29,13 +29,13 @@ import {
   Cancel,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 
 import SectionCard from "@/features/mechant/widget-config/ui/SectionCard";
 import ColorPickerButton from "@/features/mechant/widget-config/ui/ColorPickerButton";
 import PreviewPane from "@/features/mechant/widget-config/ui/PreviewPane";
 
-import { API_BASE } from "../../context/config";
+import { API_BASE } from "@/context/config";
 import type {
   EmbedMode,
   SettingsView,
