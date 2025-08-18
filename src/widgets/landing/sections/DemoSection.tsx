@@ -2,10 +2,7 @@ import { useRef, useState } from 'react';
 import { Avatar, Box, Button, Chip, Paper, Typography } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
-import ChatHeader from '../../components/chatKaleem/ChatHeader';
-import ChatBubble from '../../components/chatKaleem/ChatBubble';
-import LiveChat from '../../components/chatKaleem/LiveChat';
-import { DEMO_MESSAGES, KLEEM_COLORS } from '../../components/chatKaleem/constants';
+import { ChatHeader, ChatBubble, LiveChat, DEMO_MESSAGES, KLEEM_COLORS } from '@/widgets/chatKaleem';
 
 export default function DemoSection() {
   const [isChatLive, setIsChatLive] = useState(false);

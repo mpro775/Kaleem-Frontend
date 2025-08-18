@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import theme from "../../theme/theme";
+import theme from "@/theme/theme";
 interface Plan {
   title: string;
   price: number;

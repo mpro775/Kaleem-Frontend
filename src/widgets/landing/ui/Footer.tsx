@@ -37,7 +37,10 @@ const FooterRoot = styled(Box)(({ theme }) => ({
   borderTop: `1px solid ${theme.palette.divider}`,
 }));
 
-const SectionTitle = styled(Typography)(({ theme }) => ({
+const SectionTitle = styled(Typography).attrs({
+  component: 'h6',
+  variant: 'h6'
+})(({ theme }) => ({
   fontWeight: 800,
   marginBottom: theme.spacing(2),
   letterSpacing: 0.2,
