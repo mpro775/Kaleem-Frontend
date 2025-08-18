@@ -29,7 +29,7 @@ const MerchantLayout = lazy(() => import("@/widgets/layout/merchant/MerchantLayo
 const HomeDashboard = lazy(() => import("@/pages/merchant/Dashboard"));
 const ConversationsPage = lazy(() => import("@/pages/merchant/ConversationsPage"));
 const PromptStudio = lazy(() => import("@/pages/merchant/PromptStudio"));
-const DocumentsPage = lazy(() => import("@/pages/merchant/DocumentsPage"));
+const KnowledgePage = lazy(() => import("@/pages/merchant/KnowledgePage"));
 const LeadsManagerPage = lazy(() => import("@/pages/merchant/LeadsManagerPage"));
 const SupportPage = lazy(() => import("@/pages/merchant/SupportPage"));
 const AccountSettingsPage = lazy(() => import("@/pages/merchant/AccountSettingsPage"));
@@ -101,7 +101,7 @@ export default function App() {
           <Route path="channel" element={<ChannelsIntegrationPage />} />
           <Route path="marchinfo" element={<MerchantSettingsPage />} />
           <Route path="storefront-theme" element={<StorefrontThemePage />} />
-          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="knowledge" element={<KnowledgePage />} />
         </Route>
 
         {/* Admin (Kleem) */}

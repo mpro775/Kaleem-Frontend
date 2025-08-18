@@ -5,7 +5,7 @@ import LinksTab from "../../components/documents/LinksTab";
 import FaqsTab from "../../components/documents/FaqsTab";
 import { useState } from "react";
 
-export default function DocumentsPage() {
+export default function KnowledgePage() {
   const { user } = useAuth();
   const merchantId = user?.merchantId;
   const [tab, setTab] = useState(0);
