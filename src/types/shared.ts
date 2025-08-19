@@ -18,11 +18,7 @@ export interface QuickConfig {
   dialect: string;
   tone: string;
   customInstructions: string[];
-  sectionOrder: string[];
-  includeStoreUrl?: boolean;
-  includeAddress?: boolean;
-  includePolicies?: boolean;
-  includeWorkingHours?: boolean;
+
   includeClosingPhrase?: boolean;
   closingText?: string;
 }

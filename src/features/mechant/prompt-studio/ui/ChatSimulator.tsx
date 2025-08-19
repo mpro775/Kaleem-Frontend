@@ -1,4 +1,3 @@
-// src/components/prompet/ChatSimulator.tsx
 import {
   Box,
   Paper,
@@ -17,9 +16,7 @@ interface Message {
   text: string;
 }
 
-export function ChatSimulator({ initialPrompt }: { initialPrompt: string }) {
-  // لا نعرض الـ initialPrompt كبالون، بل نحتفظ به داخليًا فقط
-console.log("Initial Prompt:", initialPrompt);
+export function ChatSimulator() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLUListElement>(null);
@@ -28,25 +25,28 @@ console.log("Initial Prompt:", initialPrompt);
     const userText = input.trim();
     if (!userText) return;
 
-    // 1) أضف رسالة المستخدم
     setMessages((m) => [...m, { from: "user", text: userText }]);
     setInput("");
 
-    // 2) بعد تأخير وهمي، أضف رد هادئ من البوت
     setTimeout(() => {
-      // هنا يمكنك لاحقًا استدعاء API مع الـ systemPrompt + userText
-      const botReply = "شكرًا لسؤالك، سأتحقق من ذلك وأعود إليك قريبًا."; // رد هادئ ثابت
+      const botReply = "شكرًا لسؤالك، سأتحقق من ذلك وأعود إليك قريبًا.";
       setMessages((m) => [...m, { from: "bot", text: botReply }]);
     }, 600);
   };
 
-  // تمرير تلقائي للأسفل
   useEffect(() => {
     listRef.current?.scrollTo(0, listRef.current.scrollHeight);
   }, [messages]);
 
   return (
-    <Paper sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Paper
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        minWidth: 0,
+      }}
+    >
       <Typography
         variant="h6"
         sx={{ p: 1, borderBottom: "1px solid rgba(0,0,0,0.12)" }}
@@ -55,7 +55,7 @@ console.log("Initial Prompt:", initialPrompt);
       </Typography>
 
       {/* الرسائل */}
-      <Box sx={{ flexGrow: 1, overflowY: "auto", p: 1 }}>
+      <Box sx={{ flexGrow: 1, overflowY: "auto", p: 1, minWidth: 0 }}>
         <List ref={listRef}>
           {messages.map((m, i) => (
             <ListItem

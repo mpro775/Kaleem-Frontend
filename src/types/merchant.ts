@@ -1,6 +1,7 @@
 import type { Address, SubscriptionPlan } from "@/types/shared";
 import type { Channels } from "@/types/channels";
 import type { WorkingHour } from "@/types/workingHour";
+import type { QuickConfig } from "@/features/mechant/prompt-studio/types";
 
 export type Storefront = {
   _id: string;
@@ -23,13 +24,6 @@ export interface Banner {
 }
 
 
-export interface IncludeSections {
-  products: boolean;
-  instructions: boolean;
-  categories: boolean;
-  policies: boolean;
-  custom: boolean;
-}
 
 export interface AdvancedConfig {
   template: string;
@@ -48,21 +42,7 @@ export interface IncludeSections {
   policies: boolean;
   custom: boolean;
 }
-export interface QuickConfig {
-  dialect: string;
-  tone: string;
-  customInstructions: string[]; // مؤكد أنها لن تكون undefined
-  sectionOrder: readonly string[]; // استخدام readonly للثوابت
-  includeStoreUrl: boolean;
-  includeAddress: boolean;
-  includePolicies: boolean;
-  includeWorkingHours: boolean;
-  closingMessage?: string; // أو closingText إذا كنت تفضل
-  customerServicePhone?: string;
-  customerServiceWhatsapp?: string;
-  includeClosingPhrase: boolean;
-  closingText: string;
-}
+
 export interface PromptConfig {
   dialect?: string;
   tone?: string;

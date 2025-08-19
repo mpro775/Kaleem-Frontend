@@ -1,7 +1,8 @@
-import type {  Merchant,  PreviewPromptDto,  PreviewResponse,  QuickConfig } from "../types/merchant";
+import type {  Merchant,  PreviewPromptDto,  PreviewResponse } from "../types/merchant";
 import { API_BASE } from "../context/config";
 import axios from "axios";
 import type { ChannelDetails, Channels } from "../types/channels";
+import type { QuickConfig } from "@/features/mechant/prompt-studio/types";
 
 const authHeader = (token: string) => ({
   headers: { Authorization: `Bearer ${token}` },
@@ -19,11 +20,7 @@ export async function previewPrompt(
           dialect: dto.quickConfig?.dialect || "خليجي",
           tone: dto.quickConfig?.tone || "ودّي",
           customInstructions: dto.quickConfig?.customInstructions || [],
-          sectionOrder: dto.quickConfig?.sectionOrder || [],
-          includeStoreUrl: dto.quickConfig?.includeStoreUrl ?? true,
-          includeAddress: dto.quickConfig?.includeAddress ?? true,
-          includePolicies: dto.quickConfig?.includePolicies ?? true,
-          includeWorkingHours: dto.quickConfig?.includeWorkingHours ?? true,
+        
           includeClosingPhrase: dto.quickConfig?.includeClosingPhrase ?? true,
           closingText: dto.quickConfig?.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
         },

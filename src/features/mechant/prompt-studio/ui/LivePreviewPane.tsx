@@ -1,4 +1,3 @@
-// src/components/LivePreviewPane.tsx
 import {
   Paper,
   Typography,
@@ -25,6 +24,7 @@ const PreviewContainer = styled(Paper)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   height: "100%",
+  minWidth: 0,
   backgroundColor:
     theme.palette.mode === "dark"
       ? theme.palette.grey[900]
@@ -51,10 +51,7 @@ const PreviewContent = styled(Box)(({ theme }) => ({
   wordBreak: "break-word",
   backgroundColor: theme.palette.background.paper,
   color: theme.palette.text.primary,
-  "& pre": {
-    margin: 0,
-    fontFamily: "inherit",
-  },
+  "& pre": { margin: 0, fontFamily: "inherit" },
 }));
 
 const PreviewFooter = styled(Box)(({ theme }) => ({
@@ -75,14 +72,13 @@ export function LivePreviewPane({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(content);
+    navigator.clipboard.writeText(content || "");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <PreviewContainer elevation={3}>
-      {/* شريط التقدم أثناء التحميل */}
       <Fade in={isLoading} unmountOnExit>
         <LinearProgress
           color="primary"
@@ -90,7 +86,6 @@ export function LivePreviewPane({
         />
       </Fade>
 
-      {/* رأس لوحة المعاينة */}
       <PreviewHeader>
         <Typography variant="h6" component="div">
           {isLivePreview ? "المعاينة الحية" : "معاينة المحتوى"}
@@ -109,25 +104,14 @@ export function LivePreviewPane({
               </IconButton>
             </Tooltip>
           )}
-
           <Tooltip title={copied ? "تم النسخ!" : "نسخ المحتوى"}>
-            <IconButton
-              size="small"
-              onClick={handleCopy}
-              disabled={!content}
-              sx={{ ml: 1 }}
-            >
-              {copied ? (
-                <CheckIcon fontSize="small" color="success" />
-              ) : (
-                <ContentCopyIcon fontSize="small" />
-              )}
+            <IconButton size="small" onClick={handleCopy} disabled={!content} sx={{ ml: 1 }}>
+              {copied ? <CheckIcon fontSize="small" color="success" /> : <ContentCopyIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
         </Box>
       </PreviewHeader>
 
-      {/* محتوى المعاينة */}
       <PreviewContent>
         {content ? (
           <Typography component="pre">{content}</Typography>
@@ -138,10 +122,9 @@ export function LivePreviewPane({
         )}
       </PreviewContent>
 
-      {/* تذييل اللوحة */}
       <PreviewFooter>
         <Typography variant="caption" color="text.secondary">
-          {content?.length > 0 ? `${content.length} حرف` : ""}
+          {content?.length ? `${content.length} حرف` : ""}
         </Typography>
       </PreviewFooter>
     </PreviewContainer>

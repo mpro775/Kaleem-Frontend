@@ -1,4 +1,3 @@
-// src/components/PromptToolbar.tsx
 import {
   AppBar,
   Toolbar,
@@ -13,6 +12,8 @@ import {
   LinearProgress,
   Fade,
   styled,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SaveIcon from "@mui/icons-material/Save";
@@ -57,6 +58,8 @@ export function PromptToolbar({
   lastUpdated,
 }: PromptToolbarProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const theme = useTheme();
+  const isMdDown = useMediaQuery(theme.breakpoints.down("md"));
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -69,13 +72,11 @@ export function PromptToolbar({
 
   const formatLastUpdated = () => {
     if (!lastUpdated) return "لم يتم التحديث بعد";
-
     return format(lastUpdated, "HH:mm - dd MMM yyyy", { locale: ar });
   };
 
   return (
-    <StyledAppBar position="static" elevation={0}>
-      {/* شريط التقدم أثناء الحفظ */}
+    <StyledAppBar position="sticky" elevation={0}>
       <Fade in={isSaving} unmountOnExit>
         <LinearProgress
           color="primary"
@@ -83,53 +84,59 @@ export function PromptToolbar({
         />
       </Fade>
 
-      <Toolbar sx={{ justifyContent: "space-between" }}>
-        {/* العنوان والعلامة التجارية */}
-        <Box sx={{ display: "flex", alignItems: "center" }}>
+      <Toolbar
+        sx={{
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 1,
+          minHeight: { xs: 64, md: 72 },
+        }}
+      >
+        {/* العنوان */}
+        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
           <AutoFixHighIcon color="primary" sx={{ mr: 1.5 }} />
           <Typography variant="h6" noWrap>
             استوديو البرومبت
           </Typography>
         </Box>
 
-        {/* ألسنة التبويب */}
-        <Tabs
-          value={activeTab}
-          onChange={(_, newValue) => onTabChange(newValue)}
-          sx={{
-            position: "absolute",
-            left: "50%",
-            transform: "translateX(-50%)",
-          }}
-        >
-          <StyledTab
-            label={
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                <AutoFixHighIcon fontSize="small" sx={{ mr: 1 }} />
-                <span>الإعداد السريع</span>
-              </Box>
-            }
-            value="quick"
-          />
-          <StyledTab
-            label={
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                <CodeIcon fontSize="small" sx={{ mr: 1 }} />
-                <span>القالب المتقدم</span>
-              </Box>
-            }
-            value="advanced"
-          />
-        </Tabs>
+        {/* التبويبات */}
+        <Box sx={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => onTabChange(newValue)}
+            variant="scrollable"
+            allowScrollButtonsMobile
+          >
+            <StyledTab
+              label={
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <AutoFixHighIcon fontSize="small" sx={{ mr: 1 }} />
+                  <span>الإعداد السريع</span>
+                </Box>
+              }
+              value="quick"
+            />
+            <StyledTab
+              label={
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <CodeIcon fontSize="small" sx={{ mr: 1 }} />
+                  <span>القالب المتقدم</span>
+                </Box>
+              }
+              value="advanced"
+            />
+          </Tabs>
+        </Box>
 
-        {/* مجموعة الأزرار */}
-        <Box sx={{ display: "flex", alignItems: "center" }}>
-          {/* مؤشر آخر تحديث */}
-          <Typography variant="caption" color="text.secondary" sx={{ mr: 2 }}>
-            آخر تحديث: {formatLastUpdated()}
-          </Typography>
+        {/* أزرار اليمين */}
+        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+          {!isMdDown && (
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 2 }} noWrap>
+              آخر تحديث: {formatLastUpdated()}
+            </Typography>
+          )}
 
-          {/* زر التحديث */}
           <Tooltip title="تحديث المعاينة">
             <span>
               <IconButton
@@ -144,21 +151,14 @@ export function PromptToolbar({
             </span>
           </Tooltip>
 
-          {/* زر الحفظ */}
           <Button
             startIcon={<SaveIcon />}
             variant="contained"
             onClick={onSave}
             disabled={isSaving}
-            sx={{
-              minWidth: 120,
-              boxShadow: "none",
-              "&:hover": {
-                boxShadow: "none",
-              },
-            }}
+            sx={{ minWidth: 120, boxShadow: "none", "&:hover": { boxShadow: "none" } }}
           >
-            {isSaving ? <span>جاري الحفظ...</span> : <span>حفظ التغييرات</span>}
+            {isSaving ? "جاري الحفظ..." : "حفظ التغييرات"}
           </Button>
         </Box>
       </Toolbar>

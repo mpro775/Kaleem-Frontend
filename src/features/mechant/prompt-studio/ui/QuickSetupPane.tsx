@@ -1,19 +1,13 @@
-import { Box, Typography, TextField, MenuItem } from "@mui/material";
+import { Box, TextField, MenuItem, Stack, FormControlLabel, Switch } from "@mui/material";
 import { useFormContext, Controller } from "react-hook-form";
-import type { QuickConfig } from "../../types/merchant";
+import type { QuickConfig } from "@/features/mechant/prompt-studio/types";
 
 export function QuickSetupPane() {
   const { control, watch } = useFormContext<QuickConfig>();
-
-  // القيم الحالية
-  const includeStoreUrl = watch("includeStoreUrl", false);
-  const includeAddress = watch("includeAddress", false);
-  const includePolicies = watch("includePolicies", false);
-  const includeWorkingHours = watch("includeWorkingHours", false);
-  const includeClosingPhrase = watch("includeClosingPhrase", false);
+  const includeClosing = watch("includeClosingPhrase");
 
   return (
-    <Box>
+    <Box sx={{ minWidth: 0, p: { xs: 0, md: 0 } }}>
       {/* اللهجة */}
       <Controller
         name="dialect"
@@ -44,54 +38,24 @@ export function QuickSetupPane() {
         )}
       />
 
-      {/* تلميحات مكان Switches */}
-      <Box mt={2}>
-        {!includeStoreUrl && (
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            لإظهار رابط المتجر في المحادثة، يرجى إضافة رابط المتجر في{" "}
-            <strong>إعدادات المتجر</strong> أولاً.
-          </Typography>
-        )}
-        {!includeAddress && (
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            لإظهار عنوان المتجر في المحادثة، يرجى إضافة عنوان المتجر في{" "}
-            <strong>إعدادات المتجر</strong> أولاً.
-          </Typography>
-        )}
-        {!includePolicies && (
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            لإظهار سياسات الإرجاع والشحن والاستبدال، يرجى تكوينها في{" "}
-            <strong>إعدادات المتجر</strong> أولاً.
-          </Typography>
-        )}
-        {!includeWorkingHours && (
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            لإظهار أوقات الدوام، يرجى ضبط ساعات العمل في{" "}
-            <strong>إعدادات المتجر</strong> أولاً.
-          </Typography>
-        )}
-        {!includeClosingPhrase && (
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            لإظهار نص الخاتمة، يرجى تفعيل حقل نص الخاتمة في{" "}
-            <strong>إعدادات المتجر</strong> أولاً.
-          </Typography>
-        )}
-      </Box>
-
-      {/* التعليمات المخصصة */}
+      {/* التعليمات المخصصة — ⚠️ إصلاح القيمة (كانت Array مباشرة) */}
       <Controller
         name="customInstructions"
         control={control}
         render={({ field }) => (
           <TextField
             label="تعليمات مخصصة"
-            placeholder="أضف حتى 10 تعليمات، كل منها حتى 50 حرف"
+            placeholder="أضف حتى 10 تعليمات، افصل بينها بفاصلة منقوطة ; أو سطر جديد"
             fullWidth
             margin="normal"
-            value={field.value}
+            value={Array.isArray(field.value) ? field.value.join("; ") : ""}
             onChange={(e) => {
               const input = e.target.value;
-              const list = input.split(/;|\n/).slice(0, 10);
+              const list = input
+                .split(/;|\n/)
+                .map((s) => s.trim())
+                .filter(Boolean)
+                .slice(0, 10);
               field.onChange(list.map((instr) => instr.slice(0, 50)));
             }}
             helperText="يمكنك إضافة حتى 10 تعليمات، كل منها حتى 50 حرف"
@@ -100,24 +64,40 @@ export function QuickSetupPane() {
         )}
       />
 
-      {/* الرسالة الختامية */}
-      <Controller
-        name="closingMessage"
-        control={control}
-        render={({ field }) => (
-          <TextField
-            label="الرسالة الختامية (تظهر في نهاية المحادثة)"
-            placeholder="مثال: شكراً لتواصلك معنا!"
-            fullWidth
-            margin="normal"
-            value={field.value || ""}
-            onChange={field.onChange}
-            inputProps={{ maxLength: 120 }}
-            helperText="يمكنك تخصيص رسالة تظهر في نهاية كل محادثة (اختياري)"
-            FormHelperTextProps={{ sx: { color: "text.secondary" } }}
-          />
-        )}
-      />
+      {/* تفعيل/تعطيل رسالة ختامية */}
+      <Stack direction="row" alignItems="center" mt={1}>
+        <Controller
+          name="includeClosingPhrase"
+          control={control}
+          render={({ field }) => (
+            <FormControlLabel
+              control={<Switch checked={!!field.value} onChange={(_, v) => field.onChange(v)} />}
+              label="إضافة رسالة ختامية تلقائية"
+            />
+          )}
+        />
+      </Stack>
+
+      {/* الرسالة الختامية (تظهر فقط عند التفعيل) */}
+      {includeClosing && (
+        <Controller
+          name="closingText"
+          control={control}
+          render={({ field }) => (
+            <TextField
+              label="الرسالة الختامية"
+              placeholder="مثال: شكراً لتواصلك معنا!"
+              fullWidth
+              margin="normal"
+              value={field.value || ""}
+              onChange={field.onChange}
+              inputProps={{ maxLength: 120 }}
+              helperText="تظهر في نهاية كل محادثة"
+              FormHelperTextProps={{ sx: { color: "text.secondary" } }}
+            />
+          )}
+        />
+      )}
 
       {/* رقم خدمة العملاء */}
       <Controller
@@ -131,7 +111,7 @@ export function QuickSetupPane() {
             margin="normal"
             value={field.value || ""}
             onChange={field.onChange}
-            helperText="سيعطيه البوت للمستخدم عند طلب التواصل مع خدمة العملاء (اختياري)"
+            helperText="يُعطى للمستخدم عند طلب التواصل (اختياري)"
             FormHelperTextProps={{ sx: { color: "text.secondary" } }}
           />
         )}
@@ -149,7 +129,7 @@ export function QuickSetupPane() {
             margin="normal"
             value={field.value || ""}
             onChange={field.onChange}
-            helperText="سيعطيه البوت للمستخدم عند طلب التواصل مع خدمة العملاء (اختياري)"
+            helperText="يُعطى للمستخدم عند طلب التواصل (اختياري)"
             FormHelperTextProps={{ sx: { color: "text.secondary" } }}
           />
         )}

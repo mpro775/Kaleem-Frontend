@@ -1,5 +1,6 @@
 // src/components/prompet/AdvancedTemplatePane.tsx
-import { Paper, Box, Typography, IconButton,  Button, } from "@mui/material";
+
+import { Paper, Box, Typography, IconButton, Button } from "@mui/material";
 import { styled } from "@mui/system";
 import { useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
@@ -12,6 +13,7 @@ const Container = styled(Paper)({
   flexDirection: "column",
   height: "100%",
   overflow: "hidden",
+  minWidth: 0,
 });
 
 const Header = styled(Box)({
@@ -22,7 +24,8 @@ const Header = styled(Box)({
 
 const EditorWrapper = styled(Box)({
   flex: 1,
-  overflow: "auto",
+  overflow: "hidden",
+  "& .cm-theme": { height: "100%" },
 });
 
 export function AdvancedTemplatePane({
@@ -40,7 +43,7 @@ export function AdvancedTemplatePane({
     <Container
       sx={{
         position: isFullscreen ? "fixed" : "relative",
-        top:  isFullscreen ? 0 : undefined,
+        top: isFullscreen ? 0 : undefined,
         left: isFullscreen ? 0 : undefined,
         width: isFullscreen ? "100vw" : "100%",
         height: isFullscreen ? "100vh" : "100%",
@@ -51,7 +54,7 @@ export function AdvancedTemplatePane({
         <Typography variant="h6">محرر متقدم</Typography>
         <Box>
           {onGenerateAI && (
-            <Button size="small" onClick={onGenerateAI} sx={{ mr:1 }}>
+            <Button size="small" onClick={onGenerateAI} sx={{ mr: 1 }}>
               توليد ذكي
             </Button>
           )}

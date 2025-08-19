@@ -1,8 +1,9 @@
 // src/features/prompt-studio/hooks.ts
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import type { UseFormReset, UseFormWatch } from "react-hook-form";
 import { promptApi } from "./api";
-import { DEFAULT_SECTION_ORDER, areEqualQuickConfigs, type QuickConfig } from "./types";
+import { areEqualQuickConfigs, type QuickConfig } from "./types";
 
 type Args = {
   token?: string | null;
@@ -12,7 +13,20 @@ type Args = {
   watch: UseFormWatch<QuickConfig>;
 };
 
-export function usePromptStudio({ token, merchantId, activeTab, reset, watch }: Args) {
+const clampInstructions = (list: (string | undefined)[] | undefined) =>
+  (list ?? [])
+    .map((s) => (s ?? "").toString().trim())
+    .filter(Boolean)
+    .slice(0, 5)
+    .map((s) => s.slice(0, 80));
+
+export function usePromptStudio({
+  token,
+  merchantId,
+  activeTab,
+  reset,
+  watch,
+}: Args) {
   const safeToken = token ?? "";
   const safeMerchant = merchantId ?? "";
 
@@ -25,48 +39,66 @@ export function usePromptStudio({ token, merchantId, activeTab, reset, watch }: 
   // initial fetch
   useEffect(() => {
     if (!safeToken || !safeMerchant) return;
-
     let mounted = true;
     (async () => {
       setIsLoading(true);
       try {
-        const [quickConfig, advTemplate, finalPrompt] = await Promise.all([
+        const [quickConfig, advTemplate] = await Promise.all([
           promptApi.getQuickConfig(safeToken, safeMerchant),
           promptApi.getAdvancedTemplate(safeToken, safeMerchant),
-          promptApi.getFinalPrompt(safeToken, safeMerchant),
         ]);
-
         if (!mounted) return;
-
+  
+        // اضبط نموذج الفورم
         reset({
-          dialect: quickConfig.dialect,
-          tone: quickConfig.tone,
-          customInstructions: quickConfig.customInstructions,
-          sectionOrder: quickConfig.sectionOrder,
-          includeStoreUrl: quickConfig.includeStoreUrl,
-          includeAddress: quickConfig.includeAddress,
-          includePolicies: quickConfig.includePolicies,
-          includeWorkingHours: quickConfig.includeWorkingHours,
-          includeClosingPhrase: quickConfig.includeClosingPhrase,
-          closingText: quickConfig.closingText,
+          dialect: quickConfig?.dialect ?? "خليجي",
+          tone: quickConfig?.tone ?? "ودّي",
+          customInstructions: clampInstructions(quickConfig?.customInstructions ?? []),
+          includeClosingPhrase: !!quickConfig?.includeClosingPhrase,
+          closingText: quickConfig?.closingText ?? "هل أقدر أساعدك بشي ثاني؟ 😊",
+          customerServicePhone: (quickConfig?.customerServicePhone ?? "").trim(),
+          customerServiceWhatsapp: (quickConfig?.customerServiceWhatsapp ?? "").trim(),
         });
-
-        setAdvancedTemplate(advTemplate);
-        setPreviewContent(finalPrompt);
+  
+        // محرّر القالب: لو فاضي، اطلب اقتراح من السيرفر
+        let effectiveTemplate = advTemplate ?? "";
+        if (!effectiveTemplate) {
+          const fallback = await promptApi.getAdvancedTemplateSuggested(
+            safeToken,
+            safeMerchant,
+            quickConfig // نمرر التكوين الحالي للمزيد من الدقة
+          );
+          effectiveTemplate = fallback.template || "";
+        }
+        setAdvancedTemplate(effectiveTemplate);
+  
+        // === أهم سطرين: ابدأ المعاينة من /preview (بدون حارس للتاجر) ===
+        const quickForPreview = {
+          dialect: quickConfig?.dialect || "خليجي",
+          tone: quickConfig?.tone || "ودّي",
+          customInstructions: clampInstructions(quickConfig?.customInstructions),
+          includeClosingPhrase: !!quickConfig?.includeClosingPhrase,
+          closingText: quickConfig?.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
+          customerServicePhone: (quickConfig?.customerServicePhone || "").trim(),
+          customerServiceWhatsapp: (quickConfig?.customerServiceWhatsapp || "").trim(),
+        } as QuickConfig;
+  
+        const initialPreview =
+          // إن كنت على تبويب "advanced" اعرض previewAdvanced وإلا previewQuick
+          (activeTab === "advanced")
+            ? await promptApi.previewAdvanced(safeToken, safeMerchant, quickForPreview)
+            : await promptApi.previewQuick(safeToken, safeMerchant, quickForPreview);
+  
+        setPreviewContent(initialPreview || "");
         setLastUpdated(new Date());
-      } catch (e) {
-        // يمكنك إضافة toast هنا
-        // console.error(e);
+      } catch {
+        // TODO: toast
       } finally {
         if (mounted) setIsLoading(false);
       }
     })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [safeToken, safeMerchant, reset]);
-
+    return () => { mounted = false; };
+  }, [safeToken, safeMerchant, reset, activeTab]);
   // live preview (quick)
   useEffect(() => {
     if (!safeToken || !safeMerchant) return;
@@ -74,20 +106,14 @@ export function usePromptStudio({ token, merchantId, activeTab, reset, watch }: 
 
     let lastValues: QuickConfig | null = null;
     const sub = watch((values) => {
-      const filteredCustom = (values.customInstructions ?? []).filter(Boolean) as string[];
-      const filteredOrder = (values.sectionOrder ?? DEFAULT_SECTION_ORDER.slice()).filter(Boolean) as string[];
-
       const safeValues: QuickConfig = {
-        dialect: values.dialect ?? "خليجي",
-        tone: values.tone ?? "ودّي",
-        customInstructions: filteredCustom,
-        sectionOrder: filteredOrder.length ? filteredOrder : [...DEFAULT_SECTION_ORDER],
-        includeStoreUrl: values.includeStoreUrl ?? true,
-        includeAddress: values.includeAddress ?? true,
-        includePolicies: values.includePolicies ?? true,
-        includeWorkingHours: values.includeWorkingHours ?? true,
-        includeClosingPhrase: values.includeClosingPhrase ?? true,
-        closingText: values.closingText ?? "هل أقدر أساعدك بشي ثاني؟ 😊",
+        dialect: values?.dialect || "خليجي",
+        tone: values?.tone || "ودّي",
+        customInstructions: clampInstructions(values?.customInstructions ?? []),
+        includeClosingPhrase: !!values?.includeClosingPhrase,
+        closingText: values?.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
+        customerServicePhone: (values?.customerServicePhone || "").trim(),
+        customerServiceWhatsapp: (values?.customerServiceWhatsapp || "").trim(),
       };
 
       if (lastValues && areEqualQuickConfigs(safeValues, lastValues)) return;
@@ -95,11 +121,15 @@ export function usePromptStudio({ token, merchantId, activeTab, reset, watch }: 
 
       const id = setTimeout(async () => {
         try {
-          const preview = await promptApi.previewQuick(safeToken, safeMerchant, safeValues);
+          const preview = await promptApi.previewQuick(
+            safeToken,
+            safeMerchant,
+            safeValues
+          );
           setPreviewContent(preview);
           setLastUpdated(new Date());
         } catch {
-          /* ignore */
+          // ignore
         }
       }, 500);
 
@@ -115,19 +145,16 @@ export function usePromptStudio({ token, merchantId, activeTab, reset, watch }: 
       setPreviewContent("غير مصرح");
       return;
     }
-    const current = watch();
 
+    const current = watch();
     const quick: QuickConfig = {
-      dialect: current.dialect || "خليجي",
-      tone: current.tone || "ودّي",
-      customInstructions: current.customInstructions || [],
-      sectionOrder: current.sectionOrder || DEFAULT_SECTION_ORDER.slice(),
-      includeStoreUrl: current.includeStoreUrl ?? true,
-      includeAddress: current.includeAddress ?? true,
-      includePolicies: current.includePolicies ?? true,
-      includeWorkingHours: current.includeWorkingHours ?? true,
-      includeClosingPhrase: current.includeClosingPhrase ?? true,
-      closingText: current.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
+      dialect: current?.dialect || "خليجي",
+      tone: current?.tone || "ودّي",
+      customInstructions: clampInstructions(current?.customInstructions),
+      includeClosingPhrase: !!current?.includeClosingPhrase,
+      closingText: current?.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
+      customerServicePhone: (current?.customerServicePhone || "").trim(),
+      customerServiceWhatsapp: (current?.customerServiceWhatsapp || "").trim(),
     };
 
     try {
@@ -149,9 +176,31 @@ export function usePromptStudio({ token, merchantId, activeTab, reset, watch }: 
       if (!safeToken || !safeMerchant) return;
       setIsSaving(true);
       try {
-        const updated = await promptApi.updateQuickConfig(safeToken, safeMerchant, data);
-        // sync form with server response
-        reset(updated);
+        const payload: QuickConfig = {
+          dialect: data.dialect || "خليجي",
+          tone: data.tone || "ودّي",
+          customInstructions: clampInstructions(data.customInstructions),
+          includeClosingPhrase: !!data.includeClosingPhrase,
+          closingText: data.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
+          customerServicePhone: (data.customerServicePhone || "").trim(),
+          customerServiceWhatsapp: (data.customerServiceWhatsapp || "").trim(),
+        };
+
+        const updated = await promptApi.updateQuickConfig(
+          safeToken,
+          safeMerchant,
+          payload
+        );
+        // sync form with server response (مع القصّ)
+        reset({
+          dialect: updated.dialect ?? "خليجي",
+          tone: updated.tone ?? "ودّي",
+          customInstructions: clampInstructions(updated.customInstructions),
+          includeClosingPhrase: updated.includeClosingPhrase ?? true,
+          closingText: updated.closingText ?? "هل أقدر أساعدك بشي ثاني؟ 😊",
+          customerServicePhone: updated.customerServicePhone ?? "",
+          customerServiceWhatsapp: updated.customerServiceWhatsapp ?? "",
+        });
         setLastUpdated(new Date());
       } finally {
         setIsSaving(false);
@@ -161,20 +210,22 @@ export function usePromptStudio({ token, merchantId, activeTab, reset, watch }: 
   );
 
   // save advanced
-  const handleSaveAdvancedTemplate = useCallback(
-    async () => {
-      if (!safeToken || !safeMerchant) return;
-      setIsSaving(true);
-      try {
-        await promptApi.saveAdvancedTemplate(safeToken, safeMerchant, advancedTemplate, "تعديل يدوي");
-        setLastUpdated(new Date());
-        await handleManualPreview();
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [safeToken, safeMerchant, advancedTemplate, handleManualPreview]
-  );
+  const handleSaveAdvancedTemplate = useCallback(async () => {
+    if (!safeToken || !safeMerchant) return;
+    setIsSaving(true);
+    try {
+      await promptApi.saveAdvancedTemplate(
+        safeToken,
+        safeMerchant,
+        advancedTemplate,
+        "تعديل يدوي"
+      );
+      setLastUpdated(new Date());
+      await handleManualPreview();
+    } finally {
+      setIsSaving(false);
+    }
+  }, [safeToken, safeMerchant, advancedTemplate, handleManualPreview]);
 
   return {
     isLoading,
