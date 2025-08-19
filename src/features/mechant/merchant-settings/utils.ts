@@ -1,7 +1,8 @@
 // src/features/merchant-settings/utils.ts
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 
-/** فلترة الحقول المسموح بتحديثها فقط */
+
+
 export const filterUpdatableFields = (
   data: MerchantInfo
 ): Partial<MerchantInfo> => {

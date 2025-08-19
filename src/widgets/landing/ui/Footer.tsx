@@ -8,9 +8,7 @@ import {
   TextField,
   Button,
   Divider,
-  Chip,
   Tooltip,
-  type Theme,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import TwitterIcon from "@mui/icons-material/Twitter";
@@ -19,10 +17,7 @@ import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import TelegramIcon from "@mui/icons-material/Telegram";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
-import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
-import PhoneInTalkOutlinedIcon from "@mui/icons-material/PhoneInTalkOutlined";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
-import { useMemo } from "react";
 
 type FooterLink = { label: string; href: string; external?: boolean };
 
@@ -30,30 +25,16 @@ const FooterRoot = styled(Box)(({ theme }) => ({
   position: "relative",
   overflow: "hidden",
   paddingTop: theme.spacing(8),
-  paddingBottom: theme.spacing(4),
+  paddingBottom: theme.spacing(6),
   background:
     theme.palette.mode === "dark"
-      ? "radial-gradient(1000px 600px at 80% -10%, rgba(255,133,0,0.08), transparent 50%), linear-gradient(180deg, rgba(255,255,255,0.02), transparent)"
-      : "radial-gradient(1000px 600px at 80% -10%, rgba(255,133,0,0.10), transparent 50%), linear-gradient(180deg, #ffffff, #f8fafc)",
+      ? "linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%), radial-gradient(1000px 600px at 80% -10%, rgba(255,133,0,0.08), transparent 50%)"
+      : "linear-gradient(180deg, #ffffff, #f8fafc), radial-gradient(1000px 600px at 80% -10%, rgba(255,133,0,0.10), transparent 50%)",
   borderTop: `1px solid ${theme.palette.divider}`,
 }));
 
-const SectionTitle = styled(Typography)(({ theme }: { theme: Theme }) => ({
-  fontWeight: 800,
-  marginBottom: theme.spacing(2),
-  letterSpacing: 0.2,
-  fontSize: "1.05rem",
-}));
-
-const Column = styled(Box)(({ theme }) => ({
-  flex: "1 1 220px",
-  minWidth: 220,
-  maxWidth: 360,
-  padding: theme.spacing(1),
-}));
-
 const FooterA = styled(MLink)(({ theme }) => ({
-  display: "inline-flex",
+  display: "flex",
   alignItems: "center",
   gap: 6,
   color: theme.palette.text.secondary,
@@ -69,87 +50,49 @@ const FooterA = styled(MLink)(({ theme }) => ({
 export default function Footer({ brand = "كليم" }: { brand?: string }) {
   const year = new Date().getFullYear();
 
-  // روابط الأعمدة
-  const product: FooterLink[] = useMemo(
-    () => [
-      { label: "الميزات", href: "#features" },
-      { label: "التكاملات", href: "#integrations" },
-      { label: "المتجر المصغّر", href: "#storefront" },
-      { label: "الأسعار", href: "#pricing" },
-      { label: "جرّبه الآن", href: "#cta" },
-    ],
-    []
-  );
+  const primaryNav: FooterLink[] = [
+    { label: "الميزات", href: "#features" },
+    { label: "التكاملات", href: "#integrations" },
+    { label: "الأسعار", href: "#pricing" },
+    { label: "جرّبه الآن", href: "#cta" },
+  ];
 
-  const resources: FooterLink[] = useMemo(
-    () => [
-      { label: "التوثيق", href: "/docs" },
-      { label: "مركز المساعدة", href: "/help" },
-      { label: "الأسئلة الشائعة", href: "#faq" },
-      { label: "حالة النظام", href: "/status", external: true },
-    ],
-    []
-  );
+  const secondaryNav: FooterLink[] = [
+    { label: "التوثيق", href: "/docs" },
+    { label: "الأسئلة الشائعة", href: "#faq" },
+    { label: "عنّا", href: "/about" },
+    { label: "اتصل بنا", href: "/contact" },
+  ];
 
-  const company: FooterLink[] = useMemo(
-    () => [
-      { label: "عنّا", href: "/about" },
-      { label: "اتصل بنا", href: "/contact" },
-      { label: "الشراكات", href: "/partners" },
-      { label: "الوظائف", href: "/careers" },
-    ],
-    []
-  );
+  const legal: FooterLink[] = [
+    { label: "سياسة الخصوصية", href: "/privacy" },
+    { label: "الشروط والأحكام", href: "/terms" },
+  ];
 
-  const legal: FooterLink[] = useMemo(
-    () => [
-      { label: "سياسة الخصوصية", href: "/privacy" },
-      { label: "الشروط والأحكام", href: "/terms" },
-      { label: "سياسة الاستخدام", href: "/acceptable-use" },
-    ],
-    []
-  );
-
-  const scrollTop = () =>
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <FooterRoot dir="rtl">
       <Container maxWidth="lg" sx={{ px: 2 }}>
-        {/* الصف العلوي: نبذة + أعمدة روابط + نشرة بريدية */}
+        {/* شبكة عليا حديثة */}
         <Box
           sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 3,
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "2fr 1fr 1fr 1.5fr" },
+            gap: { xs: 3, md: 4 },
             alignItems: "flex-start",
-            justifyContent: "space-between",
             mb: 4,
           }}
         >
-          {/* العمود: البراند + سوشال + شِب */}
-          <Column sx={{ maxWidth: 420 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
-              {/* لو عندك شعار صورة، استبدل النص التالي بـ <Box component="img" src="/assets/logo.svg" sx={{ height: 28 }} /> */}
-              <Typography variant="h6" component="h2" sx={{ fontWeight: 900 }}>
-                {brand}
-              </Typography>
-              <Chip
-                label="Beta"
-                size="small"
-                color="default"
-                sx={{ fontWeight: 700, letterSpacing: 0.4 }}
-              />
-            </Box>
-            <Typography color="text.secondary" sx={{ lineHeight: 1.9, mb: 2 }}>
-              {brand} — مساعد متاجر ذكي بالعربية: يرد ويبيع عبر
-              واتساب، تيليجرام، والويب، ويمكّنك من بدء البيع فورًا عبر
-              <MLink href="#storefront" sx={{ mx: 0.5 }}>
-                المتجر المصغّر
-              </MLink>
-              حتى بدون سلة/زد.
+          {/* البراند */}
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
+              {brand}
             </Typography>
-
+            <Typography color="text.secondary" sx={{ lineHeight: 1.9, mb: 2 }}>
+              {brand} — مساعد متاجر ذكي بالعربية لزيادة مبيعاتك عبر القنوات
+              المختلفة، مع تجربة سلسة وسريعة الانطلاق.
+            </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Tooltip title="X / Twitter">
                 <IconButton
@@ -163,43 +106,56 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
                 </IconButton>
               </Tooltip>
               <Tooltip title="Instagram">
-                <IconButton size="small" component="a" href="#" target="_blank" rel="noopener">
+                <IconButton
+                  size="small"
+                  component="a"
+                  href="#"
+                  target="_blank"
+                  rel="noopener"
+                >
                   <InstagramIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="WhatsApp">
-                <IconButton size="small" component="a" href="#" target="_blank" rel="noopener">
+                <IconButton
+                  size="small"
+                  component="a"
+                  href="#"
+                  target="_blank"
+                  rel="noopener"
+                >
                   <WhatsAppIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Telegram">
-                <IconButton size="small" component="a" href="#" target="_blank" rel="noopener">
+                <IconButton
+                  size="small"
+                  component="a"
+                  href="#"
+                  target="_blank"
+                  rel="noopener"
+                >
                   <TelegramIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="البريد">
-                <IconButton size="small" component="a" href="mailto:hello@kleem.store">
+                <IconButton
+                  size="small"
+                  component="a"
+                  href="mailto:hello@kleem.store"
+                >
                   <MailOutlineIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
+          </Box>
 
-            <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 1.5, color: "text.secondary" }}>
-              <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
-                <LocationOnOutlinedIcon sx={{ fontSize: 18, opacity: 0.8 }} />
-                <Typography variant="caption">منطقة الشرق الأوسط</Typography>
-              </Box>
-              <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
-                <PhoneInTalkOutlinedIcon sx={{ fontSize: 18, opacity: 0.8 }} />
-                <Typography variant="caption">+966-0000-0000</Typography>
-              </Box>
-            </Box>
-          </Column>
-
-          {/* أعمدة الروابط */}
-          <Column>
-            <SectionTitle component="h6">المنتج</SectionTitle>
-            {product.map((l) => (
+          {/* روابط أساسية */}
+          <Box>
+            <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
+              المنتج
+            </Typography>
+            {primaryNav.map((l) => (
               <FooterA key={l.label} href={l.href}>
                 {l.label}
                 {!l.href.startsWith("#") && l.external && (
@@ -207,11 +163,14 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
                 )}
               </FooterA>
             ))}
-          </Column>
+          </Box>
 
-          <Column>
-            <SectionTitle component="h6">الموارد</SectionTitle>
-            {resources.map((l) => (
+          {/* روابط ثانوية */}
+          <Box>
+            <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
+              المزيد
+            </Typography>
+            {secondaryNav.map((l) => (
               <FooterA
                 key={l.label}
                 href={l.href}
@@ -219,22 +178,18 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
                 rel={l.external ? "noopener" : undefined}
               >
                 {l.label}
-                {l.external && <LaunchRoundedIcon sx={{ fontSize: 14, opacity: 0.6 }} />}
+                {l.external && (
+                  <LaunchRoundedIcon sx={{ fontSize: 14, opacity: 0.6 }} />
+                )}
               </FooterA>
             ))}
-          </Column>
+          </Box>
 
-          <Column>
-            <SectionTitle component="h6">الشركة</SectionTitle>
-            {company.map((l) => (
-              <FooterA key={l.label} href={l.href}>
-                {l.label}
-              </FooterA>
-            ))}
-          </Column>
-
-          <Column>
-            <SectionTitle component="h6">النشرة البريدية</SectionTitle>
+          {/* النشرة البريدية */}
+          <Box>
+            <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
+              النشرة البريدية
+            </Typography>
             <Typography color="text.secondary" sx={{ mb: 1.5 }}>
               نصائح ومزايا جديدة — رسالة واحدة بالشهر.
             </Typography>
@@ -242,7 +197,9 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
               component="form"
               onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
-                document.getElementById("cta")?.scrollIntoView({ behavior: "smooth" });
+                document
+                  .getElementById("cta")
+                  ?.scrollIntoView({ behavior: "smooth" });
               }}
               sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}
             >
@@ -256,16 +213,12 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
                 اشترك
               </Button>
             </Box>
-            <Typography variant="caption" color="text.disabled" sx={{ mt: 1.5, display: "block" }}>
-              بالاشتراك أنت توافق على{" "}
-              <MLink href="/privacy">سياسة الخصوصية</MLink>.
-            </Typography>
-          </Column>
+          </Box>
         </Box>
 
         <Divider sx={{ my: 2 }} />
 
-        {/* الصف السفلي: قانوني + حقوق + زر للأعلى */}
+        {/* شريط سفلي */}
         <Box
           sx={{
             display: "flex",
@@ -276,7 +229,14 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
             mt: 2,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              flexWrap: "wrap",
+            }}
+          >
             {legal.map((l) => (
               <FooterA key={l.label} href={l.href}>
                 {l.label}
@@ -284,7 +244,11 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
             ))}
           </Box>
 
-          <Typography variant="caption" color="text.disabled" sx={{ order: { xs: 3, md: 2 } }}>
+          <Typography
+            variant="caption"
+            color="text.disabled"
+            sx={{ order: { xs: 3, md: 2 } }}
+          >
             © {year} {brand}. جميع الحقوق محفوظة.
           </Typography>
 

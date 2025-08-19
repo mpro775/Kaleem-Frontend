@@ -16,33 +16,31 @@ import {
 import { NavLink, useLocation } from "react-router-dom";
 import {
   ExpandMore as ExpandIcon,
-  ChevronRight, // ← أضف هذا
-  ChevronLeft, // ← وأضف هذا إذا استخدمته
+  ChevronRight,
+  ChevronLeft,
 } from "@mui/icons-material";
-import { useState, useEffect, type JSX } from "react";
+import { useState, useEffect, type JSX, useMemo } from "react";
 import { AiTwotoneHome } from "react-icons/ai";
-import { TbMessages } from "react-icons/tb";
+import { TbMessages, TbMessageCircleCog } from "react-icons/tb";
 import { FiBox } from "react-icons/fi";
 import { BsRobot } from "react-icons/bs";
 import { LuStore } from "react-icons/lu";
-import { TbMessageCircleCog } from "react-icons/tb";
 import { PiGraphLight } from "react-icons/pi";
 import { SiGoogleanalytics } from "react-icons/si";
 import { TiGroupOutline } from "react-icons/ti";
 import { HiOutlineDocumentMagnifyingGlass } from "react-icons/hi2";
 import { MdOutlineSettingsSuggest } from "react-icons/md";
 import { BiSupport } from "react-icons/bi";
-import { useStoreServicesFlag } from "../../hooks/useStoreServicesFlag";
+import { useStoreServicesFlag } from "@/hooks/useStoreServicesFlag";
 
-// القائمة الرئيسية
+// القائمة الرئيسية (كما هي)
 interface MenuItem {
   label: string;
-  icon: JSX.Element;
+  icon?: JSX.Element; // ← كانت إلزامية، خلّيناها اختيارية
   path?: string;
   subItems?: MenuItem[];
-  featureKey?: string; // ← جديد
+  featureKey?: string;
 }
-
 const BASE_MENU: MenuItem[] = [
   { label: "الرئيسية", icon: <AiTwotoneHome />, path: "/dashboard" },
   {
@@ -50,7 +48,8 @@ const BASE_MENU: MenuItem[] = [
     icon: <TbMessages />,
     path: "/dashboard/conversations",
   },
-  // ↓↓↓ تظهر فقط مع كليم (internal)
+
+  // متجر كليم
   {
     label: "المنتجات",
     icon: <FiBox />,
@@ -81,13 +80,10 @@ const BASE_MENU: MenuItem[] = [
     path: "/dashboard/storefront-theme",
     featureKey: "storeService",
   },
-  // لو بتضيف عروض:
-  // { label: "العروض", icon: <FiTag />, path: "/dashboard/offers", featureKey: "storeService" },
 
+  // باقي العناصر
   { label: "معلومات المتجر", icon: <LuStore />, path: "/dashboard/marchinfo" },
-
-  { label: "تعليمات البوت", icon: <BsRobot />, path: "/dashboard/prompt" },
-
+  { label: "تعليمات كليم", icon: <BsRobot />, path: "/dashboard/prompt" },
   {
     label: "ضبط واجهه الدردشة",
     icon: <TbMessageCircleCog />,
@@ -103,7 +99,7 @@ const BASE_MENU: MenuItem[] = [
   {
     label: "الموارد الاضافية",
     icon: <HiOutlineDocumentMagnifyingGlass />,
-    path: "/dashboard/documents",
+    path: "/dashboard/knowledge",
   },
   { label: "الدعم", icon: <BiSupport />, path: "/dashboard/support" },
   {
@@ -111,13 +107,89 @@ const BASE_MENU: MenuItem[] = [
     icon: <MdOutlineSettingsSuggest />,
     path: "/dashboard/setting",
   },
+  { label: "التوجيهات", icon: <TbMessages />, path: "/dashboard/instructions" },
+  {
+    label: "الإجابات المفقودة",
+    icon: <TbMessages />,
+    path: "/dashboard/missing-responses",
+  },
 ];
+
 interface SidebarProps {
-  open: boolean;
+  open: boolean; // للهاتف فقط (temporary)
   onClose: () => void;
   isMobile: boolean;
-  onToggleCollapse?: () => void; // جديد
-  collapsed?: boolean; // جديد
+  onToggleCollapse?: () => void;
+  collapsed?: boolean; // المستخدم على الديسكتوب
+}
+
+// ===== تجميع تلقائي بسيط دون العبث بـ BASE_MENU =====
+function buildGroupedMenu(base: MenuItem[]): MenuItem[] {
+  const filterByLabels = (labels: string[]) =>
+    base.filter((i) => labels.includes(i.label));
+  const used = new Set<string>();
+
+  const group = (
+    label: string,
+    items: MenuItem[],
+    featureKey?: string,
+    icon?: JSX.Element
+  ): MenuItem | null => {
+    items.forEach((i) => used.add(i.label));
+    if (!items.length) return null;
+    if (items.length === 1) return items[0]; // 👈 افرد المجموعة إن كانت عنصرًا واحدًا
+    return { label, icon, subItems: items, featureKey };
+  };
+
+  const core = group(
+    "الأساسيات",
+    filterByLabels(["الرئيسية", "المحادثات", "الاحصائيات", "معلومات المتجر"]),
+    undefined,
+    <AiTwotoneHome />
+  );
+  const ai = group(
+    "Kleem IQ",
+    filterByLabels([
+      "تعليمات كليم",
+      "التوجيهات",
+      "الإجابات المفقودة",
+      "الموارد الاضافية",
+    ]),
+    undefined,
+    <BsRobot />
+  );
+  const store = group(
+    "متجر كليم",
+    base.filter((i) => i.featureKey === "storeService"),
+    "storeService",
+    <LuStore />
+  );
+  const channels = group(
+    "القنوات والربط",
+    filterByLabels(["قنوات الربط", "ضبط واجهه الدردشة"]),
+    undefined,
+    <PiGraphLight />
+  );
+  const crm = group(
+    "العملاء",
+    filterByLabels(["العملاء "]),
+    undefined,
+    <TiGroupOutline />
+  );
+
+  const ops = group(
+    "الإعدادات والدعم",
+    filterByLabels(["الاعدادات", "الدعم"]),
+    undefined,
+    <MdOutlineSettingsSuggest />
+  );
+
+  const rest = base.filter(
+    (i) => !used.has(i.label) && i.featureKey !== "storeService"
+  );
+  return [core, ai, store, channels, crm, ops, ...rest].filter(
+    Boolean
+  ) as MenuItem[];
 }
 
 const Sidebar = ({
@@ -133,48 +205,65 @@ const Sidebar = ({
     {}
   );
   const showStoreServices = useStoreServicesFlag();
-  const menu = BASE_MENU.filter((item) => {
-    if (item.featureKey === "storeService") return showStoreServices;
-    return true;
-  });
-  // لتوسيع قائمة فرعية تلقائياً إذا المسار الحالي بداخلها
+  const full = useMemo(() => buildGroupedMenu(BASE_MENU), []);
+
+  const menu: MenuItem[] = useMemo(() => {
+    const visible = (item: MenuItem) =>
+      item.featureKey === "storeService" ? showStoreServices : true;
+
+    return full
+      .map((section) => {
+        if (section.subItems) {
+          const subs = section.subItems.filter(visible);
+          return subs.length ? { ...section, subItems: subs } : null;
+        }
+        return visible(section) ? section : null;
+      })
+      .filter(Boolean) as MenuItem[];
+  }, [full, showStoreServices]);
+
+  // 4) لا تعيد تعيين expandedItems كليًا؛ دمج فقط "التوسعة الافتراضية" بناءً على المسار الحالي
   useEffect(() => {
     const currentPath = location.pathname;
-    const newExpandedItems: Record<string, boolean> = {};
-    menu.forEach((item) => {
-      if (item.subItems) {
-        const shouldExpand = item.subItems.some(
-          (subItem) => subItem.path === currentPath
-        );
-        if (shouldExpand) {
-          newExpandedItems[item.label] = true;
+    setExpandedItems((prev) => {
+      const next = { ...prev };
+      menu.forEach((item) => {
+        if (item.subItems?.some((s) => s.path === currentPath)) {
+          next[item.label] = true; // أضف التوسعة للمجموعة الموافقة للمسار
         }
-      }
+      });
+      return next; // لا تمسح اختيارات المستخدم السابقة
     });
-    setExpandedItems(newExpandedItems);
+    // مهم: لا تضع `menu` كمُعتمَد هنا حتى لا يُعاد ضبط الحالة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
-
-  const toggleSubMenu = (label: string) => {
+  const toggleSubMenu = (label: string) =>
     setExpandedItems((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
+
   const handleItemClick = () => {
     if (isMobile) onClose();
   };
 
-  // عنصر القائمة الواحد
+  // عنصر واحد (قسم أو عنصر مفرد)
   const renderMenuItem = (item: MenuItem) => {
     const isActive = item.path === location.pathname;
     const isSubItemActive = item.subItems?.some(
-      (subItem) => subItem.path === location.pathname
+      (s) => s.path === location.pathname
     );
+
+    const buttonProps = item.path
+      ? { component: NavLink, to: item.path }
+      : { component: "div" as const };
 
     return (
       <Box key={item.label}>
         <ListItem disablePadding>
           <ListItemButton
-            component={item.path ? NavLink : "div"}
-            to={item.path || ""}
-            onClick={() => item.subItems && toggleSubMenu(item.label)}
+            {...buttonProps}
+            onClick={() => {
+              if (item.subItems) toggleSubMenu(item.label);
+              handleItemClick();
+            }}
             sx={{
               borderRadius: 2,
               mb: 0.5,
@@ -209,9 +298,7 @@ const Sidebar = ({
                 color: theme.palette.primary.main,
               }),
               transition: "all 0.3s ease",
-              "&:hover": {
-                background: theme.palette.action.hover,
-              },
+              "&:hover": { background: theme.palette.action.hover },
             }}
           >
             <ListItemIcon
@@ -227,7 +314,7 @@ const Sidebar = ({
               {item.icon}
             </ListItemIcon>
 
-            {!collapsed && open && (
+            {!collapsed && (
               <>
                 <ListItemText
                   primary={item.label}
@@ -254,16 +341,17 @@ const Sidebar = ({
         </ListItem>
 
         {/* القوائم الفرعية */}
-        {item.subItems && open && (
+        {item.subItems && (
           <Collapse in={expandedItems[item.label]} timeout="auto" unmountOnExit>
             <List component="div" disablePadding sx={{ pl: 2 }}>
-              {item.subItems.map((subItem) => {
-                const isSubActive = subItem.path === location.pathname;
+              {item.subItems.map((sub) => {
+                const isSubActive = sub.path === location.pathname;
                 return (
-                  <ListItem key={subItem.label} disablePadding>
+                  <ListItem key={sub.label} disablePadding>
                     <ListItemButton
                       component={NavLink}
-                      to={subItem.path || ""}
+                      to={sub.path || ""}
+                      onClick={handleItemClick}
                       sx={{
                         borderRadius: 2,
                         mb: 0.5,
@@ -277,9 +365,7 @@ const Sidebar = ({
                               theme.palette.primary.dark + " !important",
                           },
                         }),
-                        "&:hover": {
-                          background: theme.palette.action.hover,
-                        },
+                        "&:hover": { background: theme.palette.action.hover },
                       }}
                     >
                       <ListItemIcon
@@ -290,11 +376,11 @@ const Sidebar = ({
                           minWidth: "40px !important",
                         }}
                       >
-                        {subItem.icon}
+                        {sub.icon}
                       </ListItemIcon>
-                      {open && (
+                      {!collapsed && (
                         <ListItemText
-                          primary={subItem.label}
+                          primary={sub.label}
                           primaryTypographyProps={{
                             fontSize: "0.9rem",
                             fontWeight: isSubActive ? "bold" : "normal",
@@ -315,19 +401,21 @@ const Sidebar = ({
     );
   };
 
-  // التصميم النهائي للشريط الجانبي
+  // الشريط الجانبي
+  const drawerWidth = isMobile ? 280 : collapsed ? 72 : 240;
+
   return (
     <Drawer
       variant={isMobile ? "temporary" : "permanent"}
-      open={open}
+      open={isMobile ? open : true}
       onClose={onClose}
       ModalProps={{ keepMounted: true }}
       sx={{
-        width: collapsed ? 72 : 240, // هنا الفرق!
+        width: drawerWidth,
         flexShrink: 0,
         transition: "width 0.3s cubic-bezier(.4,2.2,.2,1)",
         "& .MuiDrawer-paper": {
-          width: open ? 240 : 72,
+          width: drawerWidth,
           transition: "width 0.3s cubic-bezier(.4,2.2,.2,1)",
           overflowX: "hidden",
           background:
@@ -344,36 +432,40 @@ const Sidebar = ({
         sx={{ display: "flex", flexDirection: "column", height: "100%", py: 2 }}
       >
         {/* رأس الشريط */}
-        {/* رأس الشريط */}
-
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ px: 2, mb: 1 }}
+        >
           لوحة تحكم المتجر
         </Typography>
+
         {!isMobile && (
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              justifyContent: open ? "space-between" : "center",
+              justifyContent: collapsed ? "center" : "space-between",
               px: 2,
               mb: 2,
             }}
           >
-            {/* شعار وأسم المتجر ... */}
             <IconButton onClick={onToggleCollapse}>
-              {open ? <ChevronRight /> : <ChevronLeft />}
+              {collapsed ? <ChevronRight /> : <ChevronLeft />}
             </IconButton>
           </Box>
         )}
-        {/* القائمة الرئيسية */}
+
+        {/* القائمة */}
         <List sx={{ flex: 1, px: 1 }}>
-          {BASE_MENU.map((item) => (
+          {menu.map((item) => (
             <Box key={item.label} onClick={handleItemClick}>
               {renderMenuItem(item)}
             </Box>
           ))}
         </List>
-        {/* تذييل الشريط */}
+
+        {/* تذييل */}
         <Box
           sx={{
             px: 2,
@@ -384,7 +476,7 @@ const Sidebar = ({
             textAlign: "center",
           }}
         >
-          {open ? (
+          {!collapsed ? (
             <Typography variant="caption" color="text.secondary">
               كليم
             </Typography>

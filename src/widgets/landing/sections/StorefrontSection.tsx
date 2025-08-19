@@ -90,10 +90,19 @@ type FeatureItem = { icon: React.ElementType; text: string };
 const featureDetails: FeatureItem[] = [
   { icon: ShoppingCartRoundedIcon, text: "سلة شراء وخطوات طلب مبسّطة" },
   { icon: LinkRoundedIcon, text: "رابط فوري *.kleem.store أو نطاقك المخصص" },
-  { icon: ColorLensRoundedIcon, text: "هوية بصرية: شعار + ألوان + شكل الأزرار" },
-  { icon: ChatRoundedIcon, text: "دردشة واتساب/تيليجرام مدمجة للشراء عبر المحادثة" },
+  {
+    icon: ColorLensRoundedIcon,
+    text: "هوية بصرية: شعار + ألوان + شكل الأزرار",
+  },
+  {
+    icon: ChatRoundedIcon,
+    text: "دردشة واتساب/تيليجرام مدمجة للشراء عبر المحادثة",
+  },
   { icon: ShieldRoundedIcon, text: "سياسات شحن/استبدال + صلاحيات آمنة" },
-  { icon: SupportAgentRoundedIcon, text: "أسئلة شائعة وساعات عمل وروابط تواصل" },
+  {
+    icon: SupportAgentRoundedIcon,
+    text: "أسئلة شائعة وساعات عمل وروابط تواصل",
+  },
 ];
 
 // ========= معاينة متجر (Mock) قابلة للاستبدال بصورة =========
@@ -179,8 +188,8 @@ export default function StorefrontSection() {
             color="text.secondary"
             sx={{ maxWidth: 900, mx: "auto" }}
           >
-            لو ما عندك متجر في سلة أو زد—كليم يوفّر لك متجر جاهز خلال دقائق:
-            أضف منتجاتك وحدّد الألوان والشعار، وابدأ البيع فورًا عبر رابطك الخاص.
+            لو ما عندك متجر في سلة أو زد—كليم يوفّر لك متجر جاهز خلال دقائق: أضف
+            منتجاتك وحدّد الألوان والشعار، وابدأ البيع فورًا عبر رابطك الخاص.
           </Typography>
 
           {/* أزرار CTA */}
@@ -199,7 +208,9 @@ export default function StorefrontSection() {
               size="large"
               startIcon={<RocketLaunchRoundedIcon />}
               onClick={() =>
-                document.getElementById("cta")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("cta")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
               أنشئ متجرك الآن
@@ -208,7 +219,7 @@ export default function StorefrontSection() {
               variant="outlined"
               size="large"
               startIcon={<PlayCircleOutlineRoundedIcon />}
-              onClick={() => window.open("https://demo.kleem.store", "_blank")}
+              href="/signup"
             >
               شاهد مثال مباشر
             </Button>
@@ -238,8 +249,8 @@ export default function StorefrontSection() {
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 2, lineHeight: 1.9 }}>
               مناسب للبدايات السريعة والبيع عبر المحادثات وروابط الدفع المباشرة.
-              ولو احتجت لاحقًا مزايا أوسع (بوابات دفع/شحن متقدمة)،
-              تقدر تنتقل لسلة/زد وتستمر تستخدم كليم بالتكامل.
+              ولو احتجت لاحقًا مزايا أوسع (بوابات دفع/شحن متقدمة)، تقدر تنتقل
+              لسلة/زد وتستمر تستخدم كليم بالتكامل.
             </Typography>
 
             <Divider sx={{ my: 2 }} />
@@ -309,7 +320,9 @@ export default function StorefrontSection() {
                 variant="contained"
                 size="large"
                 onClick={() =>
-                  document.getElementById("cta")?.scrollIntoView({ behavior: "smooth" })
+                  document
+                    .getElementById("cta")
+                    ?.scrollIntoView({ behavior: "smooth" })
                 }
                 startIcon={<RocketLaunchRoundedIcon />}
               >
@@ -320,7 +333,7 @@ export default function StorefrontSection() {
               <Button
                 variant="outlined"
                 size="large"
-                onClick={() => window.open("https://demo.kleem.store", "_blank")}
+                href="/store/demo"
                 startIcon={<PlayCircleOutlineRoundedIcon />}
               >
                 استعرض الديمو

@@ -1,38 +1,69 @@
 // src/widgets/chat/ChatWorkspace.tsx
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress } from "@mui/material";
-import { useConversations, useSessionDetails, useMessages } from "@/features/mechant/Conversations/model/queries";
-import { useHandover, useRate, useSendAgentMessage } from "@/features/mechant/Conversations/model/mutations";
+import {
+  useConversations,
+  useSessionDetails,
+  useMessages,
+} from "@/features/mechant/Conversations/model/queries";
+import {
+  useHandover,
+  useRate,
+  useSendAgentMessage,
+} from "@/features/mechant/Conversations/model/mutations";
 import { useChatSocket } from "@/features/mechant/Conversations/socket/useChatSocket";
-import type { ChatMessage, ChannelType } from "@/types/chat";
+import type { ChatMessage as UiChatMessage, ChannelType } from "@/types/chat";
+import type { ChatMessage as EntityChatMessage } from "@/entities/message/model/types";
+import type { WsEvent } from "@/features/mechant/Conversations/socket/types";
 import Header from "@/features/mechant/Conversations/ui/Header";
-import Sidebar from "@/features/mechant/Conversations/ui/ConversationsSidebar";           // ConversationsSidebar
+import Sidebar from "@/features/mechant/Conversations/ui/ConversationsSidebar"; // ConversationsSidebar
 import SessionsList from "@/features/mechant/Conversations/ui/ConversationsList"; // ConversationsList
 import ChatWindow from "@/features/mechant/Conversations/ui/ChatWindow";
 import ChatInput from "@/features/mechant/Conversations/ui/ChatInput";
 import FeedbackDialog from "@/features/mechant/Conversations/ui/FeedbackDialog";
 
-function dedupeAppend(list: ChatMessage[], msg: ChatMessage) {
-  if (msg._id && list.some(m => m._id === msg._id)) return list;
+function dedupeAppend(list: UiChatMessage[], msg: UiChatMessage) {
+  if (msg._id && list.some((m) => m._id === msg._id)) return list;
   return [...list, msg];
 }
 
 export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
   const [selectedChannel, setChannel] = useState<"" | ChannelType>("");
   const [selectedSession, setSelectedSession] = useState<string>();
-  const { data: sessions, isLoading: loadingSessions } = useConversations(merchantId, selectedChannel || undefined);
+  const { data: sessions, isLoading: loadingSessions } = useConversations(
+    merchantId,
+    selectedChannel || undefined
+  );
   const { data: sessionDetails } = useSessionDetails(selectedSession);
-  const { data: initialMessages, isLoading: loadingMessages } = useMessages(selectedSession);
+  const { data: initialMessages, isLoading: loadingMessages } =
+    useMessages(selectedSession);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  useEffect(() => { setMessages(initialMessages ?? []); }, [initialMessages]);
+  const [messages, setMessages] = useState<UiChatMessage[]>([]);
+  useEffect(() => {
+    setMessages(initialMessages ?? []);
+  }, [initialMessages]);
 
   // WS: أضف الرسائل فورًا
-  const onWsEvent = useCallback((e: any) => {
-    if (e.type === "message:new" && e.payload?.sessionId === selectedSession) {
-      setMessages(prev => dedupeAppend(prev, e.payload));
-    }
-  }, [selectedSession]);
+  const toUiMessage = (m: EntityChatMessage): UiChatMessage => ({
+    _id: m._id,
+    role: m.role === "system" ? "bot" : (m.role as UiChatMessage["role"]),
+    text: m.text,
+    timestamp: m.createdAt,
+    rating: typeof m.rating === "number" ? m.rating : null,
+    feedback: m.feedback ?? null,
+  });
+
+  const onWsEvent = useCallback(
+    (e: WsEvent) => {
+      if (
+        e.type === "message:new" &&
+        e.payload?.sessionId === selectedSession
+      ) {
+        setMessages((prev) => dedupeAppend(prev, toUiMessage(e.payload)));
+      }
+    },
+    [selectedSession]
+  );
   useChatSocket(selectedSession, onWsEvent);
 
   // handover
@@ -41,39 +72,71 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
 
   // إرسال الرسالة
   const activeChannel = useMemo(
-    () => sessions?.find(s => s.sessionId === selectedSession)?.channel,
+    () => sessions?.find((s) => s.sessionId === selectedSession)?.channel,
     [sessions, selectedSession]
   );
-  const { mutateAsync: sendMsg, isPending: sending } = useSendAgentMessage(merchantId, selectedSession, activeChannel);
+  const { mutateAsync: sendMsg } = useSendAgentMessage(
+    merchantId,
+    selectedSession,
+    activeChannel
+  );
 
   // التقييم
   const { mutateAsync: rate } = useRate();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedbackMsg, setFeedbackMsg] = useState<ChatMessage | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<UiChatMessage | null>(null);
 
-  const handleRate = async (msg: ChatMessage, rating: number) => {
+  const handleRate = async (msg: UiChatMessage, rating: number) => {
     if (!selectedSession || !msg._id) return;
-    if (rating === 0) { setFeedbackMsg(msg); setFeedbackOpen(true); }
-    else {
+    if (rating === 0) {
+      setFeedbackMsg(msg);
+      setFeedbackOpen(true);
+    } else {
       await rate({ sessionId: selectedSession, messageId: msg._id, rating });
-      setMessages(prev => prev.map(m => m._id === msg._id ? { ...m, rating: rating as 0 | 1 | -1 } : m));
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === msg._id ? { ...m, rating: rating as 0 | 1 | -1 } : m
+        )
+      );
     }
   };
 
   const handleSubmitFeedback = async (feedback: string) => {
     if (!feedbackMsg || !selectedSession || !feedbackMsg._id) return;
-    await rate({ sessionId: selectedSession, messageId: feedbackMsg._id, rating: 0, feedback });
-    setMessages(prev => prev.map(m => m._id === feedbackMsg._id ? { ...m, rating: 0, feedback } : m));
-    setFeedbackOpen(false); setFeedbackMsg(null);
+    await rate({
+      sessionId: selectedSession,
+      messageId: feedbackMsg._id,
+      rating: 0,
+      feedback,
+    });
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === feedbackMsg._id ? { ...m, rating: 0, feedback } : m
+      )
+    );
+    setFeedbackOpen(false);
+    setFeedbackMsg(null);
   };
 
-  const handleSend = async (payload: { text?: string; file?: File | null; audio?: Blob | null }) => {
+  const handleSend = async (payload: {
+    text?: string;
+    file?: File | null;
+    audio?: Blob | null;
+  }) => {
     const { text } = payload;
     if (!text || !selectedSession || !activeChannel) return;
     await sendMsg(text);
     // اختياري: إظهار الرسالة محليًا للتجاوب الفوري (optimistic)
     const now = new Date().toISOString();
-    setMessages(prev => [...prev, { sessionId: selectedSession, role: "agent", text, createdAt: now, timestamp: now }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        _id: undefined,
+        role: "agent",
+        text,
+        timestamp: now,
+      },
+    ]);
   };
 
   const loading = loadingSessions || loadingMessages;
@@ -100,7 +163,14 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
         />
 
         {loading && (
-          <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Box
+            sx={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <CircularProgress />
           </Box>
         )}
@@ -108,10 +178,18 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
         {!loading && (
           <>
             <Box flex={1} minHeight={0} sx={{ overflowY: "auto" }}>
-              <ChatWindow messages={messages} loading={loadingMessages} onRate={handleRate} />
+              <ChatWindow
+                messages={messages}
+                loading={loadingMessages}
+                onRate={handleRate}
+              />
             </Box>
 
-            <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} onSubmit={handleSubmitFeedback} />
+            <FeedbackDialog
+              open={feedbackOpen}
+              onClose={() => setFeedbackOpen(false)}
+              onSubmit={handleSubmitFeedback}
+            />
 
             {selectedSession && <ChatInput onSend={handleSend} />}
           </>

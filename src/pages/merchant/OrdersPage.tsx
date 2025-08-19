@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import EditIcon from "@mui/icons-material/Edit";
-import axiosInstance from "../../api/axios";
+import axiosInstance from "@/api/axios";
 import { format } from "date-fns";
 import type { Order } from "../../types/store";
 
@@ -37,8 +37,9 @@ export default function OrdersPage() {
   // جلب الطلبات
   useEffect(() => {
     setLoading(true);
-    axiosInstance.get("/orders")
-      .then(res => setOrders(res.data))
+    axiosInstance
+      .get("/orders")
+      .then((res) => setOrders(res.data))
       .finally(() => setLoading(false));
   }, []);
 
@@ -57,17 +58,21 @@ export default function OrdersPage() {
     if (!selectedOrder || !editStatus) return;
     setStatusUpdating(true);
     try {
-      await axiosInstance.patch(`/orders/${selectedOrder._id}/status`, { status: editStatus });
-      setOrders(prev =>
-  prev.map(o =>
-    o._id === selectedOrder._id
-      ? { ...o, status: editStatus as 'pending' | 'paid' | 'canceled' }
-      : o
-  )
-);
-setSelectedOrder({ ...selectedOrder, status: editStatus as 'pending' | 'paid' | 'canceled' });
-
-    } catch  {
+      await axiosInstance.patch(`/orders/${selectedOrder._id}/status`, {
+        status: editStatus,
+      });
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === selectedOrder._id
+            ? { ...o, status: editStatus as "pending" | "paid" | "canceled" }
+            : o
+        )
+      );
+      setSelectedOrder({
+        ...selectedOrder,
+        status: editStatus as "pending" | "paid" | "canceled",
+      });
+    } catch {
       // يمكنك إضافة تنبيه هنا
     }
     setStatusUpdating(false);
@@ -124,20 +129,23 @@ setSelectedOrder({ ...selectedOrder, status: editStatus as 'pending' | 'paid' | 
                   <TableCell>
                     {order._id.substring(0, 8).toUpperCase()}
                   </TableCell>
+                  <TableCell>{order.customer?.name}</TableCell>
+                  <TableCell>{order.customer?.phone}</TableCell>
                   <TableCell>
-                    {order.customer?.name}
-                  </TableCell>
-                  <TableCell>
-                    {order.customer?.phone}
-                  </TableCell>
-                  <TableCell>
-                    {order.products.reduce(
-                      (sum, i) => sum + (i.price * i.quantity), 0
-                    ).toFixed(2)} ر.س
+                    {order.products
+                      .reduce((sum, i) => sum + i.price * i.quantity, 0)
+                      .toFixed(2)}{" "}
+                    ر.س
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={order.status === "pending" ? "قيد الانتظار" : order.status === "paid" ? "مدفوع" : "ملغي"}
+                      label={
+                        order.status === "pending"
+                          ? "قيد الانتظار"
+                          : order.status === "paid"
+                          ? "مدفوع"
+                          : "ملغي"
+                      }
                       color={getStatusColor(order.status)}
                       sx={{ fontWeight: "bold" }}
                     />
@@ -160,10 +168,13 @@ setSelectedOrder({ ...selectedOrder, status: editStatus as 'pending' | 'paid' | 
       </Paper>
 
       {/* Dialog تفاصيل الطلب وتعديل الحالة */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          تفاصيل الطلب
-        </DialogTitle>
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>تفاصيل الطلب</DialogTitle>
         <DialogContent dividers>
           {selectedOrder && (
             <>
@@ -171,7 +182,8 @@ setSelectedOrder({ ...selectedOrder, status: editStatus as 'pending' | 'paid' | 
                 رقم الطلب: {selectedOrder._id.substring(0, 8).toUpperCase()}
               </Typography>
               <Typography mb={1}>
-                <b>العميل:</b> {selectedOrder.customer?.name} - {selectedOrder.customer?.phone}
+                <b>العميل:</b> {selectedOrder.customer?.name} -{" "}
+                {selectedOrder.customer?.phone}
               </Typography>
               <Typography mb={1}>
                 <b>العنوان:</b> {selectedOrder.customer?.address}
@@ -181,7 +193,7 @@ setSelectedOrder({ ...selectedOrder, status: editStatus as 'pending' | 'paid' | 
                 <Select
                   size="small"
                   value={editStatus}
-                  onChange={e => setEditStatus(e.target.value)}
+                  onChange={(e) => setEditStatus(e.target.value)}
                   sx={{ minWidth: 120, mx: 1 }}
                 >
                   <MenuItem value="pending">قيد الانتظار</MenuItem>
@@ -193,7 +205,9 @@ setSelectedOrder({ ...selectedOrder, status: editStatus as 'pending' | 'paid' | 
                   variant="outlined"
                   startIcon={<EditIcon />}
                   sx={{ mx: 1 }}
-                  disabled={editStatus === selectedOrder.status || statusUpdating}
+                  disabled={
+                    editStatus === selectedOrder.status || statusUpdating
+                  }
                   onClick={handleUpdateStatus}
                 >
                   حفظ التعديل
@@ -224,7 +238,9 @@ setSelectedOrder({ ...selectedOrder, status: editStatus as 'pending' | 'paid' | 
                         </TableCell>
                         <TableCell>{p.price} ر.س</TableCell>
                         <TableCell>{p.quantity}</TableCell>
-                        <TableCell>{(p.price * p.quantity).toFixed(2)} ر.س</TableCell>
+                        <TableCell>
+                          {(p.price * p.quantity).toFixed(2)} ر.س
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

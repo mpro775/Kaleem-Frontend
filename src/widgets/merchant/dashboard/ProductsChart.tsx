@@ -18,8 +18,7 @@ export default function ProductsChart({ products }: ProductsChartProps) {
     const isEmpty = !products || products.length === 0;
 
   return (
-    <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 3, mb: 3 }}>
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>أعلى المنتجات تفاعلاً</Typography>
+<Paper sx={{ p: { xs: 1.5, md: 3 }, borderRadius: 3, boxShadow: 3, mb: 3 }}>      <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>أعلى المنتجات تفاعلاً</Typography>
       {isEmpty ? (
         <Box sx={{ minHeight: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#aaa" }}>
           <InfoOutlinedIcon sx={{ fontSize: 44, mb: 1 }} />
@@ -27,7 +26,7 @@ export default function ProductsChart({ products }: ProductsChartProps) {
           <Typography variant="body2" sx={{ mt: 1 }}>ابدأ التفاعل مع العملاء أو أضف منتجات ليظهر لك التحليل هنا.</Typography>
         </Box>
       ) : (
-      <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height="100%">
         <BarChart data={products} layout="vertical" margin={{ top: 20, right: 30, left: 100, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
           <XAxis type="number" />

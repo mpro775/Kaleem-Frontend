@@ -1,7 +1,7 @@
 // src/pages/ChatPage.tsx
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "../api/axios";
+import axios from "@/api/axios";
 import WidgetChatUI from "@/widgets/merchant/widget-config/WidgetChatUI";
 
 export default function ChatPage() {
@@ -22,7 +22,5 @@ export default function ChatPage() {
   if (loading) return <div>...تحميل الإعدادات</div>;
   if (!settings) return <div>لم يتم العثور على الدردشة</div>;
 
-  return (
-    <WidgetChatUI settings={settings} />
-  );
+  return <WidgetChatUI settings={settings} />;
 }

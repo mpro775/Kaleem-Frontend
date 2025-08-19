@@ -11,7 +11,7 @@ import {
   Box,
   CircularProgress,
 } from "@mui/material";
-import axios from "../../api/axios";
+import axios from "@/api/axios";
 interface TelegramConnectDialogProps {
   open: boolean;
   onClose: (success: boolean) => void;
@@ -25,7 +25,8 @@ export default function TelegramConnectDialog({
   merchantId,
   initialEnabled = false,
   initialToken = "",
-}: TelegramConnectDialogProps) {  const [token, setToken] = useState(initialToken || "");
+}: TelegramConnectDialogProps) {
+  const [token, setToken] = useState(initialToken || "");
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(initialEnabled || false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export default function TelegramConnectDialog({
             fullWidth
             placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
             value={token}
-            onChange={e => setToken(e.target.value)}
+            onChange={(e) => setToken(e.target.value)}
             disabled={loading || connected}
           />
         </Box>

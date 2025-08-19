@@ -1,7 +1,15 @@
 // components/channel/WebchatConnectDialog.tsx
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Box,
+} from "@mui/material";
 import { useState } from "react";
-import axios from "../../api/axios";
+import axios from "@/api/axios";
 
 interface WebchatConnectDialogProps {
   open: boolean;
@@ -15,7 +23,8 @@ export default function WebchatConnectDialog({
   onClose,
   merchantId,
   initialEnabled = false,
-}: WebchatConnectDialogProps) {  const [loading, setLoading] = useState(false);
+}: WebchatConnectDialogProps) {
+  const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(initialEnabled || false);
 
   const handleEnable = async () => {
@@ -38,7 +47,9 @@ export default function WebchatConnectDialog({
     <Dialog open={open} onClose={() => onClose(false)}>
       <DialogTitle>تفعيل كليم (Web Chat)</DialogTitle>
       <DialogContent>
-        <Typography>لتفعيل الكليم، اضغط على زر التفعيل وسيتم توليد كود الويدجت للمتجر.</Typography>
+        <Typography>
+          لتفعيل الكليم، اضغط على زر التفعيل وسيتم توليد كود الويدجت للمتجر.
+        </Typography>
         {connected && (
           <Box mt={2}>
             <Typography color="success.main">✅ تم التفعيل بنجاح!</Typography>
@@ -50,7 +61,12 @@ export default function WebchatConnectDialog({
         <Button onClick={() => onClose(false)} disabled={loading}>
           إغلاق
         </Button>
-        <Button onClick={handleEnable} variant="contained" color="primary" disabled={loading || connected}>
+        <Button
+          onClick={handleEnable}
+          variant="contained"
+          color="primary"
+          disabled={loading || connected}
+        >
           تفعيل
         </Button>
       </DialogActions>

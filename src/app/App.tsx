@@ -4,7 +4,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
 import GlobalGradients from "./GlobalGradients";
-
+import InstructionsPage from "@/pages/merchant/InstructionsPage";
 
 // === Public ===
 const Home = lazy(() => import("@/pages/public/Home"));
@@ -16,43 +16,83 @@ const ChatPage = lazy(() => import("@/pages/ChatPage"));
 // Storefront (public)
 const StorePage = lazy(() => import("@/pages/store/StorePage"));
 const OrderDetailsPage = lazy(() => import("@/pages/store/OrderDetailsPage"));
-const ProductDetailsPage = lazy(() => import("@/pages/store/ProductDetailsPage"));
+const ProductDetailsPage = lazy(
+  () => import("@/pages/store/ProductDetailsPage")
+);
 const AboutPage = lazy(() => import("@/pages/store/AboutPage"));
 
 // Onboarding
 const OnboardingPage = lazy(() => import("@/pages/onboarding/OnboardingPage"));
-const SourceSelectPage = lazy(() => import("@/pages/onboarding/SourceSelectPage"));
+const SourceSelectPage = lazy(
+  () => import("@/pages/onboarding/SourceSelectPage")
+);
 const SyncPage = lazy(() => import("@/pages/onboarding/SyncPage"));
 
 // === Merchant (Dashboard) ===
-const MerchantLayout = lazy(() => import("@/widgets/layout/merchant/MerchantLayout"));
+const MerchantLayout = lazy(
+  () => import("@/widgets/layout/merchant/MerchantLayout")
+);
 const HomeDashboard = lazy(() => import("@/pages/merchant/Dashboard"));
-const ConversationsPage = lazy(() => import("@/pages/merchant/ConversationsPage"));
+const ConversationsPage = lazy(
+  () => import("@/pages/merchant/ConversationsPage")
+);
 const PromptStudio = lazy(() => import("@/pages/merchant/PromptStudio"));
 const KnowledgePage = lazy(() => import("@/pages/merchant/KnowledgePage"));
-const LeadsManagerPage = lazy(() => import("@/pages/merchant/LeadsManagerPage"));
+const LeadsManagerPage = lazy(
+  () => import("@/pages/merchant/LeadsManagerPage")
+);
 const SupportPage = lazy(() => import("@/pages/merchant/SupportPage"));
-const AccountSettingsPage = lazy(() => import("@/pages/merchant/AccountSettingsPage"));
-const ChatSettingsPage = lazy(() => import("@/pages/merchant/ChatSettingsPage"));
+const AccountSettingsPage = lazy(
+  () => import("@/pages/merchant/AccountSettingsPage")
+);
+const ChatSettingsPage = lazy(
+  () => import("@/pages/merchant/ChatSettingsPage")
+);
 const ProductsPage = lazy(() => import("@/pages/merchant/ProductsPage"));
 const CategoriesPage = lazy(() => import("@/pages/merchant/CategoriesPage"));
 const OrdersPage = lazy(() => import("@/pages/merchant/OrdersPage"));
-const BannersManagementPage = lazy(() => import("@/pages/merchant/BannersManagementPage"));
-const ChannelsIntegrationPage = lazy(() => import("@/pages/merchant/ChannelsIntegrationPage"));
-const MerchantSettingsPage = lazy(() => import("@/pages/merchant/MerchantSettingsPage"));
-const StorefrontThemePage = lazy(() => import("@/pages/merchant/StorefrontThemePage"));
+const BannersManagementPage = lazy(
+  () => import("@/pages/merchant/BannersManagementPage")
+);
+const ChannelsIntegrationPage = lazy(
+  () => import("@/pages/merchant/ChannelsIntegrationPage")
+);
+const MerchantSettingsPage = lazy(
+  () => import("@/pages/merchant/MerchantSettingsPage")
+);
+  const StorefrontThemePage = lazy(
+    () => import("@/pages/merchant/StorefrontThemePage")
+  );
+  const AnalyticsPage = lazy(() => import("@/pages/merchant/AnalyticsPage"));
+const AnalyticsPageAdmin = lazy(() => import("@/pages/admin/kleem/AnalyticsPage"));
 
 // === Admin (Kleem) ===
-const KleemAdminLayout = lazy(() => import("@/widgets/layout/merchant/MerchantLayout"));
+const KleemAdminLayout = lazy(
+  () => import("@/widgets/layout/merchant/MerchantLayout")
+);
 const KleemDashboard = lazy(() => import("@/pages/admin/kleem/Dashboard"));
 const PromptsPage = lazy(() => import("@/pages/admin/kleem/PromptsPage"));
-const KnowledgeBasePage = lazy(() => import("@/pages/admin/kleem/KnowledgeBasePage"));
-const ConversationsKleemPage = lazy(() => import("@/pages/admin/kleem/ConversationsPage"));
-const ConversationView = lazy(() => import("@/pages/admin/kleem/ConversationView"));
-const AnalyticsPage = lazy(() => import("@/pages/admin/kleem/AnalyticsPage"));
-const ChatAdminSettingsPage = lazy(() => import("@/pages/admin/kleem/ChatSettingsPage"));
-const KleemMissingResponsesPage = lazy(() => import("@/pages/admin/kleem/KleemMissingResponsesPage"));
-const KleemRatingsPage = lazy(() => import("@/pages/admin/kleem/KleemRatingsPage"));
+const KnowledgeBasePage = lazy(
+  () => import("@/pages/admin/kleem/KnowledgeBasePage")
+);
+const ConversationsKleemPage = lazy(
+  () => import("@/pages/admin/kleem/ConversationsPage")
+);
+const ConversationView = lazy(
+  () => import("@/pages/admin/kleem/ConversationView")
+);
+const MissingResponsesPage = lazy(
+  () => import("@/pages/merchant/MissingResponsesPage")
+);
+const ChatAdminSettingsPage = lazy(
+  () => import("@/pages/admin/kleem/ChatSettingsPage")
+);
+const KleemMissingResponsesPage = lazy(
+  () => import("@/pages/admin/kleem/KleemMissingResponsesPage")
+);
+const KleemRatingsPage = lazy(
+  () => import("@/pages/admin/kleem/KleemRatingsPage")
+);
 
 export default function App() {
   return (
@@ -69,14 +109,41 @@ export default function App() {
 
         {/* Storefront */}
         <Route path="/store/:slugOrId" element={<StorePage />} />
-        <Route path="/store/:slugOrId/order/:orderId" element={<OrderDetailsPage />} />
-        <Route path="/store/:slugOrId/product/:productId" element={<ProductDetailsPage />} />
+        <Route
+          path="/store/:slugOrId/order/:orderId"
+          element={<OrderDetailsPage />}
+        />
+        <Route
+          path="/store/:slugOrId/product/:productId"
+          element={<ProductDetailsPage />}
+        />
         <Route path="/store/:slugOrId/about" element={<AboutPage />} />
 
         {/* Onboarding */}
-        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
-        <Route path="/onboarding/source" element={<ProtectedRoute><SourceSelectPage /></ProtectedRoute>} />
-        <Route path="/onboarding/sync" element={<ProtectedRoute><SyncPage /></ProtectedRoute>} />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/source"
+          element={
+            <ProtectedRoute>
+              <SourceSelectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding/sync"
+          element={
+            <ProtectedRoute>
+              <SyncPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Merchant Dashboard */}
         <Route
@@ -102,6 +169,9 @@ export default function App() {
           <Route path="marchinfo" element={<MerchantSettingsPage />} />
           <Route path="storefront-theme" element={<StorefrontThemePage />} />
           <Route path="knowledge" element={<KnowledgePage />} />
+          <Route path="instructions" element={<InstructionsPage />} />
+          <Route path="missing-responses" element={<MissingResponsesPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
 
         {/* Admin (Kleem) */}
@@ -117,15 +187,24 @@ export default function App() {
           <Route path="prompts" element={<PromptsPage />} />
           <Route path="knowledge-base" element={<KnowledgeBasePage />} />
           <Route path="conversations" element={<ConversationsKleemPage />} />
-          <Route path="conversations/:sessionId" element={<ConversationView />} />
+          <Route
+            path="conversations/:sessionId"
+            element={<ConversationView />}
+          />
           <Route path="chat-settings" element={<ChatAdminSettingsPage />} />
-          <Route path="missing-responses" element={<KleemMissingResponsesPage />} />
+          <Route
+            path="missing-responses"
+            element={<KleemMissingResponsesPage />}
+          />
           <Route path="ratings" element={<KleemRatingsPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="analytics" element={<AnalyticsPageAdmin />} />
         </Route>
 
         {/* Optional legacy redirects */}
-        <Route path="/admin/*" element={<Navigate to="/admin/kleem" replace />} />
+        <Route
+          path="/admin/*"
+          element={<Navigate to="/admin/kleem" replace />}
+        />
       </Routes>
     </Suspense>
   );

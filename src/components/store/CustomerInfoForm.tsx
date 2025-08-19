@@ -1,9 +1,8 @@
 // src/components/CustomerInfoForm.tsx
 import React, { useState, useEffect } from "react";
 import { Box, TextField, Button, Stack } from "@mui/material";
-import axios from "../../api/axios";
+import axios from "@/api/axios";
 import type { CustomerInfo, Lead } from "../../types/store";
-
 
 export default function CustomerInfoForm({
   merchantId,
@@ -12,7 +11,11 @@ export default function CustomerInfoForm({
   merchantId: string;
   onComplete: (info: CustomerInfo) => void;
 }) {
-  const [form, setForm] = useState<CustomerInfo>({ name: "", phone: "", address: "" });
+  const [form, setForm] = useState<CustomerInfo>({
+    name: "",
+    phone: "",
+    address: "",
+  });
   const [loading, setLoading] = useState(false);
 
   // جلب البيانات إذا كانت محفوظة مسبقًا

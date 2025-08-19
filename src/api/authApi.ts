@@ -31,7 +31,12 @@ export const loginAPI = async (
   });
   return res.data;
 };
-
+export async function ensureMerchant(token: string) {
+  const { data } = await axios.post(`${API_BASE}/auth/ensure-merchant`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data; // { accessToken, user }
+}
 export const signUpAPI = async (
   name: string,
   email: string,

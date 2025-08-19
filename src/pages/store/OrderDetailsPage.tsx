@@ -1,7 +1,7 @@
 // src/pages/OrderDetailsPage.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "../../api/axios";
+import axiosInstance from "@/api/axios";
 import {
   Box,
   Typography,
@@ -31,34 +31,62 @@ import {
   Receipt,
 } from "@mui/icons-material";
 import type { Order, OrderProduct } from "../../types/store";
-import type { MerchantInfo } from "../../types/merchant";
+import type { MerchantInfo } from "@/features/mechant/merchant-settings/types"; // ⬅️ FIX: مسار النوع
 
 export default function OrderDetailsPage() {
   const theme = useTheme();
-  const { orderId } = useParams<{ orderId: string }>();
+  const navigate = useNavigate();
+
+  // ⬅️ FIX: استخرجنا slugOrId أيضًا
+  const { orderId, slugOrId } = useParams<{
+    orderId: string;
+    slugOrId: string;
+  }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
-
-  const navigate = useNavigate();
+  const isDemo = slugOrId === "demo"; // ⬅️ الآن يعمل
 
   useEffect(() => {
     setLoading(true);
+
+    if (isDemo && orderId?.startsWith("DEMO-")) {
+      // قراءة طلب الديمو من localStorage
+      const raw = localStorage.getItem("kleem:lastDemoOrder");
+      if (raw) {
+        try {
+          const o = JSON.parse(raw);
+          setOrder(o);
+        } catch {
+          console.error("Failed to parse demo order");
+        }
+      }
+      // جلب بيانات المتجر للعرض
+      axiosInstance
+        .get(`/store/${slugOrId}`)
+        .then((res) => setMerchant(res.data.merchant))
+        .catch(() => {});
+      setLoading(false);
+      return;
+    }
+
+    // طلب حقيقي من الباك
     axiosInstance
       .get(`/orders/${orderId}`)
-      .then((res) => {
-        setOrder(res.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [orderId]);
+      .then((res) => setOrder(res.data))
+      .finally(() => setLoading(false));
+  }, [orderId, isDemo, slugOrId]);
+
+  // عند الطلب الحقيقي: اجلب التاجر بحسب order.merchantId
   useEffect(() => {
-    if (order?.merchantId) {
+    if (!isDemo && order?.merchantId) {
       axiosInstance
         .get(`/merchants/${order.merchantId}`)
-        .then((res) => setMerchant(res.data));
+        .then((res) => setMerchant(res.data))
+        .catch(() => {});
     }
-  }, [order?.merchantId]);
+  }, [order?.merchantId, isDemo]);
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "completed":
@@ -371,33 +399,21 @@ export default function OrderDetailsPage() {
 
             <Box sx={{ mb: 2 }}>
               <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 1,
-                }}
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography>المجموع الفرعي:</Typography>
                 <Typography>{totalAmount.toFixed(2)} ر.س</Typography>
               </Box>
 
               <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 1,
-                }}
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography>رسوم الشحن:</Typography>
                 <Typography>0.00 ر.س</Typography>
               </Box>
 
               <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 1,
-                }}
+                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Typography>الخصم:</Typography>
                 <Typography>0.00 ر.س</Typography>
@@ -459,7 +475,6 @@ export default function OrderDetailsPage() {
                   time: "١١:٤٥ ص",
                   active: order.status !== "pending",
                 },
-            
                 {
                   status: "تم التوصيل",
                   date: "١٢ مارس ٢٠٢٣",
@@ -513,21 +528,11 @@ export default function OrderDetailsPage() {
           </Box>
 
           <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              mt: 5,
-              gap: 2,
-            }}
+            sx={{ display: "flex", justifyContent: "center", mt: 5, gap: 2 }}
           >
             <Button
               variant="contained"
-              sx={{
-                px: 4,
-                py: 1.5,
-                borderRadius: 2,
-                fontWeight: "bold",
-              }}
+              sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: "bold" }}
               onClick={() => navigate(`/store/${merchant?.slug || ""}`)}
             >
               متابعة التسوق
@@ -535,12 +540,7 @@ export default function OrderDetailsPage() {
 
             <Button
               variant="outlined"
-              sx={{
-                px: 4,
-                py: 1.5,
-                borderRadius: 2,
-                fontWeight: "bold",
-              }}
+              sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: "bold" }}
               onClick={() => window.print()}
             >
               طباعة الفاتورة
@@ -553,28 +553,12 @@ export default function OrderDetailsPage() {
 }
 
 const OrderDetailsSkeleton = () => (
-  <Box
-    sx={{
-      maxWidth: "md",
-      mx: "auto",
-      py: 4,
-      px: { xs: 2, sm: 3 },
-    }}
-  >
+  <Box sx={{ maxWidth: "md", mx: "auto", py: 4, px: { xs: 2, sm: 3 } }}>
     <Skeleton variant="rectangular" width={100} height={40} sx={{ mb: 3 }} />
-
     <Paper sx={{ borderRadius: 3, overflow: "hidden", mb: 4 }}>
       <Skeleton variant="rectangular" height={80} />
-
       <Box sx={{ p: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 4,
-            mb: 4,
-          }}
-        >
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4, mb: 4 }}>
           <Box sx={{ flex: 1, minWidth: 300 }}>
             <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
             <Skeleton
@@ -583,7 +567,6 @@ const OrderDetailsSkeleton = () => (
               sx={{ borderRadius: 2 }}
             />
           </Box>
-
           <Box sx={{ flex: 1, minWidth: 300 }}>
             <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
             <Skeleton
@@ -593,11 +576,8 @@ const OrderDetailsSkeleton = () => (
             />
           </Box>
         </Box>
-
         <Skeleton variant="rectangular" height={2} sx={{ mb: 3 }} />
-
         <Skeleton variant="text" width="40%" height={30} sx={{ mb: 3 }} />
-
         <Box
           sx={{
             backgroundColor: (theme) => theme.palette.grey[50],
@@ -628,15 +608,12 @@ const OrderDetailsSkeleton = () => (
             </Box>
           ))}
         </Box>
-
         <Skeleton
           variant="rectangular"
           height={180}
           sx={{ borderRadius: 3, mb: 4 }}
         />
-
         <Skeleton variant="text" width="40%" height={30} sx={{ mb: 3 }} />
-
         <Box
           sx={{
             display: "flex",
@@ -673,14 +650,7 @@ const OrderDetailsSkeleton = () => (
             </Box>
           ))}
         </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 2,
-          }}
-        >
+        <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
           <Skeleton
             variant="rectangular"
             width={150}

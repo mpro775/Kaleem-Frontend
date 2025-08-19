@@ -1,4 +1,3 @@
-// src/pages/Dashboard/MerchantSettingsPage.tsx
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -8,10 +7,15 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
-import { updateMerchantInfo, getMerchantInfo } from "@/api/merchantApi";
+import {
+  updateMerchantInfo,
+  getMerchantInfo,
+} from "@/features/mechant/merchant-settings/api";
 
 import { SECTIONS } from "@/features/mechant/merchant-settings/sections";
 import { filterUpdatableFields } from "@/features/mechant/merchant-settings/utils";
@@ -31,6 +35,9 @@ export default function MerchantSettingsPage() {
     severity: "success" | "error";
   }>({ open: false, message: "", severity: "success" });
 
+  const theme = useTheme();
+  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
+
   // جلب بيانات التاجر
   useEffect(() => {
     if (!merchantId) return;
@@ -49,7 +56,11 @@ export default function MerchantSettingsPage() {
       await updateMerchantInfo(merchantId, filterUpdatableFields(newData));
       setData(newData);
 
-      setSnackbar({ open: true, message: "تم الحفظ بنجاح", severity: "success" });
+      setSnackbar({
+        open: true,
+        message: "تم الحفظ بنجاح",
+        severity: "success",
+      });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "حدث خطأ أثناء الحفظ";
       setSnackbar({ open: true, message: msg, severity: "error" });
@@ -80,43 +91,81 @@ export default function MerchantSettingsPage() {
         overflow: "hidden",
       }}
     >
-      <Box display="flex" minHeight={500} dir="rtl">
-        {/* Tabs جانبية */}
-        <Tabs
-          orientation="vertical"
-          value={tab}
-          onChange={(_, v) => setTab(v)}
+      <Box
+        dir="rtl"
+        sx={{
+          display: "flex",
+          flexDirection: isMdUp ? "row" : "column",
+          minHeight: 500,
+        }}
+      >
+        {/* Tabs */}
+        <Box
           sx={{
-            borderLeft: 1,
-            borderColor: "divider",
-            minWidth: 180,
+            ...(isMdUp
+              ? {
+                  width: 240,
+                  flexShrink: 0,
+                  borderLeft: 1,
+                  borderColor: "divider",
+                }
+              : {
+                  width: "100%",
+                  borderBottom: 1,
+                  borderColor: "divider",
+                }),
             bgcolor: "#f9f9f9",
-            py: 3,
-            "& .MuiTab-root": {
-              alignItems: "flex-end",
-              fontWeight: "bold",
-              fontSize: 16,
-              color: "#757575",
-              mb: 1,
-              borderRadius: 2,
-              transition: "all 0.2s",
-              textAlign: "right",
-            },
-            "& .Mui-selected": {
-              color: "primary.main",
-              bgcolor: "#fff",
-              boxShadow: 2,
-            },
           }}
-          variant="scrollable"
         >
-          {SECTIONS.map((s, i) => (
-            <Tab key={i} label={s.label} />
-          ))}
-        </Tabs>
+          <Tabs
+            orientation={isMdUp ? "vertical" : "horizontal"}
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            variant="scrollable"
+            scrollButtons={isMdUp ? false : "auto"}
+            allowScrollButtonsMobile
+            sx={{
+              py: 2,
+              "& .MuiTab-root": {
+                alignItems: "flex-end",
+                fontWeight: "bold",
+                fontSize: 15,
+                color: "#757575",
+                mx: isMdUp ? 1 : 0.5,
+                my: isMdUp ? 0.5 : 0,
+                borderRadius: 2,
+                textAlign: "right",
+                minHeight: 40,
+              },
+              "& .Mui-selected": {
+                color: "primary.main",
+                bgcolor: "#fff",
+                boxShadow: isMdUp ? 2 : 0,
+              },
+              ...(isMdUp
+                ? {}
+                : {
+                    "& .MuiTabs-indicator": {
+                      height: 3,
+                    },
+                  }),
+            }}
+          >
+            {SECTIONS.map((s, i) => (
+              <Tab key={i} label={s.label} />
+            ))}
+          </Tabs>
+        </Box>
 
         {/* محتوى التاب */}
-        <Box flex={1} p={4} bgcolor="#fff">
+        <Box
+          sx={{
+            flex: 1,
+            p: { xs: 2, md: 4 },
+            bgcolor: "#fff",
+            minWidth: 0, // مهم لمنع انفجار المحتوى
+          }}
+        >
           {SECTIONS.map(({ component: SectionComp }, i) =>
             tab === i ? (
               <SectionComp

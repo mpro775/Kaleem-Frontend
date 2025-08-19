@@ -12,38 +12,44 @@ import {
   Container,
   Skeleton,
 } from "@mui/material";
-import { useCart, CartProvider } from "../context/CartContext";
-import axiosInstance from "../api/axios";
-import type { MerchantInfo, Storefront } from "../types/merchant";
-import type { Product } from "../types/Product";
-import type { Category } from "../types/Category";
-import { StoreNavbar } from "../components/store/StoreNavbar";
-import { StoreHeader } from "../components/store/StoreHeader";
-import { CategoryFilter } from "../components/store/CategoryFilter";
-import { ProductGrid } from "../components/store/ProductGrid";
+import { useCart, CartProvider } from "../../context/CartContext";
+import axiosInstance from "@/api/axios";
+import type { Storefront } from "../../types/merchant";
+
+import type { Product } from "../../types/Product";
+import type { Category } from "../../types/Category";
+import { StoreNavbar } from "../../components/store/StoreNavbar";
+import { StoreHeader } from "../../components/store/StoreHeader";
+import { CategoryFilter } from "../../components/store/CategoryFilter";
+import { ProductGrid } from "../../components/store/ProductGrid";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
-import { Footer } from "../components/store/Footer";
-import CartDialog from "../components/store/CartDialog";
+import { Footer } from "../../components/store/Footer";
+import CartDialog from "../../components/store/CartDialog";
 import "swiper/css";
 import "swiper/css/pagination";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import { Pagination, Autoplay } from "swiper/modules";
-import { getStorefrontInfo } from "../api/storefrontApi";
+import { getStorefrontInfo } from "../../api/storefrontApi";
+import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 
 async function fetchStore(slug: string) {
   const res = await axiosInstance.get<{
     merchant: MerchantInfo;
     products: Product[];
     categories: Category[];
-  }>(`/store/${slug}`);
+  }>(`/storefront/${slug}`);
   return res.data;
 }
-
+function resolveTargetSlug(slugOrId: string | undefined, isDemo: boolean) {
+  const DEMO = import.meta.env.VITE_DEMO_MERCHANT_SLUG_OR_ID;
+  if (isDemo && DEMO) return DEMO; // slug/ID ثابت للديمو إن وُجد
+  return slugOrId ?? "demo";
+}
 const StoreContent: React.FC = () => {
   const navigate = useNavigate();
   const { slugOrId } = useParams<{ slugOrId: string }>();
@@ -64,24 +70,37 @@ const StoreContent: React.FC = () => {
 
   const cartCount = items.reduce((total, item) => total + item.quantity, 0);
 
+  const isDemo =
+    slugOrId === "demo" || new URLSearchParams(location.search).has("demo");
+
   useEffect(() => {
-    if (!slugOrId) return;
+    // ⬅️ نوجّه طلب الجلب إلى هدف الديمو إن لزم
     setIsLoading(true);
-    fetchStore(slugOrId)
+    const target = resolveTargetSlug(slugOrId, isDemo);
+    fetchStore(target)
       .then(async (data) => {
         setMerchant(data.merchant);
         setProducts(data.products);
         setCategories(data.categories);
-        // جلب بيانات الواجهة
         const sf = await getStorefrontInfo(data.merchant._id);
         setStorefront(sf);
-        setIsLoading(false);
       })
-      .catch((err) => {
-        setError(err.message);
-        setIsLoading(false);
-      });
-  }, [slugOrId]);
+      .catch((err) => setError(err.message))
+      .finally(() => setIsLoading(false));
+  }, [slugOrId, isDemo]);
+
+  // ⬅️ NEW: منع الأرشفة وتعديل العنوان عند الديمو
+  useEffect(() => {
+    if (!isDemo) return;
+    document.title = "متجر تجريبي — Kleem";
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex,nofollow";
+    document.head.appendChild(meta);
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, [isDemo]);
 
   if (error)
     return (

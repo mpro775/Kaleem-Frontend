@@ -22,7 +22,7 @@ import {
   Button,
   Drawer,
 } from "@mui/material";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, type ReactNode } from "react";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
@@ -33,10 +33,18 @@ import SearchIcon from "@mui/icons-material/Search";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import MenuIcon from "@mui/icons-material/Menu";
 
-const Topbar = ({ onOpenSidebar, isMobile }: TopbarProps) => {
+const Topbar = ({
+  onOpenSidebar,
+  isMobile,
+  extra,
+}: {
+  onOpenSidebar: () => void;
+  isMobile: boolean;
+  extra?: ReactNode;
+}) => {
   const theme = useTheme();
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -129,6 +137,7 @@ const Topbar = ({ onOpenSidebar, isMobile }: TopbarProps) => {
             justifyContent: "flex-end",
           }}
         >
+          {extra}
           {/* البحث: Paper في الديسكتوب، أيقونة في الجوال */}
           <Paper
             component="form"

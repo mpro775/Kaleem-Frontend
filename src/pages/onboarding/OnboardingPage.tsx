@@ -1,7 +1,6 @@
 // src/pages/onboarding/OnboardingPage.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-  Box,
   Button,
   TextField,
   InputAdornment,
@@ -13,7 +12,6 @@ import {
   Alert,
   Typography,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import { MuiTelInput, matchIsValidTel } from "mui-tel-input";
 import { LuStore } from "react-icons/lu";
 import { MdOutlineBusiness } from "react-icons/md";
@@ -26,12 +24,11 @@ import {
   BUSINESS_TYPES,
   STORE_CATEGORIES,
 } from "@/features/onboarding/constants";
+import { ensureMerchant } from "@/api/authApi";
 
 export default function OnboardingPage() {
-  const theme = useTheme();
   const navigate = useNavigate();
-  const { user, token } = useAuth();
-
+  const { user, token, setAuth } = useAuth(); // ← جديد
   const [businessType, setBusinessType] = useState("store");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -40,6 +37,7 @@ export default function OnboardingPage() {
   const [customCategory, setCustomCategory] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ensuring, setEnsuring] = useState(false);
 
   const isPhoneValid = useMemo(() => !phone || matchIsValidTel(phone), [phone]);
   const canSubmit = useMemo(() => {
@@ -49,11 +47,74 @@ export default function OnboardingPage() {
     return true;
   }, [name, isPhoneValid, category, customCategory]);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      // 🔑 لا تشترط emailVerified هنا؛ السيرفر سيتحقق ويمنع إن لم يكن مفعّلًا
+      if (token && !user?.merchantId && !ensuring) {
+        try {
+          setEnsuring(true);
+          const res = await ensureMerchant(token);
+          if (!mounted) return;
+          // نتوقع payload: { accessToken, user }
+          if (res?.user?.merchantId) {
+            setAuth(res.user, res.accessToken, { silent: true });
+          } else {
+            // لو رجع 400 "Email not verified" وتم التقاطها أعلاه لن نصل هنا
+            // ولو رجع بدون merchantId لسبب ما، اعرض رسالة ودية
+            setError("نُجهّز متجرك الآن.. جرّب بعد لحظات قليلة.");
+          }
+        } catch (e) {
+          if (!mounted) return;
+          // لو البريد غير مفعل سيرجع السيرفر 400 — وجّه المستخدم لصفحة التفعيل
+          const msg = getAxiosMessage(e);
+          if (String(msg).includes("Email not verified")) {
+            setError("رجاءً فعِّل بريدك أولاً.");
+            // (اختياري) وجّه مباشرة:
+            // navigate("/verify-email", { replace: true });
+          } else {
+            setError(getAxiosMessage(e, "تعذر تهيئة المتجر الآن"));
+          }
+        } finally {
+          if (mounted) setEnsuring(false);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+    // ⚠️ اعتمد فقط على token و user?.merchantId (لا تعتمد على emailVerified هنا)
+  }, [token, user?.merchantId, setAuth]); // 👈 أزلنا user?.emailVerified
+  console.log('token', !!token, 'user', user)
   const handleContinue = async () => {
     try {
       setError(null);
       setSaving(true);
-      if (!user?.merchantId || !token) throw new Error("جلسة غير صالحة");
+
+      if (!token) {
+        setError("الجلسة منتهية، سجّل الدخول مجددًا");
+        return;
+      }
+      if (ensuring) {
+        setError("نُجهّز متجرك الآن.. انتظر اكتمال التهيئة ثم جرّب ثانية.");
+        return;
+      }
+      if (!user?.merchantId) {
+        // حاول مرة سريعة أخيرة قبل الإنهاء
+        try {
+          const res = await ensureMerchant(token);
+          if (res?.user?.merchantId) {
+            setAuth(res.user, res.accessToken, { silent: true });
+          }
+        } catch (e) {
+          setError(getAxiosMessage(e, "تعذر تهيئة المتجر الآن"));
+        }
+        if (!user?.merchantId) {
+          setError("نُجهّز متجرك الآن.. جرّب بعد ثوانٍ");
+          return;
+        }
+      }
+
       const payload = {
         name: name.trim(),
         phone: phone || undefined,
@@ -63,7 +124,7 @@ export default function OnboardingPage() {
         customCategory:
           category === "other" ? customCategory.trim() : undefined,
       };
-      await saveBasicInfo(user.merchantId, token, payload);
+      await saveBasicInfo(user.merchantId!, token, payload);
       navigate("/onboarding/source");
     } catch (e) {
       setError(getAxiosMessage(e, "حدث خطأ أثناء الحفظ"));
@@ -87,12 +148,12 @@ export default function OnboardingPage() {
         </Typography>
       }
     >
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+   {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {ensuring && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          نُجهّز متجرك الآن…
         </Alert>
       )}
-
       <TextField
         label="اسم النشاط"
         placeholder="ادخل اسم المتجر"
@@ -221,7 +282,7 @@ export default function OnboardingPage() {
         fullWidth
         variant="contained"
         onClick={handleContinue}
-        disabled={!canSubmit || saving}
+        disabled={!canSubmit || saving || ensuring} // 👈 عطّل أثناء ensuring
         sx={{
           fontWeight: "bold",
           py: 1.7,
@@ -232,7 +293,11 @@ export default function OnboardingPage() {
           mt: 1,
         }}
       >
-        {saving ? <CircularProgress size={22} color="inherit" /> : "متابعة"}
+        {saving || ensuring ? (
+          <CircularProgress size={22} color="inherit" />
+        ) : (
+          "متابعة"
+        )}
       </Button>
     </OnboardingLayout>
   );

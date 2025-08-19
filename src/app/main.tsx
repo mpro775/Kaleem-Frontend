@@ -12,6 +12,7 @@ import createCache from "@emotion/cache";
 import stylisRTLPlugin from "stylis-plugin-rtl";
 import { CacheProvider } from "@emotion/react";
 import * as Sentry from "@sentry/react";
+import AppProviders from "@/app/providers/QueryClientProvider";
 
 const cacheRtl = createCache({ key: "muirtl", stylisPlugins: [stylisRTLPlugin], prepend: true });
 
@@ -29,11 +30,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <CacheProvider value={cacheRtl}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <AuthProvider>
-            <CartProvider>
-              <App />
-            </CartProvider>
-          </AuthProvider>
+          <AppProviders>
+            <AuthProvider>
+              <CartProvider>
+                <App />
+              </CartProvider>
+            </AuthProvider>
+          </AppProviders>
           <ToastContainer position="top-center" rtl autoClose={3500} />
         </ThemeProvider>
       </CacheProvider>

@@ -58,7 +58,7 @@ const isEmpty =
           </Typography>
         </Box>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={channelUsage}

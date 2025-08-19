@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { statsBadReplies, statsTopQuestions } from "../../../api/adminKleem";
 
-export default function AnalyticsPage() {
+export default function AnalyticsPageAdmin() {
   const [tops, setTops] = useState<{ text: string; count: number }[]>([]);
   const [bads, setBads] = useState<
     { text: string; count: number; feedbacks: string[] }[]

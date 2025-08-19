@@ -9,7 +9,7 @@ import {
   Button,
   CircularProgress,
 } from "@mui/material";
-import axios from "../../api/axios";
+import axios from "@/api/axios";
 interface WhatsappChannelInfo {
   status: string;
   owner?: string;
@@ -31,11 +31,14 @@ export default function WhatsappQrConnect({
   onClose,
   merchantId,
   onSuccess,
-}: WhatsappQrConnectProps) {  const [qr, setQr] = useState<string>("");
+}: WhatsappQrConnectProps) {
+  const [qr, setQr] = useState<string>("");
   const [sessionStatus, setSessionStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
-  const [channelInfo, setChannelInfo] = useState<WhatsappChannelInfo | null>(null);
+  const [channelInfo, setChannelInfo] = useState<WhatsappChannelInfo | null>(
+    null
+  );
 
   const handleStartSession = async () => {
     setLoading(true);
@@ -44,10 +47,17 @@ export default function WhatsappQrConnect({
     setStarted(true);
 
     try {
-      const res = await axios.post(`/merchants/${merchantId}/whatsapp/start-session`, {});
+      const res = await axios.post(
+        `/merchants/${merchantId}/whatsapp/start-session`,
+        {}
+      );
       const data = res.data;
       if (data.qr) {
-        setQr(data.qr.startsWith("data:image/") ? data.qr : `data:image/png;base64,${data.qr}`);
+        setQr(
+          data.qr.startsWith("data:image/")
+            ? data.qr
+            : `data:image/png;base64,${data.qr}`
+        );
       } else {
         setQr("");
       }
@@ -180,7 +190,8 @@ export default function WhatsappQrConnect({
 
           {started && !isConnected && (
             <Typography variant="caption" color="warning.main" sx={{ mt: 1 }}>
-              إذا لم يظهر QR أو لم يتم الربط خلال دقيقة، أعد المحاولة أو تأكد من اتصال الخادم.
+              إذا لم يظهر QR أو لم يتم الربط خلال دقيقة، أعد المحاولة أو تأكد من
+              اتصال الخادم.
             </Typography>
           )}
         </Box>

@@ -13,8 +13,8 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import type { MerchantSectionProps } from "../../types/merchant";
-import type { WorkingHour } from "../../types/workingHour";
+import type { SectionComponentProps } from "@/features/mechant/merchant-settings/types";
+import type { WorkingHour } from "@/types/workingHour";
 
 const weekdays = [
   { key: "Sunday", label: "الأحد" },
@@ -30,13 +30,11 @@ export default function WorkingHoursForm({
   initialData,
   onSave,
   loading,
-}: MerchantSectionProps) {
-  // إبدأ فقط بالأيام التي لها دوام فعلي من البيانات
+}: SectionComponentProps) {
   const [hours, setHours] = useState<WorkingHour[]>(
     initialData.workingHours?.length ? initialData.workingHours : []
   );
 
-  // إضافة يوم جديد (فقط الأيام غير الموجودة)
   const availableDays = weekdays.filter(
     (w) => !hours.find((h) => h.day === w.key)
   );
@@ -64,64 +62,85 @@ export default function WorkingHoursForm({
   };
 
   return (
-    <Box>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>اليوم</TableCell>
-            <TableCell>من</TableCell>
-            <TableCell>إلى</TableCell>
-            <TableCell>حذف</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {hours.map((h, i) => (
-            <TableRow key={h.day}>
-              <TableCell>
-                <TextField
-                  select
-                  value={h.day}
-                  onChange={(e) => handleChange(i, "day", e.target.value)}
-                  fullWidth
-                >
-                  {weekdays.map((w) => (
-                    <MenuItem
-                      key={w.key}
-                      value={w.key}
-                      disabled={
-                        !!hours.find((hh, idx) => hh.day === w.key && idx !== i)
-                      }
-                    >
-                      {w.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </TableCell>
-              <TableCell>
-                <TextField
-                  type="time"
-                  value={h.openTime}
-                  onChange={(e) => handleChange(i, "openTime", e.target.value)}
-                  required
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  type="time"
-                  value={h.closeTime}
-                  onChange={(e) => handleChange(i, "closeTime", e.target.value)}
-                  required
-                />
-              </TableCell>
-              <TableCell>
-                <IconButton onClick={() => handleDelete(i)} color="error">
-                  <DeleteIcon />
-                </IconButton>
-              </TableCell>
+    <Box dir="rtl">
+      <Box sx={{ overflowX: "auto" }}>
+        <Table size="small" stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell>اليوم</TableCell>
+              <TableCell>من</TableCell>
+              <TableCell>إلى</TableCell>
+              <TableCell>حذف</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {hours.map((h, i) => (
+              <TableRow key={h.day}>
+                <TableCell sx={{ minWidth: 160 }}>
+                  <TextField
+                    select
+                    value={h.day}
+                    onChange={(e) => handleChange(i, "day", e.target.value)}
+                    fullWidth
+                    size="small"
+                  >
+                    {weekdays.map((w) => (
+                      <MenuItem
+                        key={w.key}
+                        value={w.key}
+                        disabled={
+                          !!hours.find(
+                            (hh, idx) => hh.day === w.key && idx !== i
+                          )
+                        }
+                      >
+                        {w.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </TableCell>
+                <TableCell sx={{ minWidth: 140 }}>
+                  <TextField
+                    type="time"
+                    value={h.openTime}
+                    onChange={(e) =>
+                      handleChange(i, "openTime", e.target.value)
+                    }
+                    required
+                    size="small"
+                    fullWidth
+                  />
+                </TableCell>
+                <TableCell sx={{ minWidth: 140 }}>
+                  <TextField
+                    type="time"
+                    value={h.closeTime}
+                    onChange={(e) =>
+                      handleChange(i, "closeTime", e.target.value)
+                    }
+                    required
+                    size="small"
+                    fullWidth
+                  />
+                </TableCell>
+                <TableCell sx={{ minWidth: 100 }}>
+                  <IconButton onClick={() => handleDelete(i)} color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+            {hours.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} sx={{ color: "text.secondary" }}>
+                  لم يتم إضافة أي أيام عمل بعد.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Box>
+
       <Button
         startIcon={<AddIcon />}
         variant="outlined"

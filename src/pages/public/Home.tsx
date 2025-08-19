@@ -1,23 +1,41 @@
 // src/pages/Home.tsx
 import { Box } from "@mui/material";
 import {
-  SEOHead, JsonLd,
-  Navbar, 
-  HeroSection, HowItWorks, FeaturesSection,
-  IntegrationsSection, StorefrontSection, DemoSection,
-  ComparisonSection, PricingSection, Testimonials,
-  FAQSection, FinalCtaSection, CookieConsent, Footer,
+  SEOHead,
+  JsonLd,
+  Navbar,
+  HeroSection,
+  HowItWorks,
+  FeaturesSection,
+  IntegrationsSection,
+  StorefrontSection,
+  DemoSection,
+  ComparisonSection,
+  PricingSection,
+  Testimonials,
+  FAQSection,
+  Footer,
 } from "@/widgets/landing";
 import { motion } from "framer-motion";
 
-const SectionReveal = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
+const SectionReveal = ({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+}) => (
   <motion.div
     initial="hidden"
     whileInView="visible"
     viewport={{ once: true, amount: 0.15 }}
     variants={{
       hidden: { opacity: 0, y: 28 },
-      visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut", delay } },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.6, ease: "easeOut", delay },
+      },
     }}
   >
     {children}
@@ -61,11 +79,7 @@ const Home = () => {
       <SectionReveal>
         <FAQSection />
       </SectionReveal>
-      <SectionReveal>
-        <FinalCtaSection />
-      </SectionReveal>
 
-      <CookieConsent />
       <Footer />
     </Box>
   );

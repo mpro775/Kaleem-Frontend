@@ -1,5 +1,5 @@
 import { Tabs, Tab } from '@mui/material';
-import type { ChannelType } from '../../types/chat';
+import type { ChannelType } from '@/types/chat';
 import type { FC } from 'react';
 
 const channels: Array<{ label: string; value: '' | ChannelType; color?: string }> = [

@@ -1,5 +1,9 @@
 import { useState } from "react";
-import type { MerchantInfo, SocialLinks } from "@/features/mechant/merchant-settings/types";
+import { Box, Button } from "@mui/material";
+import type {
+  MerchantInfo,
+  SocialLinks,
+} from "@/features/mechant/merchant-settings/types";
 import SocialLinksEditor from "@/features/mechant/merchant-settings/ui/SocialLinksEditor";
 
 interface Props {
@@ -8,8 +12,14 @@ interface Props {
   loading?: boolean;
 }
 
-export default function SocialLinksSection({ initialData, onSave, loading }: Props) {
-  const [links, setLinks] = useState<SocialLinks>(initialData.socialLinks || {});
+export default function SocialLinksSection({
+  initialData,
+  onSave,
+  loading,
+}: Props) {
+  const [links, setLinks] = useState<SocialLinks>(
+    initialData.socialLinks || {}
+  );
   const [changed, setChanged] = useState(false);
 
   const handleChange = (newLinks: SocialLinks) => {
@@ -23,24 +33,16 @@ export default function SocialLinksSection({ initialData, onSave, loading }: Pro
   };
 
   return (
-    <div>
+    <Box dir="rtl">
       <SocialLinksEditor socialLinks={links} onChange={handleChange} />
-      <button
+      <Button
         onClick={handleSave}
         disabled={loading || !changed}
-        style={{
-          marginTop: 24,
-          padding: "10px 30px",
-          fontWeight: "bold",
-          borderRadius: 6,
-          background: "#1976d2",
-          color: "#fff",
-          border: "none",
-          cursor: changed && !loading ? "pointer" : "not-allowed",
-        }}
+        variant="contained"
+        sx={{ mt: 3, fontWeight: "bold", minWidth: 160 }}
       >
         {loading ? "جاري الحفظ..." : "حفظ الروابط"}
-      </button>
-    </div>
+      </Button>
+    </Box>
   );
 }

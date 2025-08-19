@@ -12,8 +12,8 @@ import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { useState, useEffect } from "react";
-import { useAdminNotifications } from "../../hooks/useAdminNotifications";
-import type { AdminNotification } from "../../types/notification";
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import type { AdminNotification } from "@/types/notification";
 import { toast } from "react-toastify";
 
 const DashboardLayout = () => {
@@ -88,14 +88,17 @@ const DashboardLayout = () => {
           flexDirection: "column",
         }}
       >
-        <Topbar onOpenSidebar={() => setSidebarOpen(true)} isMobile={isMobile}>
-          {/* زر الإشعارات في التوب بار */}
-          <IconButton onClick={handleNotifClick} sx={{ ml: 2 }}>
-            <Badge badgeContent={notifications.length} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
-        </Topbar>
+        <Topbar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          isMobile={isMobile}
+          extra={
+            <IconButton onClick={handleNotifClick} sx={{ ml: 2 }}>
+              <Badge badgeContent={notifications.length} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+          }
+        ></Topbar>
 
         {/* نافذة الإشعارات */}
         <Popover

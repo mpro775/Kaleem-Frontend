@@ -14,19 +14,27 @@ export async function getOverview(period: Period) {
 }
 
 export async function getProductsCount() {
-  const { data } = await axios.get<{ total: number }>(`/analytics/products-count`);
+  const { data } = await axios.get<{ total: number }>(
+    `/analytics/products-count`
+  );
   return data.total ?? 0;
 }
 
-export async function getMessagesTimeline(period: Period, groupBy: GroupBy = "day") {
-  const { data } = await axios.get(`/analytics/messages-timeline`, {
-    params: { period, groupBy },
-  });
-  return data as Array<any>; // غيّر النوع حسب استجابتك
+export async function getMessagesTimeline(
+  period: Period,
+  groupBy: GroupBy = "day"
+) {
+  const { data } = await axios.get<import("@/types/analytics").TimelinePoint[]>(
+    `/analytics/messages-timeline`,
+    { params: { period, groupBy } }
+  );
+  return data;
 }
 
 export async function getChecklist(merchantId: string) {
-  const { data } = await axios.get<ChecklistGroup[]>(`/merchants/${merchantId}/checklist`);
+  const { data } = await axios.get<ChecklistGroup[]>(
+    `/merchants/${merchantId}/checklist`
+  );
   return data;
 }
 
