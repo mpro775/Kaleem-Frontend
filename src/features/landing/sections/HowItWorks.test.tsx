@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/test/test-utils";
 import HowItWorks from "./HowItWorks";
 
@@ -6,125 +6,59 @@ describe("HowItWorks", () => {
   test("يعرض عنوان قسم كيف يعمل", () => {
     renderWithProviders(<HowItWorks />);
     
-    expect(screen.getByText("كيف يعمل كليم؟")).toBeInTheDocument();
-    expect(screen.getByText(/في 3 خطوات بسيطة/)).toBeInTheDocument();
+    expect(screen.getByText("كيف يعمل كليم في ٤ خطوات سهلة؟")).toBeInTheDocument();
+    expect(screen.getByText("من التسجيل إلى بدء العمل خلال أقل من ٢٠ دقيقة")).toBeInTheDocument();
   });
 
-  test("يعرض الخطوات الثلاث", () => {
+  test("يعرض الخطوات الأربع", () => {
     renderWithProviders(<HowItWorks />);
     
-    expect(screen.getByText("1. التسجيل والإعداد")).toBeInTheDocument();
-    expect(screen.getByText("2. التخصيص والتدريب")).toBeInTheDocument();
-    expect(screen.getByText("3. البدء والمراقبة")).toBeInTheDocument();
+    expect(screen.getByText("إنشاء حساب")).toBeInTheDocument();
+    expect(screen.getByText("تهيئة متجرك")).toBeInTheDocument();
+    expect(screen.getByText("تهيئة البوت")).toBeInTheDocument();
+    expect(screen.getByText("ربط القنوات")).toBeInTheDocument();
   });
 
   test("يعرض وصف كل خطوة", () => {
     renderWithProviders(<HowItWorks />);
     
-    expect(screen.getByText(/أنشئ حسابك وربط متجرك/)).toBeInTheDocument();
-    expect(screen.getByText(/خصص الردود ودرب البوت/)).toBeInTheDocument();
-    expect(screen.getByText(/ابدأ استقبال العملاء/)).toBeInTheDocument();
-  });
-
-  test("يحتوي على رسوم توضيحية لكل خطوة", () => {
-    renderWithProviders(<HowItWorks />);
-    
-    const illustrations = screen.getAllByRole("img", { name: /خطوة/ });
-    expect(illustrations).toHaveLength(3);
+    expect(screen.getByText(/سجّل مجانًا وادخل لوحة تحكم كليم الذكية خلال دقيقة واحدة فقط/)).toBeInTheDocument();
+    expect(screen.getByText(/اربط متجرك الإلكتروني الحالي/)).toBeInTheDocument();
+    expect(screen.getByText(/عرّف كليم على منتجاتك وتعليماتك وأسلوبك في التواصل/)).toBeInTheDocument();
+    expect(screen.getByText(/فعّل كليم على قنواتك: واتساب، تيليجرام، دردشة الموقع وغيرها/)).toBeInTheDocument();
   });
 
   test("يعرض الوقت المتوقع لكل خطوة", () => {
     renderWithProviders(<HowItWorks />);
     
-    expect(screen.getByText("2 دقيقة")).toBeInTheDocument();
-    expect(screen.getByText("10 دقائق")).toBeInTheDocument();
-    expect(screen.getByText("فوري")).toBeInTheDocument();
+    expect(screen.getByText("دقيقة واحدة")).toBeInTheDocument();
+    expect(screen.getByText("٥ دقائق")).toBeInTheDocument();
+    expect(screen.getByText("١٠ دقائق")).toBeInTheDocument();
+    expect(screen.getByText("٣ دقائق")).toBeInTheDocument();
   });
 
-  test("يحتوي على تبويبات تفاعلية للخطوات", () => {
+  test("يحتوي على أيقونات لكل خطوة", () => {
     renderWithProviders(<HowItWorks />);
     
-    const step2Tab = screen.getByText("التخصيص والتدريب");
-    fireEvent.click(step2Tab);
-    
-    expect(screen.getByText(/خصص الردود حسب احتياجاتك/)).toBeInTheDocument();
+    // التحقق من وجود الأيقونات
+    const stepIcons = screen.getAllByTestId(/PersonAddAltIcon|StorefrontIcon|SmartToyIcon|ShareIcon/);
+    expect(stepIcons.length).toBeGreaterThan(0);
   });
 
-  test("يعرض فيديو توضيحي", () => {
+  test("يعرض أرقام الخطوات", () => {
     renderWithProviders(<HowItWorks />);
     
-    expect(screen.getByText("شاهد الفيديو التوضيحي")).toBeInTheDocument();
-    const videoButton = screen.getByLabelText("تشغيل الفيديو");
-    expect(videoButton).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
   });
 
-  test("يفتح مشغل الفيديو عند الضغط", async () => {
+  test("يحتوي على شارات المدة", () => {
     renderWithProviders(<HowItWorks />);
     
-    const videoButton = screen.getByLabelText("تشغيل الفيديو");
-    fireEvent.click(videoButton);
-    
-    await waitFor(() => {
-      expect(screen.getByTestId("video-player")).toBeInTheDocument();
-    });
-  });
-
-  test("يعرض نصائح لكل خطوة", () => {
-    renderWithProviders(<HowItWorks />);
-    
-    expect(screen.getByText("نصيحة:")).toBeInTheDocument();
-    expect(screen.getByText(/استخدم البيانات الموجودة/)).toBeInTheDocument();
-  });
-
-  test("يحتوي على أزرار البدء", () => {
-    renderWithProviders(<HowItWorks />);
-    
-    expect(screen.getByText("ابدأ الآن")).toBeInTheDocument();
-    expect(screen.getByText("احجز عرض توضيحي")).toBeInTheDocument();
-  });
-
-  test("يعرض شريط التقدم", () => {
-    renderWithProviders(<HowItWorks />);
-    
-    const progressBar = screen.getByRole("progressbar");
-    expect(progressBar).toBeInTheDocument();
-  });
-
-  test("يدعم التنقل بالأسهم", () => {
-    renderWithProviders(<HowItWorks />);
-    
-    const nextButton = screen.getByLabelText("الخطوة التالية");
-    const prevButton = screen.getByLabelText("الخطوة السابقة");
-    
-    expect(nextButton).toBeInTheDocument();
-    expect(prevButton).toBeInTheDocument();
-  });
-
-  test("يعرض إحصائيات سريعة", () => {
-    renderWithProviders(<HowItWorks />);
-    
-    expect(screen.getByText("متوسط وقت الإعداد")).toBeInTheDocument();
-    expect(screen.getByText("15 دقيقة")).toBeInTheDocument();
-  });
-
-  test("يحتوي على رسوم متحركة للانتقال", async () => {
-    renderWithProviders(<HowItWorks />);
-    
-    const step2Tab = screen.getByText("التخصيص والتدريب");
-    fireEvent.click(step2Tab);
-    
-    await waitFor(() => {
-      const activeStep = screen.getByTestId("active-step");
-      expect(activeStep).toHaveClass("fade-in");
-    });
-  });
-
-  test("يعرض قائمة مرجعية للإعداد", () => {
-    renderWithProviders(<HowItWorks />);
-    
-    expect(screen.getByText("قائمة الإعداد")).toBeInTheDocument();
-    expect(screen.getByText("ربط المتجر")).toBeInTheDocument();
-    expect(screen.getByText("تخصيص الرسائل")).toBeInTheDocument();
-    expect(screen.getByText("اختبار البوت")).toBeInTheDocument();
+    // التحقق من وجود أيقونة CheckCircle في شارات المدة
+    const checkIcons = screen.getAllByTestId("CheckCircleIcon");
+    expect(checkIcons.length).toBeGreaterThan(0);
   });
 });

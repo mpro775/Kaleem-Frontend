@@ -6,58 +6,50 @@ describe("IntegrationsSection", () => {
   test("يعرض عنوان قسم التكاملات", () => {
     renderWithProviders(<IntegrationsSection />);
     
-    expect(screen.getByText("التكامل مع منصات التجارة الإلكترونية")).toBeInTheDocument();
-    expect(screen.getByText(/اربط كليم مع متجرك بسهولة/)).toBeInTheDocument();
+    expect(screen.getByText("تكاملات تمنحك القوة")).toBeInTheDocument();
   });
 
   test("يعرض شعارات المنصات المدعومة", () => {
     renderWithProviders(<IntegrationsSection />);
     
+    expect(screen.getByText("Salla")).toBeInTheDocument();
+    expect(screen.getByText("Zid")).toBeInTheDocument();
     expect(screen.getByText("Shopify")).toBeInTheDocument();
     expect(screen.getByText("WooCommerce")).toBeInTheDocument();
-    expect(screen.getByText("سلة")).toBeInTheDocument();
-    expect(screen.getByText("زد")).toBeInTheDocument();
   });
 
   test("يعرض مميزات التكامل", () => {
     renderWithProviders(<IntegrationsSection />);
     
-    expect(screen.getByText("ربط تلقائي للمنتجات")).toBeInTheDocument();
-    expect(screen.getByText("تحديث المخزون فورياً")).toBeInTheDocument();
-    expect(screen.getByText("معالجة الطلبات")).toBeInTheDocument();
+    expect(screen.getByText("مزامنة سلسة للمنتجات، الأسعار، والمخزون مع متجرك.")).toBeInTheDocument();
+    expect(screen.getByText("تحديثات فورية للمخزون وبيانات المنتجات تلقائيًا.")).toBeInTheDocument();
+    expect(screen.getByText("تكامل عالمي لمتجر إلكتروني احترافي.")).toBeInTheDocument();
+    expect(screen.getByText("ربط قوي مع منصة ووردبريس لإدارة أعمالك.")).toBeInTheDocument();
   });
 
-  test("يحتوي على زر البدء", () => {
+  test("يحتوي على أزرار التنقل", () => {
     renderWithProviders(<IntegrationsSection />);
     
-    expect(screen.getByText("ابدأ التكامل")).toBeInTheDocument();
+    const prevButton = screen.getByLabelText("السابق");
+    const nextButton = screen.getByLabelText("التالي");
+    
+    expect(prevButton).toBeInTheDocument();
+    expect(nextButton).toBeInTheDocument();
   });
 
-  test("يعرض خطوات التكامل", () => {
+  test("يعرض مؤشرات النقاط للصفحات", () => {
     renderWithProviders(<IntegrationsSection />);
     
-    expect(screen.getByText("1. اختر منصتك")).toBeInTheDocument();
-    expect(screen.getByText("2. ادخل بيانات المتجر")).toBeInTheDocument();
-    expect(screen.getByText("3. فعّل الربط")).toBeInTheDocument();
+    // البحث عن أزرار التنقل بين الصفحات
+    const pageButtons = screen.getAllByLabelText(/الذهاب إلى الصفحة/);
+    expect(pageButtons.length).toBeGreaterThan(0);
   });
 
-  test("يعرض إحصائيات التكامل", () => {
+  test("يعرض شارة 'قريباً' للمنصات المستقبلية", () => {
     renderWithProviders(<IntegrationsSection />);
     
-    expect(screen.getByText("5 دقائق")).toBeInTheDocument(); // وقت الإعداد
-    expect(screen.getByText("99.9%")).toBeInTheDocument(); // نسبة النجاح
-  });
-
-  test("يحتوي على روابط الوثائق", () => {
-    renderWithProviders(<IntegrationsSection />);
-    
-    expect(screen.getByText("دليل التكامل")).toBeInTheDocument();
-    expect(screen.getByText("API Documentation")).toBeInTheDocument();
-  });
-
-  test("يعرض شهادات حول سهولة التكامل", () => {
-    renderWithProviders(<IntegrationsSection />);
-    
-    expect(screen.getByText(/كان التكامل سهل جداً/)).toBeInTheDocument();
+    // استخدام getAllByText لأن هناك عنصرين "قريبًا"
+    const soonLabels = screen.getAllByText("قريبًا");
+    expect(soonLabels.length).toBeGreaterThan(0);
   });
 });

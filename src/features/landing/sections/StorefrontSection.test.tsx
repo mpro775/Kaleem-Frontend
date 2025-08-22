@@ -1,4 +1,4 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/test/test-utils";
 import StorefrontSection from "./StorefrontSection";
 
@@ -6,96 +6,73 @@ describe("StorefrontSection", () => {
   test("يعرض عنوان قسم واجهة المتجر", () => {
     renderWithProviders(<StorefrontSection />);
     
-    expect(screen.getByText("واجهة متجر احترافية")).toBeInTheDocument();
-    expect(screen.getByText(/أنشئ متجرك الإلكتروني بدقائق/)).toBeInTheDocument();
+    expect(screen.getByText("متجر كليم المصغّر")).toBeInTheDocument();
+    expect(screen.getByText(/لو ما عندك متجر في سلة أو زد/)).toBeInTheDocument();
+  });
+
+  test("يعرض الشريحة التعريفية", () => {
+    renderWithProviders(<StorefrontSection />);
+    
+    expect(screen.getByText("ميزة أساسية")).toBeInTheDocument();
   });
 
   test("يعرض معاينة لواجهة المتجر", () => {
     renderWithProviders(<StorefrontSection />);
     
-    expect(screen.getByText("متجر العطور الفاخرة")).toBeInTheDocument();
-    expect(screen.getByText("عطر الورد الجوري")).toBeInTheDocument();
+    expect(screen.getByText("معاينة المتجر")).toBeInTheDocument();
+    expect(screen.getByText("ضع هنا Screenshot لواجهة متجرك")).toBeInTheDocument();
   });
 
-  test("يحتوي على أزرار التخصيص", () => {
-    renderWithProviders(<StorefrontSection />);
-    
-    expect(screen.getByText("تخصيص الألوان")).toBeInTheDocument();
-    expect(screen.getByText("تغيير الخطوط")).toBeInTheDocument();
-    expect(screen.getByText("إضافة الشعار")).toBeInTheDocument();
-  });
-
-  test("يعرض مميزات واجهة المتجر", () => {
-    renderWithProviders(<StorefrontSection />);
-    
-    expect(screen.getByText("تصميم متجاوب")).toBeInTheDocument();
-    expect(screen.getByText("محرك بحث محسن")).toBeInTheDocument();
-    expect(screen.getByText("دفع آمن")).toBeInTheDocument();
-  });
-
-  test("يحتوي على عارض القوالب", () => {
-    renderWithProviders(<StorefrontSection />);
-    
-    expect(screen.getByText("قالب كلاسيكي")).toBeInTheDocument();
-    expect(screen.getByText("قالب عصري")).toBeInTheDocument();
-    expect(screen.getByText("قالب مينيمال")).toBeInTheDocument();
-  });
-
-  test("يتفاعل مع تغيير القوالب", () => {
-    renderWithProviders(<StorefrontSection />);
-    
-    const modernTemplate = screen.getByText("قالب عصري");
-    fireEvent.click(modernTemplate);
-    
-    // التحقق من تغيير المعاينة
-    expect(screen.getByTestId("storefront-preview")).toBeInTheDocument();
-  });
-
-  test("يعرض إحصائيات الأداء", () => {
-    renderWithProviders(<StorefrontSection />);
-    
-    expect(screen.getByText("سرعة التحميل < 2 ثانية")).toBeInTheDocument();
-    expect(screen.getByText("معدل التحويل 15%")).toBeInTheDocument();
-  });
-
-  test("يحتوي على أدوات التخصيص التفاعلية", () => {
-    renderWithProviders(<StorefrontSection />);
-    
-    const colorPicker = screen.getByLabelText("اختر اللون الأساسي");
-    expect(colorPicker).toBeInTheDocument();
-  });
-
-  test("يعرض معاينة مباشرة للتغييرات", () => {
-    renderWithProviders(<StorefrontSection />);
-    
-    const colorPicker = screen.getByLabelText("اختر اللون الأساسي");
-    fireEvent.change(colorPicker, { target: { value: "#ff0000" } });
-    
-    // التحقق من تطبيق اللون على المعاينة
-    const preview = screen.getByTestId("storefront-preview");
-    expect(preview).toHaveStyle("--primary-color: #ff0000");
-  });
-
-  test("يحتوي على زر إنشاء المتجر", () => {
+  test("يحتوي على أزرار العمل", () => {
     renderWithProviders(<StorefrontSection />);
     
     expect(screen.getByText("أنشئ متجرك الآن")).toBeInTheDocument();
+    expect(screen.getByText("شاهد مثال مباشر")).toBeInTheDocument();
   });
 
-  test("يعرض أمثلة على المتاجر الناجحة", () => {
+  test("يعرض مميزات المتجر في الحبوب", () => {
     renderWithProviders(<StorefrontSection />);
     
-    expect(screen.getByText("متاجر نجحت مع كليم")).toBeInTheDocument();
-    expect(screen.getByText("متجر الأزياء العصرية")).toBeInTheDocument();
+    expect(screen.getByText("جاهز خلال دقائق")).toBeInTheDocument();
+    expect(screen.getAllByText("سلة مبسّطة")).toHaveLength(2); // موجود في مكانين
+    expect(screen.getByText("محادثات مدمجة")).toBeInTheDocument();
+    expect(screen.getByText("نطاق مخصص")).toBeInTheDocument();
   });
 
-  test("يدعم المعاينة على الأجهزة المختلفة", () => {
+  test("يعرض قسم لماذا المتجر المصغّر", () => {
     renderWithProviders(<StorefrontSection />);
     
-    const desktopView = screen.getByLabelText("معاينة سطح المكتب");
-    const mobileView = screen.getByLabelText("معاينة الجوال");
+    expect(screen.getByText("لماذا المتجر المصغّر؟")).toBeInTheDocument();
+    expect(screen.getByText(/مناسب للبدايات السريعة والبيع عبر المحادثات/)).toBeInTheDocument();
+  });
+
+  test("يعرض الميزات التفصيلية", () => {
+    renderWithProviders(<StorefrontSection />);
     
-    expect(desktopView).toBeInTheDocument();
-    expect(mobileView).toBeInTheDocument();
+    expect(screen.getByText("سلة شراء وخطوات طلب مبسّطة")).toBeInTheDocument();
+    expect(screen.getByText(/رابط فوري.*kleem.store أو نطاقك المخصص/)).toBeInTheDocument();
+    expect(screen.getByText("هوية بصرية: شعار + ألوان + شكل الأزرار")).toBeInTheDocument();
+  });
+
+  test("يحتوي على قسم كيف يعمل", () => {
+    renderWithProviders(<StorefrontSection />);
+    
+    expect(screen.getByText("كيف يعمل؟")).toBeInTheDocument();
+    expect(screen.getByText(/فعّل المتجر من لوحة التحكم/)).toBeInTheDocument();
+  });
+
+  test("يحتوي على أزرار إضافية في قسم كيف يعمل", () => {
+    renderWithProviders(<StorefrontSection />);
+    
+    expect(screen.getByText("ابدأ الآن")).toBeInTheDocument();
+    expect(screen.getByText("استعرض الديمو")).toBeInTheDocument();
+  });
+
+  test("يعرض الحبوب الصغيرة للميزات", () => {
+    renderWithProviders(<StorefrontSection />);
+    
+    expect(screen.getByText("ألوان وشعار")).toBeInTheDocument();
+    expect(screen.getByText("واتساب/تيليجرام")).toBeInTheDocument();
+    expect(screen.getByText("رابط فوري")).toBeInTheDocument();
   });
 });

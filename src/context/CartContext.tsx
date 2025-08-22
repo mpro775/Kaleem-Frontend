@@ -18,11 +18,20 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 const [items, setItems] = useState<CartItem[]>(() => {
-  const saved = localStorage.getItem("cart");
-  return saved ? JSON.parse(saved) : [];
+  try {
+    const saved = localStorage.getItem("cart");
+    return saved ? JSON.parse(saved) : [];
+  } catch (error) {
+    console.warn("Failed to load cart from localStorage:", error);
+    return [];
+  }
 });
 useEffect(() => {
-  localStorage.setItem("cart", JSON.stringify(items));
+  try {
+    localStorage.setItem("cart", JSON.stringify(items));
+  } catch (error) {
+    console.warn("Failed to save cart to localStorage:", error);
+  }
 }, [items]);
 const addItem = (p: ProductResponse, quantity: number = 1) => {
     setItems(prev => {

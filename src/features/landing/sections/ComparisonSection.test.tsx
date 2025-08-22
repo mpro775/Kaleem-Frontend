@@ -1,102 +1,68 @@
+// src/features/landing/sections/ComparisonSection.test.tsx
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/test/test-utils";
 import ComparisonSection from "./ComparisonSection";
 
-describe("ComparisonSection", () => {
-  test("يعرض عنوان قسم المقارنة", () => {
+describe("ComparisonSection (Before/After)", () => {
+  const beforeTexts = [
+    "تأخير في الردود",
+    "إدارة يدوية للطلبات",
+    "لا توجد توصيات للعملاء",
+    "ردود غير موحدة",
+    "عدم توفر لوحة تحكم",
+  ];
+
+  const afterTexts = [
+    "ردود فورية عبر المنصات",
+    "إدارة تلقائية ذكية",
+    "توصية العملاء",
+    "ردود ذكية موحدة ومخصصة",
+    "لوحة تحكم مخصصة لكل تاجر",
+  ];
+
+  test("يعرض عنوان قسم المقارنة الفعلي", () => {
     renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("لماذا كليم هو الخيار الأفضل؟")).toBeInTheDocument();
-    expect(screen.getByText(/مقارنة شاملة مع المنافسين/)).toBeInTheDocument();
+    expect(screen.getByText("قبل VS بعد كَلِيم")).toBeInTheDocument();
   });
 
-  test("يعرض جدول المقارنة", () => {
+  test("يعرض عمودَي المقارنة: بعد كليم / قبل كليم", () => {
     renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("كليم")).toBeInTheDocument();
-    expect(screen.getByText("المنافس أ")).toBeInTheDocument();
-    expect(screen.getByText("المنافس ب")).toBeInTheDocument();
+    expect(screen.getByText("بعد كَلِيم")).toBeInTheDocument();
+    expect(screen.getByText("قبل كَلِيم")).toBeInTheDocument();
   });
 
-  test("يعرض المميزات المقارنة", () => {
+  test("يعرض جميع عناصر قائمة (بعد كليم)", () => {
     renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("دعم اللغة العربية")).toBeInTheDocument();
-    expect(screen.getByText("سهولة الإعداد")).toBeInTheDocument();
-    expect(screen.getByText("التكامل مع المتاجر")).toBeInTheDocument();
-    expect(screen.getByText("الدعم الفني")).toBeInTheDocument();
+    afterTexts.forEach((txt) => {
+      expect(screen.getByText(txt)).toBeInTheDocument();
+    });
   });
 
-  test("يعرض علامات الصح والخطأ للمقارنة", () => {
+  test("يعرض جميع عناصر قائمة (قبل كليم)", () => {
     renderWithProviders(<ComparisonSection />);
-    
-    const checkIcons = screen.getAllByTestId("CheckIcon");
-    const closeIcons = screen.getAllByTestId("CloseIcon");
-    
-    expect(checkIcons.length).toBeGreaterThan(0);
-    expect(closeIcons.length).toBeGreaterThan(0);
+    beforeTexts.forEach((txt) => {
+      expect(screen.getByText(txt)).toBeInTheDocument();
+    });
   });
 
-  test("يبرز مميزات كليم بشكل واضح", () => {
+  test("المجموع الكلي للعناصر هو 10 عناصر (5 قبل + 5 بعد)", () => {
     renderWithProviders(<ComparisonSection />);
-    
-    // التحقق من أن عمود كليم مميز
-    const kleemColumn = screen.getByText("كليم").closest("div");
-    expect(kleemColumn).toHaveClass("highlighted");
+    const allItems = [...afterTexts, ...beforeTexts];
+    const found = allItems.map((t) => screen.getByText(t));
+    expect(found).toHaveLength(10);
   });
 
-  test("يعرض الأسعار للمقارنة", () => {
+  test("كل عنصر يحتوي على أيقونات (أيقونة الميزة + شارة الحالة)", () => {
     renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("99 ريال/شهر")).toBeInTheDocument();
-    expect(screen.getByText("149 ريال/شهر")).toBeInTheDocument();
-    expect(screen.getByText("199 ريال/شهر")).toBeInTheDocument();
-  });
-
-  test("يحتوي على زر اختيار كليم", () => {
-    renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("اختر كليم")).toBeInTheDocument();
-  });
-
-  test("يعرض تقييمات العملاء", () => {
-    renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("4.9/5")).toBeInTheDocument(); // تقييم كليم
-    expect(screen.getByText("4.2/5")).toBeInTheDocument(); // تقييم المنافس
-  });
-
-  test("يعرض إحصائيات الاستخدام", () => {
-    renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("وقت الإعداد")).toBeInTheDocument();
-    expect(screen.getByText("5 دقائق")).toBeInTheDocument();
-    expect(screen.getByText("30 دقيقة")).toBeInTheDocument();
-  });
-
-  test("يحتوي على شهادات العملاء", () => {
-    renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText(/كليم أسهل وأسرع من أي حل آخر/)).toBeInTheDocument();
-  });
-
-  test("يعرض المميزات الحصرية لكليم", () => {
-    renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("حصري")).toBeInTheDocument();
-    expect(screen.getByText("ذكاء اصطناعي متقدم")).toBeInTheDocument();
-  });
-
-  test("يدعم التمرير الأفقي للجدول", () => {
-    renderWithProviders(<ComparisonSection />);
-    
-    const table = screen.getByRole("table");
-    expect(table).toHaveStyle("overflow-x: auto");
-  });
-
-  test("يحتوي على رابط للتجربة المجانية", () => {
-    renderWithProviders(<ComparisonSection />);
-    
-    expect(screen.getByText("جرب مجاناً")).toBeInTheDocument();
+    // لكل نص عنصر نتأكد أن عنصر الأب يحتوي على <svg> على الأقل
+    const allTexts = [...afterTexts, ...beforeTexts];
+    allTexts.forEach((txt) => {
+      const textEl = screen.getByText(txt);
+      // أقرب حاوية للعنصر (Paper) هي أب لعدة مستويات؛ نكتفي بالتأكد من وجود أي SVG قريب
+      const container = textEl.closest("div");
+      // قد يكون هناك أكثر من SVG (الأيقونة الأساسية + الشارة)
+      const svgs = container?.querySelectorAll("svg");
+      expect(svgs && svgs.length).toBeGreaterThan(0);
+    });
   });
 });

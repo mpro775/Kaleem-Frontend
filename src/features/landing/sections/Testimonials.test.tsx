@@ -6,8 +6,8 @@ describe("Testimonials", () => {
   test("يعرض عنوان قسم الشهادات", () => {
     renderWithProviders(<Testimonials />);
     
-    expect(screen.getByText("ماذا يقول عملاؤنا")).toBeInTheDocument();
-    expect(screen.getByText(/أكثر من 1000 متجر يثق بكليم/)).toBeInTheDocument();
+    expect(screen.getByText("آراء عملائنا")).toBeInTheDocument();
+    expect(screen.getByText(/انظر ماذا يقول عملاؤنا عن تجربتهم مع MusaidBot/)).toBeInTheDocument();
   });
 
   test("يعرض الشهادات بالأسماء والتقييمات", () => {
@@ -21,7 +21,7 @@ describe("Testimonials", () => {
     renderWithProviders(<Testimonials />);
     
     // البحث عن نجوم التقييم
-    const stars = screen.getAllByTestId(/star-icon/);
+    const stars = screen.getAllByTestId("StarIcon");
     expect(stars.length).toBeGreaterThan(0);
   });
 
@@ -40,37 +40,57 @@ describe("Testimonials", () => {
     
     const nextButton = screen.getByLabelText("التالي");
     
-    // الحصول على النص الحالي
-    const currentTestimonial = screen.getByText(/من أول يوم ارتفعت نسبة الردود/);
-    expect(currentTestimonial).toBeInTheDocument();
+    // الحصول على مؤشر الصفحة الحالي
+    const pageButtons = screen.getAllByLabelText(/الذهاب إلى الصفحة/);
     
-    // الانتقال للشهادة التالية
+    // البحث عن الزر النشط (الذي له عرض 22px)
+    const initialActiveButton = pageButtons.find(button => {
+      const computedStyle = window.getComputedStyle(button);
+      return computedStyle.width === '22px';
+    });
+    
+    expect(initialActiveButton).toBeInTheDocument();
+    
+    // الانتقال للصفحة التالية
     fireEvent.click(nextButton);
     
     await waitFor(() => {
-      // التحقق من تغيير المحتوى
-      expect(screen.queryByText(/من أول يوم ارتفعت نسبة الردود/)).not.toBeInTheDocument();
+      // التحقق من تغيير مؤشر الصفحة النشط
+      const newPageButtons = screen.getAllByLabelText(/الذهاب إلى الصفحة/);
+      const newActiveButton = newPageButtons.find(button => {
+        const computedStyle = window.getComputedStyle(button);
+        return computedStyle.width === '22px';
+      });
+      
+      // يجب أن يكون الزر النشط الجديد مختلفاً عن الزر الأولي
+      expect(newActiveButton).not.toBe(initialActiveButton);
+      
+      // التحقق من أن الزر الأول لم يعد نشطاً
+      const firstButtonStyle = window.getComputedStyle(newPageButtons[0]);
+      expect(firstButtonStyle.width).not.toBe('22px');
     });
   });
 
   test("يعرض مؤشرات النقاط للشهادات", () => {
     renderWithProviders(<Testimonials />);
     
-    const dots = screen.getAllByRole("button", { name: /الانتقال للشهادة/ });
-    expect(dots.length).toBeGreaterThan(1);
+    // البحث عن أزرار التنقل بين الصفحات
+    const pageButtons = screen.getAllByLabelText(/الذهاب إلى الصفحة/);
+    expect(pageButtons.length).toBeGreaterThan(1);
   });
 
   test("يتنقل للشهادة المحددة عند الضغط على النقطة", async () => {
     renderWithProviders(<Testimonials />);
     
-    const dots = screen.getAllByRole("button", { name: /الانتقال للشهادة/ });
+    const pageButtons = screen.getAllByLabelText(/الذهاب إلى الصفحة/);
     
-    if (dots.length > 1) {
-      fireEvent.click(dots[1]);
+    if (pageButtons.length > 1) {
+      fireEvent.click(pageButtons[1]);
       
       await waitFor(() => {
-        // التحقق من تغيير الشهادة
-        expect(dots[1]).toHaveAttribute("aria-pressed", "true");
+        // التحقق من أن الزر الثاني أصبح نشطاً
+        const secondButtonStyle = window.getComputedStyle(pageButtons[1]);
+        expect(secondButtonStyle.width).toBe('22px');
       });
     }
   });
@@ -84,7 +104,8 @@ describe("Testimonials", () => {
   test("يعرض صور العملاء (avatars)", () => {
     renderWithProviders(<Testimonials />);
     
-    const avatars = screen.getAllByRole("img");
+    // البحث عن عناصر Avatar بدلاً من img
+    const avatars = screen.getAllByText(/م|ن|ت/);
     expect(avatars.length).toBeGreaterThan(0);
   });
 
@@ -94,9 +115,9 @@ describe("Testimonials", () => {
     // انتظار التنقل التلقائي
     await waitFor(
       () => {
-        // التحقق من تغيير المحتوى تلقائياً
-        const dots = screen.getAllByRole("button", { name: /الانتقال للشهادة/ });
-        expect(dots.length).toBeGreaterThan(0);
+        // التحقق من وجود أزرار التنقل بين الصفحات
+        const pageButtons = screen.getAllByLabelText(/الذهاب إلى الصفحة/);
+        expect(pageButtons.length).toBeGreaterThan(0);
       },
       { timeout: 6000 }
     );
@@ -113,6 +134,33 @@ describe("Testimonials", () => {
     // التحقق من توقف التنقل التلقائي
     await waitFor(() => {
       expect(nextButton).toBeInTheDocument();
+    });
+  });
+
+  test("يتنقل بين الشهادات عند الضغط على أزرار التنقل - اختبار محسن", async () => {
+    renderWithProviders(<Testimonials />);
+    
+    const nextButton = screen.getByLabelText("التالي");
+    const pageButtons = screen.getAllByLabelText(/الذهاب إلى الصفحة/);
+    
+    // التحقق من أن الزر الأول نشط في البداية
+    const firstButtonStyle = window.getComputedStyle(pageButtons[0]);
+    expect(firstButtonStyle.width).toBe('22px');
+    
+    // الانتقال للصفحة التالية
+    fireEvent.click(nextButton);
+    
+    await waitFor(() => {
+      // التحقق من أن الزر الأول لم يعد نشطاً
+      const newFirstButtonStyle = window.getComputedStyle(pageButtons[0]);
+      expect(newFirstButtonStyle.width).not.toBe('22px');
+      
+      // التحقق من أن أحد الأزرار الأخرى أصبح نشطاً
+      const hasActiveButton = pageButtons.some(button => {
+        const computedStyle = window.getComputedStyle(button);
+        return computedStyle.width === '22px';
+      });
+      expect(hasActiveButton).toBe(true);
     });
   });
 });

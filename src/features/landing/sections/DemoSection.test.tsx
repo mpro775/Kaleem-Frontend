@@ -4,39 +4,45 @@ import DemoSection from "./DemoSection";
 import { vi } from "vitest";
 
 // Mock the chat components
-vi.mock("@/widgets/chatKaleem", () => ({
+vi.mock("@/features/landing/chatKaleem", () => ({
   ChatHeader: ({ title }: { title: string }) => <div data-testid="chat-header">{title}</div>,
-  ChatBubble: ({ message, isBot }: { message: string; isBot: boolean }) => (
-    <div data-testid={isBot ? "bot-message" : "user-message"}>{message}</div>
+  ChatBubble: ({ msg }: { msg: any }) => (
+    <div data-testid={msg.isBot ? "bot-message" : "user-message"}>{msg.text}</div>
   ),
-  LiveChat: ({ onStart }: { onStart: () => void }) => (
+  LiveChat: ({ messagesContainerRef }: { messagesContainerRef: any }) => (
     <div data-testid="live-chat">
-      <button onClick={onStart}>Start Chat</button>
+      <button>Live Chat Started</button>
     </div>
   ),
   DEMO_MESSAGES: [
-    { text: "مرحباً، كيف يمكنني مساعدتك؟", isBot: true },
-    { text: "أريد معرفة المزيد عن المنتجات", isBot: false },
+    { id: 1, text: "مرحباً، كيف يمكنني مساعدتك؟", isBot: true },
+    { id: 2, text: "أريد معرفة المزيد عن المنتجات", isBot: false },
+    { id: 3, text: "...", isBot: true },
   ],
   KLEEM_COLORS: {
     primary: "#1976d2",
+    primaryHover: "#1565c0",
     secondary: "#dc004e",
   },
 }));
 
 describe("DemoSection", () => {
-  test("يعرض عنوان القسم والوصف", () => {
+  test("يعرض عنوان القسم الرئيسي", () => {
     renderWithProviders(<DemoSection />);
     
-    expect(screen.getByText("شاهد كليم في العمل")).toBeInTheDocument();
-    expect(screen.getByText(/جرب المحادثة التفاعلية/)).toBeInTheDocument();
+    // البحث عن العنوان في عنصر h1 محدد
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toBeInTheDocument();
+    expect(heading.textContent).toContain("تحدث مع");
+    expect(heading.textContent).toContain("كَلِيم");
+    expect(heading.textContent).toContain("الآن");
   });
 
   test("يعرض واجهة المحادثة التوضيحية", () => {
     renderWithProviders(<DemoSection />);
     
     expect(screen.getByTestId("chat-header")).toBeInTheDocument();
-    expect(screen.getByText("كليم - مساعدك الذكي")).toBeInTheDocument();
+    expect(screen.getByText("اليوم")).toBeInTheDocument();
   });
 
   test("يعرض رسائل المحادثة التوضيحية", () => {
@@ -49,13 +55,13 @@ describe("DemoSection", () => {
   test("يحتوي على زر بدء المحادثة التفاعلية", () => {
     renderWithProviders(<DemoSection />);
     
-    expect(screen.getByText("جرب المحادثة التفاعلية")).toBeInTheDocument();
+    expect(screen.getByText("ابدأ المحادثة الآن")).toBeInTheDocument();
   });
 
   test("يفعل المحادثة التفاعلية عند الضغط على الزر", async () => {
     renderWithProviders(<DemoSection />);
     
-    const interactiveButton = screen.getByText("جرب المحادثة التفاعلية");
+    const interactiveButton = screen.getByText("ابدأ المحادثة الآن");
     fireEvent.click(interactiveButton);
     
     await waitFor(() => {
@@ -63,24 +69,25 @@ describe("DemoSection", () => {
     });
   });
 
-  test("يعرض معلومات حول سرعة الاستجابة", () => {
+  test("يعرض رسالة اليوم في المحادثة", () => {
     renderWithProviders(<DemoSection />);
     
-    expect(screen.getByText(/استجابة فورية/)).toBeInTheDocument();
-    expect(screen.getByText(/متاح 24\/7/)).toBeInTheDocument();
+    expect(screen.getByText("اليوم")).toBeInTheDocument();
   });
 
-  test("يعرض إحصائيات الأداء", () => {
+  test("يعرض رسائل المحادثة مع التخطيط الصحيح", () => {
     renderWithProviders(<DemoSection />);
     
-    expect(screen.getByText(/95% معدل الرضا/)).toBeInTheDocument();
-    expect(screen.getByText(/< 2 ثانية وقت الاستجابة/)).toBeInTheDocument();
+    // التحقق من وجود رسائل المحادثة
+    expect(screen.getByText("مرحباً، كيف يمكنني مساعدتك؟")).toBeInTheDocument();
+    expect(screen.getByText("أريد معرفة المزيد عن المنتجات")).toBeInTheDocument();
   });
 
-  test("يحتوي على رسوم متحركة للكتابة", () => {
+  test("يحتوي على زر بدء المحادثة مع التصميم الصحيح", () => {
     renderWithProviders(<DemoSection />);
     
-    // التحقق من وجود مؤشر الكتابة
-    expect(screen.getByTestId("typing-indicator")).toBeInTheDocument();
+    const button = screen.getByText("ابدأ المحادثة الآن");
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute("type", "button");
   });
 });

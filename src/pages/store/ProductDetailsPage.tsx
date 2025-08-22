@@ -175,7 +175,7 @@ export default function ProductDetailsPage() {
           textAlign: "center",
         }}
       >
-        <Typography variant="h5" color="error">
+        <Typography variant="h5" color="error" data-testid="error-message">
           تعذر تحميل المنتج
         </Typography>
       </Box>
@@ -401,6 +401,7 @@ export default function ProductDetailsPage() {
                 onClick={() => setSelectedAttrs((s) => ({ ...s, [key]: val }))}
                 color={selected ? 'primary' : 'default'}
                 variant={selected ? 'filled' : 'outlined'}
+                data-testid="attribute-chip"
               />
             );
           })}
@@ -417,34 +418,29 @@ export default function ProductDetailsPage() {
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <IconButton
-                onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-                sx={{
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: "8px 0 0 8px",
-                }}
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={quantity <= 1}
+                data-testid="quantity-minus"
               >
                 -
               </IconButton>
               <TextField
+                type="number"
                 value={quantity}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val) && val > 0) setQuantity(val);
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value > 0) {
+                    setQuantity(value);
+                  }
                 }}
-                sx={{
-                  width: 80,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 0,
-                    textAlign: "center",
-                  },
-                }}
+                inputProps={{ min: 1, max: product.quantity || 999 }}
+                sx={{ width: 80, textAlign: "center" }}
+                data-testid="quantity-input"
               />
               <IconButton
-                onClick={() => setQuantity(quantity + 1)}
-                sx={{
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: "0 8px 8px 0",
-                }}
+                onClick={() => setQuantity(Math.min(product.quantity || 999, quantity + 1))}
+                disabled={quantity >= (product.quantity || 999)}
+                data-testid="quantity-plus"
               >
                 +
               </IconButton>
@@ -560,38 +556,11 @@ export default function ProductDetailsPage() {
         <Tabs
           value={activeTab}
           onChange={(_, newValue) => setActiveTab(newValue)}
-          sx={{
-            mb: 3,
-            "& .MuiTabs-indicator": {
-              backgroundColor: theme.palette.primary.main,
-              height: 3,
-            },
-          }}
+          sx={{ borderBottom: 1, borderColor: "divider" }}
         >
-          <Tab
-            label="المواصفات"
-            sx={{
-              fontWeight: "bold",
-              fontSize: 16,
-              "&.Mui-selected": { color: theme.palette.primary.main },
-            }}
-          />
-          <Tab
-            label="التقييمات (١٥)"
-            sx={{
-              fontWeight: "bold",
-              fontSize: 16,
-              "&.Mui-selected": { color: theme.palette.primary.main },
-            }}
-          />
-          <Tab
-            label="الأسئلة الشائعة"
-            sx={{
-              fontWeight: "bold",
-              fontSize: 16,
-              "&.Mui-selected": { color: theme.palette.primary.main },
-            }}
-          />
+          <Tab label="المواصفات" data-testid="specs-tab" />
+          <Tab label="التقييمات" data-testid="reviews-tab" />
+          <Tab label="الأسئلة الشائعة" data-testid="faq-tab" />
         </Tabs>
 
         {/* محتوى التبويبات */}
@@ -602,6 +571,7 @@ export default function ProductDetailsPage() {
               borderRadius: 3,
               backgroundColor: theme.palette.grey[50],
             }}
+            data-testid="tab-content"
           >
             {product.specsBlock && product.specsBlock.length > 0 ? (
               <Box
@@ -642,6 +612,7 @@ export default function ProductDetailsPage() {
               borderRadius: 3,
               backgroundColor: theme.palette.grey[50],
             }}
+            data-testid="tab-content"
           >
             {/* تقييمات المستخدمين */}
             {[...Array(3)].map((_, i) => (
@@ -696,6 +667,7 @@ export default function ProductDetailsPage() {
               borderRadius: 3,
               backgroundColor: theme.palette.grey[50],
             }}
+            data-testid="tab-content"
           >
             {[
               {

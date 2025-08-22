@@ -35,6 +35,10 @@ global.IntersectionObserver = class IntersectionObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
+  root: Element | null = null;
+  rootMargin: string = '';
+  thresholds: ReadonlyArray<number> = [];
+  takeRecords() { return []; }
 };
 
 // polyfill لـ scrollTo
@@ -42,6 +46,16 @@ Object.defineProperty(window, "scrollTo", {
   writable: true,
   value: () => {},
 });
+
+// polyfill لـ Element.scrollTo
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = function(options: any) {
+    if (options && typeof options === 'object') {
+      if (options.left !== undefined) this.scrollLeft = options.left;
+      if (options.top !== undefined) this.scrollTop = options.top;
+    }
+  };
+}
 
 // إخفاء تحذيرات console في الاختبارات
 const originalError = console.error;
