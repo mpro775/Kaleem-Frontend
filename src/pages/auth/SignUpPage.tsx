@@ -18,9 +18,9 @@ import { toast } from "react-toastify";
 import { TfiEye } from "react-icons/tfi";
 import { RiEyeCloseLine } from "react-icons/ri";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
-import AuthLayout from "@/widgets/auth/AuthLayout";
+import AuthLayout from "@/auth/AuthLayout";
 import GradientIcon from "@/shared/ui/GradientIcon";
-import { signUpAPI } from "@/api/authApi";
+import { signUpAPI } from "@/auth/api";
 import { useAuth } from "@/context/AuthContext";
 import { getAxiosMessage } from "@/shared/lib/errors";
 

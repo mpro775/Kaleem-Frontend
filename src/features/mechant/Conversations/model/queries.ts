@@ -1,7 +1,7 @@
 // src/features/chat/model/queries.ts
 import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
-import type { ChannelType } from "@/types/chat";
+import type { ChannelType } from "@/features/mechant/Conversations/type";
 
 export function useConversations(merchantId?: string, channel?: ChannelType) {
   return useQuery({

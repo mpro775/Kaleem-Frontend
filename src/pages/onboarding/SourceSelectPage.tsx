@@ -15,7 +15,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "@/context/config";
-import OnboardingLayout from "@/widgets/onboarding/OnboardingLayout";
+import OnboardingLayout from "@/app/layout/OnboardingLayout";
 
 type Source = "internal" | "salla" | "zid";
 type ProviderState = {

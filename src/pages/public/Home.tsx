@@ -1,5 +1,4 @@
 // src/pages/Home.tsx
-import { Box } from "@mui/material";
 import {
   SEOHead,
   JsonLd,
@@ -15,7 +14,9 @@ import {
   Testimonials,
   FAQSection,
   Footer,
-} from "@/widgets/landing";
+} from "@/features/landing";
+import { Box } from "@mui/material";
+
 import { motion } from "framer-motion";
 
 const SectionReveal = ({

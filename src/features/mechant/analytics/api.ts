@@ -1,10 +1,10 @@
-import axios from "@/api/axios";
+import axios from "@/shared/api/axios";
 
 // أنواع عامة (استخدم أنواعك إن كانت موجودة)
 export type Period = "week" | "month" | "quarter";
 export type GroupBy = "day" | "week";
-export type Overview = import("@/types/analytics").Overview;
-export type ChecklistGroup = import("@/types/analytics").ChecklistGroup;
+export type Overview = import("@/features/mechant/dashboard/type").Overview;
+export type ChecklistGroup = import("@/features/mechant/dashboard/type").ChecklistGroup;
 
 export async function getOverview(period: Period) {
   const { data } = await axios.get<Overview>(`/analytics/overview`, {
@@ -24,7 +24,7 @@ export async function getMessagesTimeline(
   period: Period,
   groupBy: GroupBy = "day"
 ) {
-  const { data } = await axios.get<import("@/types/analytics").TimelinePoint[]>(
+  const { data } = await axios.get<import("@/features/mechant/dashboard/type").TimelinePoint[]>(
     `/analytics/messages-timeline`,
     { params: { period, groupBy } }
   );

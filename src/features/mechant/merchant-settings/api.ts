@@ -1,5 +1,5 @@
 import type { MerchantInfo } from "./types";
-import axios from "@/api/axios"; // أو حسب مكان ملف axios الخاص بك
+import axios from "@/shared/api/axios"; // أو حسب مكان ملف axios الخاص بك
 
 export const getMerchantInfo = async (
   merchantId: string

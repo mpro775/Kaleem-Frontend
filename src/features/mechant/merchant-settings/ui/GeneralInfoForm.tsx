@@ -12,7 +12,7 @@ import {
 
 } from "@mui/material";
 
-import axios from "@/api/axios";
+import axios from "@/shared/api/axios";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 
 

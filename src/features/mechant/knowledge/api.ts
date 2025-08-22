@@ -4,19 +4,19 @@ import {
     fetchDocuments as _fetchDocuments,
     uploadDocument as _uploadDocument,
     deleteDocument as _deleteDocument,
-  } from "../../../api/documentsApi";
+  } from "./api/documentsApi";
   
   import {
     fetchLinks as _fetchLinks,
     addLinks as _addLinks,
     deleteLink as _deleteLink,
-  } from "../../../api/linksApi";
+  } from "./api/linksApi";
   
   import {
     fetchFaqs as _fetchFaqs,
     addFaqs as _addFaqs,
     deleteFaq as _deleteFaq,
-  } from "../../../api/faqsApi";
+  } from "./api/faqsApi";
   
   export const docsApi = {
     fetch: _fetchDocuments,

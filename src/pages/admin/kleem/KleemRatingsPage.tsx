@@ -6,7 +6,7 @@ import {
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import dayjs from 'dayjs';
-import { fetchRatings, fetchRatingsStats, type RatingRow } from '../../../api/adminKleemRatings';
+import { fetchRatings, fetchRatingsStats, type RatingRow } from '@/features/admin/api/adminKleemRatings';
 import { useNavigate } from 'react-router-dom';
 
 export default function KleemRatingsPage() {

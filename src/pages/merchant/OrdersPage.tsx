@@ -19,13 +19,16 @@ import {
   Select,
   CircularProgress,
   Tooltip,
+  Stack,
+  TextField,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import EditIcon from "@mui/icons-material/Edit";
-import axiosInstance from "@/api/axios";
+import axiosInstance from "@/shared/api/axios";
 import { format } from "date-fns";
-import type { Order } from "../../types/store";
-
+import type { Order } from "@/features/store/type";
+import { useLocation } from "react-router-dom";
+function useQuery() { return new URLSearchParams(useLocation().search); }
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,15 +36,18 @@ export default function OrdersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [editStatus, setEditStatus] = useState<string | undefined>();
-
+  const query = useQuery();
+  const phoneFromQuery = query.get('phone') || '';
+  const [phoneFilter, setPhoneFilter] = useState(phoneFromQuery);
+  const [statusFilter, setStatusFilter] = useState('');
   // جلب الطلبات
   useEffect(() => {
     setLoading(true);
     axiosInstance
-      .get("/orders")
+      .get("/orders", { params: { phone: phoneFromQuery || undefined } })
       .then((res) => setOrders(res.data))
       .finally(() => setLoading(false));
-  }, []);
+  }, [phoneFromQuery]);
 
   const handleOpenDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -78,16 +84,24 @@ export default function OrdersPage() {
     setStatusUpdating(false);
   };
 
+  const STATUS_LABEL: Record<string,string> = {
+    pending: 'قيد الانتظار',
+    paid: 'مدفوع',
+    canceled: 'ملغي',
+    shipped: 'تم الشحن',
+    delivered: 'تم التسليم',
+    refunded: 'مسترد',
+  };
+  
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "warning";
-      case "paid":
-        return "success";
-      case "canceled":
-        return "error";
-      default:
-        return "default";
+      case "pending": return "warning";
+      case "paid": return "success";
+      case "shipped": return "info";
+      case "delivered": return "success";
+      case "refunded": return "default";
+      case "canceled": return "error";
+      default: return "default";
     }
   };
 
@@ -99,6 +113,19 @@ export default function OrdersPage() {
 
       <Paper sx={{ overflow: "auto" }}>
         <Table>
+        <Stack direction="row" spacing={2} mb={2} alignItems="center">
+  <TextField size="small" label="بحث بالجوال" value={phoneFilter} onChange={(e)=>setPhoneFilter(e.target.value)} />
+  <Select size="small" value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)}>
+    <MenuItem value="">الكل</MenuItem>
+    {Object.keys(STATUS_LABEL).map(s => <MenuItem key={s} value={s}>{STATUS_LABEL[s]}</MenuItem>)}
+  </Select>
+  <Button variant="outlined" onClick={()=>{
+    setLoading(true);
+    axiosInstance.get('/orders', { params: { phone: phoneFilter||undefined, status: statusFilter||undefined /*, from, to*/ }})
+      .then(r=>setOrders(r.data))
+      .finally(()=>setLoading(false));
+  }}>تطبيق</Button>
+</Stack>
           <TableHead>
             <TableRow>
               <TableCell>رقم الطلب</TableCell>
@@ -196,9 +223,12 @@ export default function OrdersPage() {
                   onChange={(e) => setEditStatus(e.target.value)}
                   sx={{ minWidth: 120, mx: 1 }}
                 >
-                  <MenuItem value="pending">قيد الانتظار</MenuItem>
-                  <MenuItem value="paid">مدفوع</MenuItem>
-                  <MenuItem value="canceled">ملغي</MenuItem>
+          <MenuItem value="pending">قيد الانتظار</MenuItem>
+<MenuItem value="paid">مدفوع</MenuItem>
+<MenuItem value="shipped">تم الشحن</MenuItem>
+<MenuItem value="delivered">تم التسليم</MenuItem>
+<MenuItem value="refunded">مسترد</MenuItem>
+<MenuItem value="canceled">ملغي</MenuItem>
                 </Select>
                 <Button
                   size="small"

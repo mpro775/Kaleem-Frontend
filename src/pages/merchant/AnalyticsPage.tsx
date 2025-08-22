@@ -19,15 +19,15 @@ import {
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import axios from "@/api/axios";
+import axios from "@/shared/api/axios";
 import { useAuth } from "@/context/AuthContext";
-import { useStoreServicesFlag } from "@/hooks/useStoreServicesFlag";
+import { useStoreServicesFlag } from "@/shared/hooks/useStoreServicesFlag";
 
 // رسومات موجودة لديك مسبقًا:
-import MessagesTimelineChart from "@/widgets/merchant/dashboard/MessagesTimelineChart";
-import ProductsChart from "@/widgets/merchant/dashboard/ProductsChart";
-import KeywordsChart from "@/widgets/merchant/dashboard/KeywordsChart";
-import ChannelsPieChart from "@/widgets/merchant/dashboard/ChannelsPieChart";
+import MessagesTimelineChart from "@/features/mechant/dashboard/ui/MessagesTimelineChart";
+import ProductsChart from "@/features/mechant/dashboard/ui/ProductsChart";
+import KeywordsChart from "@/features/mechant/dashboard/ui/KeywordsChart";
+import ChannelsPieChart from "@/features/mechant/dashboard/ui/ChannelsPieChart";
 import { useLocation } from "react-router-dom";
 
 // Recharts لمخطط جودة الذكاء (مفقود/مُعالج)

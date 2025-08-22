@@ -12,10 +12,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useTheme } from "@mui/material/styles";
-import AuthLayout from "@/widgets/auth/AuthLayout";
+import AuthLayout from "@/auth/AuthLayout";
 import OtpInputBoxes from "@/shared/ui/OtpInputBoxes";
 import { useAuth } from "@/context/AuthContext";
-import { resendVerificationAPI, verifyEmailAPI } from "@/api/authApi";
+import { resendVerificationAPI, verifyEmailAPI } from "@/auth/api";
 import { getAxiosMessage } from "@/shared/lib/errors";
 
 export default function VerifyEmailPage() {

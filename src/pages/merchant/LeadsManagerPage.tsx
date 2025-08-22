@@ -1,7 +1,7 @@
 // src/pages/Dashboard/LeadsManagerPage.tsx
 import { useState } from "react";
 import { Box, Paper, Typography, CircularProgress, Snackbar, Alert } from "@mui/material";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { useLeadsManager } from "@/features/mechant/leads/hooks";
 import EnabledToggleCard from "@/features/mechant/leads/ui/EnabledToggleCard";
 import FieldsEditor from "@/features/mechant/leads/ui/FieldsEditor";
@@ -61,13 +61,13 @@ export default function LeadsManagerPage() {
       </Typography>
 
       <EnabledToggleCard
-        enabled={enabled}
-        onToggle={async (v) => {
-          setEnabled(v);
-          const ok = await saveAll(); // نحفظ حالة التفعيل مباشرة
-          setSnack({ open: true, msg: ok ? "تم تحديث الحالة" : "تعذّر تحديث الحالة", type: ok ? "success" : "error" });
-        }}
-      />
+  enabled={enabled}
+  onToggle={async (next)=>{
+    setEnabled(next);
+    await saveAll(); 
+  }}
+/>  
+
 
       {enabled && (
         <Paper sx={{ p: 3, mb: 4 }}>

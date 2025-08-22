@@ -1,8 +1,8 @@
 // src/features/chat/api/index.ts
-import * as raw from "@/api/messages";          // الملف الذي أرسلته هنا (rate/fetch...)
+import * as raw from "@/features/mechant/Conversations/api/messages";          // الملف الذي أرسلته هنا (rate/fetch...)
 // إن كان لديك ملف مستقل لرسائل الموظف:
-import { sendAgentMessage as sendAgent } from "@/api/messageagent";
-import type { ChatMessage, ConversationSession, ChannelType } from "@/types/chat";
+import { sendAgentMessage as sendAgent } from "./messageagent";
+import type { ChatMessage,  ChannelType } from "@/features/mechant/Conversations/type";
 
 export async function listConversations(merchantId: string, channel?: ChannelType) {
   return raw.fetchConversations(merchantId, channel); // يرجّع ConversationSession[]

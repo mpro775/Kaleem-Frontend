@@ -11,7 +11,7 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddLocationAltIcon from "@mui/icons-material/AddLocationAlt";
 import type { SectionComponentProps } from "@/features/mechant/merchant-settings/types";
-import type { Address } from "@/types/shared";
+import type { Address } from "@/features/mechant/merchant-settings/types";
 
 export default function AddressForm({
   initialData,

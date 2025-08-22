@@ -1,5 +1,5 @@
 // src/features/leads/hooks.ts
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect,  useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { Lead, LeadField, LeadsSettings } from "./types";
 import { fetchLeads, fetchLeadsSettings, saveLeadsSettings } from "./api";

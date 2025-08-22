@@ -21,7 +21,7 @@ import {
   updateKleem,
   bulkResolve,
   type KleemItem,
-} from "../../../api/adminAnalytics";
+} from "../../../features/admin/api/adminAnalytics";
 
 export default function KleemMissingResponsesPage() {
   const [rows, setRows] = useState<KleemItem[]>([]);

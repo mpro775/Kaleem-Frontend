@@ -6,7 +6,7 @@ import {
   Tooltip,
   IconButton,
 } from "@mui/material";
-import type { ChatMessage } from "@/types/chat";
+import type { ChatMessage } from "@/features/mechant/Conversations/type";
 import type { FC } from "react";
 import emptyChat from "@/assets/empty-chat.png";
 import ThumbUpIcon from "@mui/icons-material/ThumbUpAlt";

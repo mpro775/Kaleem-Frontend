@@ -10,7 +10,7 @@ import {
   type Prompt,
   type CreatePromptDto,
   type PromptType,
-} from "../../../api/adminKleem";
+} from "@/features/admin/api/adminKleem";
 import {
   Box,
   Button,
@@ -37,7 +37,7 @@ import ArchiveIcon from "@mui/icons-material/Archive";
 import PublishIcon from "@mui/icons-material/Publish";
 import AddIcon from "@mui/icons-material/Add";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { sandboxTest, type SandboxResponse } from "../../../api/adminKleem";
+import { sandboxTest, type SandboxResponse } from "@/features/admin/api/adminKleem";
 import { Checkbox, FormControlLabel, Slider } from "@mui/material";
 
 export default function PromptsPage() {

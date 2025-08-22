@@ -1,14 +1,14 @@
 // src/context/CartContext.tsx
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Product } from '../types/Product';
+import type { ProductResponse } from '@/features/mechant/products/type';
 
-type CartItem = { product: Product; quantity: number };
+type CartItem = { product: ProductResponse; quantity: number };
 interface CartProviderProps {
   children: ReactNode;
 }
 interface CartContextValue {
   items: CartItem[];
-  addItem: (p: Product, quantity?: number) => void; // <-- أضف quantity
+  addItem: (p: ProductResponse, quantity?: number) => void; // <-- أضف quantity
   removeItem: (id: string) => void;
   clearCart: () => void;
     updateQuantity: (id: string, quantity: number) => void; 
@@ -24,7 +24,7 @@ const [items, setItems] = useState<CartItem[]>(() => {
 useEffect(() => {
   localStorage.setItem("cart", JSON.stringify(items));
 }, [items]);
-const addItem = (p: Product, quantity: number = 1) => {
+const addItem = (p: ProductResponse, quantity: number = 1) => {
     setItems(prev => {
       const exists = prev.find(i => i.product._id === p._id);
       if (exists) {

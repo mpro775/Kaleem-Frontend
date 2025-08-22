@@ -3,7 +3,7 @@ import { Box, CircularProgress } from "@mui/material";
 import { styled } from "@mui/system";
 import { FormProvider, useForm } from "react-hook-form";
 
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { usePromptStudio } from "@/features/mechant/prompt-studio/hooks";
 import type { QuickConfig } from "@/features/mechant/prompt-studio/types";
 

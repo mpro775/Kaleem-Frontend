@@ -1,7 +1,7 @@
 // src/pages/ProductDetailsPage.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "@/api/axios";
+import axiosInstance from "@/shared/api/axios";
 import {
   Box,
   Button,
@@ -30,36 +30,107 @@ import {
   Autorenew,
   Description,
 } from "@mui/icons-material";
-import type { Product } from "../../types/Product";
-import { useCart } from "../../context/CartContext";
+import type { ProductResponse } from "@/features/mechant/products/type";
+import { useCart } from "@/context/CartContext";
+type Currency = 'SAR' | 'YER' | 'USD';
+
+const CURRENCY_INFO: Record<Currency, { symbol: string; locale: string }> = {
+  SAR: { symbol: 'ر.س', locale: 'ar-SA' },
+  YER: { symbol: '﷼',   locale: 'ar-SA' },
+  USD: { symbol: '$',    locale: 'en-US' },
+};
+
+function formatMoney(value: number, currency: Currency = 'SAR') {
+  const c = CURRENCY_INFO[currency] ?? CURRENCY_INFO.SAR;
+  return `${value.toLocaleString(c.locale)} ${c.symbol}`;
+}
+
+function isOfferActive(offer?: {
+  enabled?: boolean;
+  newPrice?: number;
+  oldPrice?: number;
+  startAt?: string | Date;
+  endAt?: string | Date;
+}) {
+  if (!offer?.enabled) return false;
+  const now = Date.now();
+  const start = offer.startAt ? new Date(offer.startAt).getTime() : -Infinity;
+  const end   = offer.endAt   ? new Date(offer.endAt).getTime()   : +Infinity;
+  return now >= start && now <= end && (typeof offer.newPrice === 'number') && offer.newPrice > 0;
+}
+
+function discountPct(oldP?: number, newP?: number) {
+  if (!oldP || !newP || newP >= oldP) return 0;
+  return Math.round((1 - newP / oldP) * 100);
+}
+
+// محاولة عرض “الابن — الأب” أو أي مسار يصلنا من الباك
+function renderCategoryTrail(product: any): string | null {
+  const c = (product as any)?.category;
+  if (!c) return null;
+
+  // لو الباك رجّع كائناً فيه name أو trail
+  if (typeof c === 'object') {
+    if (Array.isArray((c as any).trail) && (c as any).trail.length) {
+      return (c as any).trail.join(' › ');
+    }
+    const childName = (c as any).name;
+    const parentName =
+      (c as any).parentName ||
+      (c as any).parent?.name ||
+      (Array.isArray((c as any).ancestors) && (c as any).ancestorsNames?.at?.(-1));
+    if (childName) return parentName ? `${childName} — ${parentName}` : childName;
+    return null;
+  }
+
+  // لو مجرد id… نكتفي بعدم العرض هنا (أو أضف جلب الفئات لو تحب)
+  return null;
+}
 
 export default function ProductDetailsPage() {
   const theme = useTheme();
   const { productId } = useParams<{ productId: string }>();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState(0);
   const { addItem } = useCart();
   const navigate = useNavigate();
+  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
+  const trail = renderCategoryTrail(product);
 
   useEffect(() => {
     setLoading(true);
     axiosInstance
-      .get<Product>(`/products/${productId}`)
+      .get<ProductResponse>(`/products/${productId}`)
       .then((res) => {
         setProduct(res.data);
+        // ضبط السمات المختارة افتراضياً
+        const init: Record<string, string> = {};
+        const attrs = (res.data as any).attributes as Record<string, string[]> | undefined;
+        if (attrs) {
+          Object.entries(attrs).forEach(([k, vals]) => {
+            if (Array.isArray(vals) && vals[0]) init[k] = String(vals[0]);
+          });
+        }
+        setSelectedAttrs(init);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [productId]);
-
+  if (!product) return null;
+  const activeOffer = isOfferActive(product.offer);
+  const offerOld = product.offer?.oldPrice ?? product.price;
+  const offerNew = product.offer?.newPrice ?? product.price;
+  const pct = discountPct(offerOld, offerNew);
   const handleAddToCart = () => {
     if (product) {
-      addItem(product, quantity);
+      // لو addItem يقبل بيانات إضافية:
+      addItem({ ...product, selectedAttributes: selectedAttrs } as any, quantity);
     }
   };
+  
 
   const renderStars = (rating: number) => {
     const stars = [];
@@ -125,6 +196,11 @@ export default function ProductDetailsPage() {
           العودة
         </IconButton>
       </Box>
+{trail && (
+  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+    {trail}
+  </Typography>
+)}
 
       <Box
         sx={{
@@ -230,7 +306,7 @@ export default function ProductDetailsPage() {
                   sx={{ fontWeight: "bold", mr: 1 }}
                 />
               )}
-              {product.lowQuantity && parseInt(product.lowQuantity) < 10 && (
+              {product.lowQuantity && product.lowQuantity < 10 && (
                 <Chip
                   label="ينفد سريعاً"
                   color="warning"
@@ -276,14 +352,27 @@ export default function ProductDetailsPage() {
             </Typography>
           </Box>
 
-          <Typography
-            variant="h4"
-            fontWeight="bold"
-            color="primary"
-            sx={{ mb: 3 }}
-          >
-            {product.price?.toFixed(2)} ر.س
-          </Typography>
+          {activeOffer ? (
+  <Box sx={{ mb: 3 }}>
+    <Typography variant="h4" fontWeight="bold" color="error.main" sx={{ display: 'inline', mr: 1 }}>
+      {formatMoney(offerNew, (product as any).currency || 'SAR')}
+    </Typography>
+    <Typography
+      component="span"
+      sx={{ textDecoration: 'line-through', color: 'text.disabled', mr: 1 }}
+    >
+      {formatMoney(offerOld, (product as any).currency || 'SAR')}
+    </Typography>
+    {pct > 0 && (
+      <Chip label={`-${pct}%`} color="error" size="small" sx={{ fontWeight: 'bold' }} />
+    )}
+  </Box>
+) : (
+  <Typography variant="h4" fontWeight="bold" color="primary" sx={{ mb: 3 }}>
+    {formatMoney(product.price ?? 0, (product as any).currency || 'SAR')}
+  </Typography>
+)}
+
 
           <Typography
             sx={{
@@ -296,7 +385,31 @@ export default function ProductDetailsPage() {
           </Typography>
 
           <Divider sx={{ mb: 3 }} />
-
+          {product.attributes && Object.keys(product.attributes).length > 0 && (
+  <Box sx={{ mb: 3 }}>
+    {Object.entries(product.attributes).map(([key, values]) => (
+      <Box key={key} sx={{ mb: 2 }}>
+        <Typography fontWeight="bold" sx={{ mb: 1 }}>{key}</Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {(values as string[]).map((val) => {
+            const selected = selectedAttrs[key] === val;
+            return (
+              <Chip
+                key={val}
+                label={val}
+                clickable
+                onClick={() => setSelectedAttrs((s) => ({ ...s, [key]: val }))}
+                color={selected ? 'primary' : 'default'}
+                variant={selected ? 'filled' : 'outlined'}
+              />
+            );
+          })}
+        </Box>
+      </Box>
+    ))}
+  </Box>
+)}
+<Divider sx={{ mb: 3 }} />
           {/* الكمية */}
           <Box sx={{ mb: 4 }}>
             <Typography fontWeight="bold" sx={{ mb: 2 }}>

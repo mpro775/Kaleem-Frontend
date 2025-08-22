@@ -8,7 +8,7 @@ import {
   ListItem,
   ListItemText,
 } from "@mui/material";
-import { statsBadReplies, statsTopQuestions } from "../../../api/adminKleem";
+import { statsBadReplies, statsTopQuestions } from "@/features/admin/api/adminKleem";
 
 export default function AnalyticsPageAdmin() {
   const [tops, setTops] = useState<{ text: string; count: number }[]>([]);

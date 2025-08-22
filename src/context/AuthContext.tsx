@@ -29,6 +29,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   hasRole: (...roles: Role[]) => boolean;
   isAdmin: boolean;
+  isLoading: boolean;
 }
 
 // --- إنشاء السياق
@@ -42,7 +43,8 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   hasRole: () => false,
   isAdmin: false,
-});
+  isLoading: true,
+  });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
@@ -55,12 +57,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const str = localStorage.getItem("user");
     return str ? JSON.parse(str) : null;
   });
-
+  const [isLoading, setIsLoading] = useState(true);
   const hasRole = (...roles: Role[]) => !!user && roles.includes(user.role);
   const isAdmin = hasRole("ADMIN");
 
   // 2) دالة موحّدة لضبط الحالة والتخزين، مع خيار silent لمنع التنقّل التلقائي
   const setAuth: AuthContextType["setAuth"] = (userData, tokenValue, opts) => {
+    setIsLoading(true);
     setUser(userData);
     setToken(tokenValue);
     localStorage.setItem("token", tokenValue);
@@ -86,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       navigate("/dashboard", { replace: true });
     }
+    setIsLoading(false);
   };
 
   // 3) login يستخدم setAuth بدون silent (سلوك سابق)
@@ -124,6 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!token,
         hasRole,
         isAdmin,
+        isLoading,
       }}
     >
       {children}

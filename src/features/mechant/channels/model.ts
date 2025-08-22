@@ -22,3 +22,16 @@ export function useUpdateChannel(merchantId?: string) {
     },
   });
 }
+
+export function useDeleteChannel(merchantId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      key: ChannelKey;
+      mode?: "disable" | "disconnect" | "wipe";
+    }) => api.deleteChannel(merchantId!, vars.key, vars.mode ?? "disable"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["channels", merchantId] });
+    },
+  });
+}

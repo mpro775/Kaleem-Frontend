@@ -1,5 +1,5 @@
 // src/features/leads/api.ts
-import axiosInstance from "@/api/axios";
+import axiosInstance from "@/shared/api/axios";
 import type { Lead, LeadsSettings } from "./types";
 
 export async function fetchLeadsSettings(merchantId: string): Promise<LeadsSettings> {

@@ -13,34 +13,38 @@ import {
   Skeleton,
 } from "@mui/material";
 import { useCart, CartProvider } from "../../context/CartContext";
-import axiosInstance from "@/api/axios";
-import type { Storefront } from "../../types/merchant";
+import axiosInstance from "@/shared/api/axios";
+import type { Storefront } from "@/features/mechant/storefront-theme/type";
 
-import type { Product } from "../../types/Product";
-import type { Category } from "../../types/Category";
-import { StoreNavbar } from "../../components/store/StoreNavbar";
-import { StoreHeader } from "../../components/store/StoreHeader";
-import { CategoryFilter } from "../../components/store/CategoryFilter";
-import { ProductGrid } from "../../components/store/ProductGrid";
+import type { ProductResponse } from "@/features/mechant/products/type";
+import type { Category } from "@/features/mechant/categories/type";
+import { StoreNavbar } from "@/features/store/ui/StoreNavbar";
+import { StoreHeader } from "@/features/store/ui/StoreHeader";
+import { CategoryFilter } from "@/features/store/ui/CategoryFilter";
+import { ProductGrid } from "@/features/store/ui/ProductGrid";
 import SearchIcon from "@mui/icons-material/Search";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
-import { Footer } from "../../components/store/Footer";
-import CartDialog from "../../components/store/CartDialog";
+import { Footer } from "@/features/store/ui/Footer";
+import CartDialog from "@/features/store/ui/CartDialog";
 import "swiper/css";
 import "swiper/css/pagination";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import { Pagination, Autoplay } from "swiper/modules";
-import { getStorefrontInfo } from "../../api/storefrontApi";
+import { getStorefrontInfo } from "@/features/mechant/storefront-theme/api";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
+import { getSessionId } from "@/shared/utils/session";
+import { getLocalCustomer } from "@/shared/utils/customer";
+import LiteIdentityCard from "@/features/store/ui/LiteIdentityCard";
+import type { CustomerInfo } from "@/features/store/type";
 
 async function fetchStore(slug: string) {
   const res = await axiosInstance.get<{
     merchant: MerchantInfo;
-    products: Product[];
+    products: ProductResponse[];
     categories: Category[];
   }>(`/storefront/${slug}`);
   return res.data;
@@ -54,7 +58,7 @@ const StoreContent: React.FC = () => {
   const navigate = useNavigate();
   const { slugOrId } = useParams<{ slugOrId: string }>();
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
   const [error, setError] = useState<string>("");
   const { items, addItem } = useCart();
   const [search, setSearch] = useState("");
@@ -64,7 +68,8 @@ const StoreContent: React.FC = () => {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [openCart, setOpenCart] = useState(false);
   const [storefront, setStorefront] = useState<Storefront | null>(null);
-
+  const [sessionId] = useState<string>(() => getSessionId());
+  const localCustomer = getLocalCustomer() as CustomerInfo;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -191,7 +196,12 @@ const StoreContent: React.FC = () => {
             />
           </Box>
         ) : (
-          <StoreHeader merchant={merchant} storefront={storefront} />
+          <>
+            {!isLoading && merchant && (
+              <LiteIdentityCard merchantId={merchant._id} />
+            )}
+            <StoreHeader merchant={merchant} storefront={storefront} />
+          </>
         )}
         {storefront.banners &&
           storefront.banners.filter((b) => b.active).length > 0 && (
@@ -448,13 +458,16 @@ const StoreContent: React.FC = () => {
           </Box>
         </Box>
         <CartDialog
-          open={openCart}
-          onClose={() => setOpenCart(false)}
-          merchantId={merchant._id}
-          onOrderSuccess={(orderId) => {
-            navigate(`/store/${slugOrId}/order/${orderId}`);
-          }}
-        />
+    open={openCart}
+    onClose={() => setOpenCart(false)}
+    merchantId={merchant._id}
+    sessionId={sessionId}                 // ⬅️ جديد
+    defaultCustomer={localCustomer}       // ⬅️ كي تُملأ تلقائيًا في نافذة الطلب
+    onOrderSuccess={(orderId) => {
+      // بعد النجاح يمكنك تحديث localCustomer من قيم cartdialog أيضًا إن رغبت
+      navigate(`/store/${slugOrId}/order/${orderId}`);
+    }}
+  />
       </Container>
 
       <Footer merchant={merchant} categories={categories} />

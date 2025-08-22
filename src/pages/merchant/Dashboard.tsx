@@ -19,13 +19,13 @@ import {
 import Grid from "@mui/material/Grid";
 import InsightsIcon from "@mui/icons-material/Insights";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import type { ChecklistGroup } from "@/types/analytics";
-import ChecklistPanel from "@/widgets/merchant/dashboard/ChecklistPanel";
-import DashboardAdvice from "@/widgets/merchant/dashboard/DashboardAdvice";
-import ProductsChart from "@/widgets/merchant/dashboard/ProductsChart";
-import KeywordsChart from "@/widgets/merchant/dashboard/KeywordsChart";
-import ChannelsPieChart from "@/widgets/merchant/dashboard/ChannelsPieChart";
-import MessagesTimelineChart from "@/widgets/merchant/dashboard/MessagesTimelineChart";
+import type { ChecklistGroup } from "@/features/mechant/dashboard/type";
+import ChecklistPanel from "@/features/mechant/dashboard/ui/ChecklistPanel";
+import DashboardAdvice from "@/features/mechant/dashboard/ui/DashboardAdvice";
+import ProductsChart from "@/features/mechant/dashboard/ui/ProductsChart";
+import KeywordsChart from "@/features/mechant/dashboard/ui/KeywordsChart";
+import ChannelsPieChart from "@/features/mechant/dashboard/ui/ChannelsPieChart";
+import MessagesTimelineChart from "@/features/mechant/dashboard/ui/MessagesTimelineChart";
 import { useAuth } from "@/context/AuthContext";
 import {
   useChecklist,
@@ -35,7 +35,7 @@ import {
   useSkipChecklist,
 } from "@/features/mechant/analytics/model";
 import type { AxiosError } from "axios";
-import { useStoreServicesFlag } from "@/hooks/useStoreServicesFlag";
+import { useStoreServicesFlag } from "@/shared/hooks/useStoreServicesFlag";
 import { useNavigate } from "react-router-dom";
 
 type Period = "week" | "month" | "quarter";

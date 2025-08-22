@@ -1,15 +1,100 @@
 // src/features/prompt-studio/api.ts
 
-import {
-  getQuickConfig as getQuickConfigRaw,
-  updateQuickConfig as updateQuickConfigRaw,
-  getFinalPrompt,
-  getAdvancedTemplate,
-  saveAdvancedTemplate,
-  previewPrompt as previewPromptRaw, // ملاحظة: سنلفّه بوظيفة محلية لإضافة audience
-} from "@/api/merchantsApi";
-import type { PreviewPromptDto, QuickConfig } from "./types";
+import type { PreviewPromptDto, PreviewResponse, QuickConfig } from "./types";
+import { API_BASE } from "@/context/config";
+import axios from "@/shared/api/axios";
 
+
+const authHeader = (token: string) => ({
+  headers: { Authorization: `Bearer ${token}` },
+});
+export async function getAdvancedTemplate(
+  token: string,
+  merchantId: string
+): Promise<string> {
+  const res = await axios.get<{ advancedTemplate: string }>(
+    `${API_BASE}/merchants/${merchantId}/prompt/advanced-template`,
+    authHeader(token)
+  );
+  return res.data.advancedTemplate;
+}
+
+// حفظ الـAdvancedTemplate
+export async function saveAdvancedTemplate(
+  token: string,
+  merchantId: string,
+  template: string,
+  note?: string
+): Promise<void> {
+  await axios.post(
+    `${API_BASE}/merchants/${merchantId}/prompt/advanced-template`,
+    { advancedTemplate: template, note },
+    authHeader(token)
+  );
+}
+export async function getQuickConfig(
+  token: string,
+  merchantId: string
+): Promise<QuickConfig> {
+  const res = await axios.get<QuickConfig>(
+    `${API_BASE}/merchants/${merchantId}/prompt/quick-config`,
+    authHeader(token)
+  );
+  return res.data;
+}
+export async function previewPrompt(
+  token: string,
+  merchantId: string,
+  dto: PreviewPromptDto
+): Promise<string> {
+  try {
+    const res = await axios.post<PreviewResponse>(
+      `${API_BASE}/merchants/${merchantId}/prompt/preview`,
+      {
+        quickConfig: {
+          dialect: dto.quickConfig?.dialect || "خليجي",
+          tone: dto.quickConfig?.tone || "ودّي",
+          customInstructions: dto.quickConfig?.customInstructions || [],
+        
+          includeClosingPhrase: dto.quickConfig?.includeClosingPhrase ?? true,
+          closingText: dto.quickConfig?.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
+        },
+        useAdvanced: dto.useAdvanced,
+        testVars: dto.testVars,
+      },
+      authHeader(token)
+    );
+    return res.data.preview;
+  } catch (error) {
+    console.error("Error in previewPrompt:", error);
+    throw error;
+  }
+}
+
+// src/api/merchantsApi.ts
+export async function getFinalPrompt(
+  token: string,
+  merchantId: string,
+): Promise<string> {
+  const res = await axios.get<{ prompt: string }>(
+    `${API_BASE}/merchants/${merchantId}/prompt/final-prompt`,
+    authHeader(token),
+  );
+  return res.data.prompt;
+}
+// تحديث الـQuickConfig
+export async function updateQuickConfig(
+  token: string,
+  merchantId: string,
+  config: QuickConfig
+): Promise<QuickConfig> {
+  const res = await axios.patch<QuickConfig>(
+    `${API_BASE}/merchants/${merchantId}/prompt/quick-config`,
+    config,
+    authHeader(token)
+  );
+  return res.data;
+}
 const DEFAULT_TEST_VARS = {
   productName: "هاتف ذكي",
   customerName: "أحمد محمد",
@@ -54,7 +139,7 @@ async function postPreview(
   body: PreviewBody
 ): Promise<string> {
   // نمرّر body كـ any لتجاوز فروق التعريفات إن كانت النسخة القديمة لا تحتوي audience
-  const res: unknown = await previewPromptRaw(
+  const res: unknown = await previewPrompt(
     token,
     merchantId,
     body as unknown as PreviewPromptDto
@@ -90,7 +175,7 @@ async function getAdvancedTemplateSuggested(
 export const promptApi = {
   // QuickConfig
   getQuickConfig: async (token: string, merchantId: string) => {
-    const cfg = await getQuickConfigRaw(token, merchantId);
+    const cfg = await getQuickConfig(token, merchantId);
     return mapFromMerchantQuickConfig(cfg);
   },
 
@@ -99,7 +184,7 @@ export const promptApi = {
     merchantId: string,
     config: QuickConfig
   ) =>
-    updateQuickConfigRaw(token, merchantId, mapToMerchantQuickConfig(config)),
+    updateQuickConfig(token, merchantId, mapToMerchantQuickConfig(config)),
 
   // Final prompt (نص النظام الكامل للاستخدام الداخلي فقط)
   getFinalPrompt,

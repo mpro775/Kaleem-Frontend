@@ -1,7 +1,7 @@
 // src/pages/AboutPage.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "@/api/axios";
+import axiosInstance from "@/shared/api/axios";
 import {
   Box,
   Paper,
@@ -33,20 +33,19 @@ import {
   Star,
   Email,
 } from "@mui/icons-material";
-import type { Merchant } from "@/types/merchant";
-import type { WorkingHour } from "../../types/workingHour";
+import type { MerchantInfo, WorkingHour } from "@/features/mechant/merchant-settings/types";
 
 export default function AboutPage() {
   const theme = useTheme();
   const { slugOrId } = useParams<{ slugOrId: string }>();
-  const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
-    axiosInstance
-      .get(`/store/${slugOrId}`)
+    axiosInstance.get(`/storefront/${slugOrId}`)
+    
       .then((res) => {
         setMerchant(res.data.merchant);
         setLoading(false);
@@ -222,7 +221,7 @@ export default function AboutPage() {
                   />
                 </ListItem>
 
-                {merchant.address && (
+                {merchant.addresses && (
                   <ListItem>
                     <ListItemIcon sx={{ minWidth: 40 }}>
                       <LocationOn color="primary" />
@@ -231,8 +230,8 @@ export default function AboutPage() {
                       primary="العنوان"
                       secondary={
                         <Typography sx={{ mb: 0.5 }}>
-                          {merchant.address.street}, {merchant.address.city},{" "}
-                          {merchant.address.state}
+                          {merchant.addresses[0].street}, {merchant.addresses[0].city},{" "}
+                          {merchant.addresses[0].state}
                         </Typography>
                       }
                     />

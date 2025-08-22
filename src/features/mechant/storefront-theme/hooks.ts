@@ -1,7 +1,7 @@
 // src/features/mechant/storefront-theme/hooks.ts
 import { useEffect, useMemo, useState } from "react";
-import { getStorefrontInfo, updateStorefrontInfo, checkSlug } from "@/api/storefrontApi";
-import type { Storefront } from "@/types/merchant";
+import { getStorefrontInfo, updateStorefrontInfo, checkSlug } from "./api";
+import type { Storefront } from "./type";
 
 const DEBOUNCE = 500;
 const normalizeSlug = (input: string) => {

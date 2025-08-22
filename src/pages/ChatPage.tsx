@@ -1,8 +1,8 @@
 // src/pages/ChatPage.tsx
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "@/api/axios";
-import WidgetChatUI from "@/widgets/merchant/widget-config/WidgetChatUI";
+import axios from "@/shared/api/axios";
+import WidgetChatUI from "@/features/mechant/widget-config/ui/WidgetChatUI";
 
 export default function ChatPage() {
   const { widgetSlug } = useParams();

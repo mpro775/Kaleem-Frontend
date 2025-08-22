@@ -1,13 +1,84 @@
-import { Box, TextField, MenuItem, Stack, FormControlLabel, Switch } from "@mui/material";
-import { useFormContext, Controller } from "react-hook-form";
+// src/features/prompt-studio/ui/QuickSetupPane.tsx
+import { useState, useMemo } from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  MenuItem,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Tooltip,
+  Divider,
+} from "@mui/material";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import AddIcon from "@mui/icons-material/Add";
+import { useFormContext, Controller, useWatch } from "react-hook-form";
 import type { QuickConfig } from "@/features/mechant/prompt-studio/types";
 
+const MAX_INSTRUCTIONS = 5;
+const MAX_CHARS = 80;
+
+function clampInstruction(s: string) {
+  return (s ?? "").toString().trim().slice(0, MAX_CHARS);
+}
+
+function makeWaLink(input: string): string {
+  const v = (input ?? "").trim();
+  if (!v) return "";
+  // إذا كان رابط واتساب صحيح، أعده كما هو
+  if (/^https?:\/\/(wa\.me|(?:www\.)?whatsapp\.com)\//i.test(v)) return v;
+  // لو أرقام فقط: ابنِ wa.me
+  const digits = v.replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}` : "";
+}
+
 export function QuickSetupPane() {
-  const { control, watch } = useFormContext<QuickConfig>();
-  const includeClosing = watch("includeClosingPhrase");
+  const { control, setValue } = useFormContext<QuickConfig>();
+
+  // مشاهدة القيم الحيّة للمعاينة الفورية
+  const instructions = useWatch({ control, name: "customInstructions" }) || [];
+  const phone = useWatch({ control, name: "customerServicePhone" }) || "";
+  const whatsapp = useWatch({ control, name: "customerServiceWhatsapp" }) || "";
+  const closingEnabled = !!useWatch({ control, name: "includeClosingPhrase" });
+  const closingText = useWatch({ control, name: "closingText" }) || "";
+
+  // إدخال التعليمات (سطر واحد يضاف بالقائمة عند Enter/زر إضافة)
+  const [draft, setDraft] = useState("");
+
+  const canAdd =
+    draft.trim().length > 0 && (instructions?.length ?? 0) < MAX_INSTRUCTIONS;
+
+  const handleAddInstruction = () => {
+    const next = clampInstruction(draft);
+    if (!next) return;
+    const list = Array.isArray(instructions) ? [...instructions] : [];
+    if (list.length >= MAX_INSTRUCTIONS) return;
+    list.push(next);
+    setValue("customInstructions", list, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+    setDraft("");
+  };
+
+  const handleDeleteInstruction = (index: number) => {
+    const list = (instructions as string[]).slice();
+    list.splice(index, 1);
+    setValue("customInstructions", list, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
+  };
+
+  const waPreview = useMemo(() => makeWaLink(whatsapp), [whatsapp]);
 
   return (
-    <Box sx={{ minWidth: 0, p: { xs: 0, md: 0 } }}>
+    <Box>
       {/* اللهجة */}
       <Controller
         name="dialect"
@@ -38,66 +109,83 @@ export function QuickSetupPane() {
         )}
       />
 
-      {/* التعليمات المخصصة — ⚠️ إصلاح القيمة (كانت Array مباشرة) */}
-      <Controller
-        name="customInstructions"
-        control={control}
-        render={({ field }) => (
+      {/* التعليمات المخصّصة: إدخال + قائمة */}
+      <Box mt={2}>
+        <Typography variant="subtitle1" gutterBottom>
+          التعليمات المخصّصة
+        </Typography>
+
+        <Box sx={{ display: "flex", gap: 1 }}>
           <TextField
-            label="تعليمات مخصصة"
-            placeholder="أضف حتى 10 تعليمات، افصل بينها بفاصلة منقوطة ; أو سطر جديد"
+            label="اكتب التعليمة ثم اضغط Enter"
+            placeholder="مثال: لا نعد عميلًا بحجز منتج غير متاح"
             fullWidth
-            margin="normal"
-            value={Array.isArray(field.value) ? field.value.join("; ") : ""}
-            onChange={(e) => {
-              const input = e.target.value;
-              const list = input
-                .split(/;|\n/)
-                .map((s) => s.trim())
-                .filter(Boolean)
-                .slice(0, 10);
-              field.onChange(list.map((instr) => instr.slice(0, 50)));
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.slice(0, MAX_CHARS))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddInstruction();
+              }
             }}
-            helperText="يمكنك إضافة حتى 10 تعليمات، كل منها حتى 50 حرف"
+            helperText={`${draft.length}/${MAX_CHARS} — ${instructions.length}/${MAX_INSTRUCTIONS} تعليمات`}
             FormHelperTextProps={{ sx: { color: "text.secondary" } }}
+            size="small"
           />
-        )}
-      />
+          <Tooltip title="إضافة">
+            <span>
+              <IconButton
+                color="primary"
+                onClick={handleAddInstruction}
+                disabled={!canAdd}
+                sx={{ alignSelf: "center" }}
+              >
+                <AddIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
 
-      {/* تفعيل/تعطيل رسالة ختامية */}
-      <Stack direction="row" alignItems="center" mt={1}>
-        <Controller
-          name="includeClosingPhrase"
-          control={control}
-          render={({ field }) => (
-            <FormControlLabel
-              control={<Switch checked={!!field.value} onChange={(_, v) => field.onChange(v)} />}
-              label="إضافة رسالة ختامية تلقائية"
-            />
+        <List
+          dense
+          sx={{
+            mt: 1,
+            border: (t) => `1px dashed ${t.palette.divider}`,
+            borderRadius: 1,
+          }}
+        >
+          {(Array.isArray(instructions) ? instructions : []).map(
+            (text, idx) => (
+              <ListItem key={`${text}-${idx}`} divider>
+                <ListItemText
+                  primary={text}
+                  secondary={`${text.length}/${MAX_CHARS} حرف`}
+                  primaryTypographyProps={{ sx: { whiteSpace: "pre-wrap" } }}
+                />
+                <ListItemSecondaryAction>
+                  <Tooltip title="حذف">
+                    <IconButton
+                      edge="end"
+                      onClick={() => handleDeleteInstruction(idx)}
+                    >
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </Tooltip>
+                </ListItemSecondaryAction>
+              </ListItem>
+            )
           )}
-        />
-      </Stack>
+          {(!instructions || instructions.length === 0) && (
+            <Box sx={{ p: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                لا توجد تعليمات بعد — اكتب التعليمة في الحقل أعلاه واضغط Enter.
+              </Typography>
+            </Box>
+          )}
+        </List>
+      </Box>
 
-      {/* الرسالة الختامية (تظهر فقط عند التفعيل) */}
-      {includeClosing && (
-        <Controller
-          name="closingText"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              label="الرسالة الختامية"
-              placeholder="مثال: شكراً لتواصلك معنا!"
-              fullWidth
-              margin="normal"
-              value={field.value || ""}
-              onChange={field.onChange}
-              inputProps={{ maxLength: 120 }}
-              helperText="تظهر في نهاية كل محادثة"
-              FormHelperTextProps={{ sx: { color: "text.secondary" } }}
-            />
-          )}
-        />
-      )}
+      <Divider sx={{ my: 2 }} />
 
       {/* رقم خدمة العملاء */}
       <Controller
@@ -106,16 +194,22 @@ export function QuickSetupPane() {
         render={({ field }) => (
           <TextField
             label="رقم هاتف خدمة العملاء"
-            placeholder="مثال: 0555555555"
+            placeholder="مثال: 0555555555 (رمز الدولة إن لزم)"
             fullWidth
             margin="normal"
             value={field.value || ""}
-            onChange={field.onChange}
-            helperText="يُعطى للمستخدم عند طلب التواصل (اختياري)"
+            onChange={(e) => field.onChange(e.target.value)}
+            helperText="سيستخدمه البوت عند طلب التواصل الهاتفي"
             FormHelperTextProps={{ sx: { color: "text.secondary" } }}
           />
         )}
       />
+      {/* معاينة فورية للهاتف */}
+      {phone?.trim() && (
+        <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
+          المعاينة: <strong>{phone.trim()}</strong>
+        </Typography>
+      )}
 
       {/* رابط واتساب خدمة العملاء */}
       <Controller
@@ -123,17 +217,72 @@ export function QuickSetupPane() {
         control={control}
         render={({ field }) => (
           <TextField
-            label="رابط واتساب خدمة العملاء"
-            placeholder="مثال: https://wa.me/9665xxxxxxx"
+            label="رابط/رقم واتساب خدمة العملاء"
+            placeholder="مثال: https://wa.me/9665xxxxxxx أو 96655xxxxxxx"
             fullWidth
             margin="normal"
             value={field.value || ""}
-            onChange={field.onChange}
-            helperText="يُعطى للمستخدم عند طلب التواصل (اختياري)"
+            onChange={(e) => field.onChange(e.target.value)}
+            helperText="أدخل رابط واتساب مباشرة أو رقمًا لنولّد الرابط تلقائيًا"
             FormHelperTextProps={{ sx: { color: "text.secondary" } }}
           />
         )}
       />
+      {/* معاينة فورية لواتساب */}
+      {!!waPreview && (
+        <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
+          المعاينة:{" "}
+          <a href={waPreview} target="_blank" rel="noreferrer">
+            {waPreview}
+          </a>
+        </Typography>
+      )}
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* الرسالة الختامية */}
+      <Controller
+        name="includeClosingPhrase"
+        control={control}
+        render={({ field }) => (
+          <TextField
+            select
+            label="إظهار رسالة ختامية؟"
+            fullWidth
+            margin="normal"
+            value={field.value ? "true" : "false"}
+            onChange={(e) => field.onChange(e.target.value === "true")}
+          >
+            <MenuItem value="true">نعم</MenuItem>
+            <MenuItem value="false">لا</MenuItem>
+          </TextField>
+        )}
+      />
+
+      <Controller
+        name="closingText"
+        control={control}
+        render={({ field }) => (
+          <TextField
+            label="الرسالة الختامية"
+            placeholder="مثال: هل أقدر أساعدك بشي ثاني؟ 😊"
+            fullWidth
+            margin="normal"
+            value={field.value || ""}
+            onChange={(e) => field.onChange(e.target.value)}
+            inputProps={{ maxLength: 120 }}
+            helperText="تظهر في نهاية المحادثة عند التفعيل (حتى 120 حرفًا)"
+            FormHelperTextProps={{ sx: { color: "text.secondary" } }}
+          />
+        )}
+      />
+
+      {/* معاينة فورية للرسالة الختامية */}
+      {closingEnabled && closingText?.trim() && (
+        <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
+          المعاينة: <em>{closingText.trim()}</em>
+        </Typography>
+      )}
     </Box>
   );
 }

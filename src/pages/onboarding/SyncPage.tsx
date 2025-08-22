@@ -1,22 +1,20 @@
 // src/pages/onboarding/SyncPage.tsx
 import { useEffect, useState } from "react";
 import {
-  Box,
   Button,
   Typography,
   CircularProgress,
   Alert,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { getIntegrationsStatus } from "@/api/integrationsApi";
-import { syncCatalog } from "@/api/catalogApi";
+
 import { getAxiosMessage } from "@/shared/lib/errors";
-import OnboardingLayout from "@/widgets/onboarding/OnboardingLayout";
+import OnboardingLayout from "@/app/layout/OnboardingLayout";
+import { getIntegrationsStatus } from "@/features/integtarions/api/integrationsApi";
+import { syncCatalog } from "@/features/integtarions/api/catalogApi";
 
 export default function SyncPage() {
-  const theme = useTheme();
   const navigate = useNavigate();
   const { user, token } = useAuth();
 

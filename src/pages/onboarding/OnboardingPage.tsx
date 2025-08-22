@@ -17,14 +17,14 @@ import { LuStore } from "react-icons/lu";
 import { MdOutlineBusiness } from "react-icons/md";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { saveBasicInfo } from "@/api/onboardingApi";
+import { saveBasicInfo } from "@/features/onboarding/api";
 import { getAxiosMessage } from "@/shared/lib/errors"; // أو من utils/error
-import OnboardingLayout from "@/widgets/onboarding/OnboardingLayout";
+import OnboardingLayout from "@/app/layout/OnboardingLayout";
 import {
   BUSINESS_TYPES,
   STORE_CATEGORIES,
 } from "@/features/onboarding/constants";
-import { ensureMerchant } from "@/api/authApi";
+import { ensureMerchant } from "@/auth/api";
 
 export default function OnboardingPage() {
   const navigate = useNavigate();

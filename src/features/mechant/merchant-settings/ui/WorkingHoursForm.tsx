@@ -14,7 +14,7 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import type { SectionComponentProps } from "@/features/mechant/merchant-settings/types";
-import type { WorkingHour } from "@/types/workingHour";
+import type { WorkingHour } from "@/features/mechant/merchant-settings/types";
 
 const weekdays = [
   { key: "Sunday", label: "الأحد" },

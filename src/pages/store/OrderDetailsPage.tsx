@@ -1,7 +1,7 @@
 // src/pages/OrderDetailsPage.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "@/api/axios";
+import axiosInstance from "@/shared/api/axios";
 import {
   Box,
   Typography,
@@ -30,7 +30,7 @@ import {
   LocationOn,
   Receipt,
 } from "@mui/icons-material";
-import type { Order, OrderProduct } from "../../types/store";
+import type { Order, OrderProduct } from "@/features/store/type";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types"; // ⬅️ FIX: مسار النوع
 
 export default function OrderDetailsPage() {
@@ -88,34 +88,25 @@ export default function OrderDetailsPage() {
   }, [order?.merchantId, isDemo]);
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "completed":
-        return "success";
-      case "pending":
-        return "warning";
-      case "shipped":
-        return "info";
-      case "cancelled":
-        return "error";
-      default:
-        return "primary";
+    switch (status) {
+      case "pending": return "warning";
+      case "paid": return "success";
+      case "shipped": return "info";
+      case "delivered": return "success";
+      case "refunded": return "default";
+      case "canceled": return "error";
+      default: return "primary";
     }
   };
-
-  const translateStatus = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "completed":
-        return "مكتمل";
-      case "pending":
-        return "قيد الانتظار";
-      case "shipped":
-        return "تم الشحن";
-      case "cancelled":
-        return "ملغي";
-      default:
-        return status;
-    }
-  };
+  const translateStatus = (status: string) => ({
+    pending: "قيد الانتظار",
+    paid: "مدفوع",
+    canceled: "ملغي",
+    shipped: "تم الشحن",
+    delivered: "تم التسليم",
+    refunded: "مسترد",
+  }[status] || status);
+  
 
   if (loading) return <OrderDetailsSkeleton />;
 

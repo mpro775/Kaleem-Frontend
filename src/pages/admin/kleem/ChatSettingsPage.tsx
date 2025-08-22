@@ -3,7 +3,7 @@ import {
   getChatSettings,
   updateChatSettings,
   type ChatSettings,
-} from "../../../api/adminKleem";
+} from "@/features/admin/api/adminKleem";
 import {
   Box,
   Button,

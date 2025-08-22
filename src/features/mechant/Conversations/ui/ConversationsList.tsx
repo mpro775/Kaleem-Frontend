@@ -7,7 +7,7 @@ import {
   CircularProgress,
   ListItemButton, // أضف هذا
 } from "@mui/material";
-import type { ConversationSession } from "@/types/chat";
+import type { ConversationSession } from "@/features/mechant/Conversations/type";
 import type { FC } from "react";
 
 interface Props {

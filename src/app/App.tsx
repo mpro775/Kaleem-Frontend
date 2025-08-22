@@ -30,7 +30,7 @@ const SyncPage = lazy(() => import("@/pages/onboarding/SyncPage"));
 
 // === Merchant (Dashboard) ===
 const MerchantLayout = lazy(
-  () => import("@/widgets/layout/merchant/MerchantLayout")
+  () => import("@/app/layout/merchant/MerchantLayout")
 );
 const HomeDashboard = lazy(() => import("@/pages/merchant/Dashboard"));
 const ConversationsPage = lazy(
@@ -68,7 +68,7 @@ const AnalyticsPageAdmin = lazy(() => import("@/pages/admin/kleem/AnalyticsPage"
 
 // === Admin (Kleem) ===
 const KleemAdminLayout = lazy(
-  () => import("@/widgets/layout/merchant/MerchantLayout")
+  () => import("@/app/layout/merchant/MerchantLayout")
 );
 const KleemDashboard = lazy(() => import("@/pages/admin/kleem/Dashboard"));
 const PromptsPage = lazy(() => import("@/pages/admin/kleem/PromptsPage"));

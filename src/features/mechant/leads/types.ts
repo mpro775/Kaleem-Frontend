@@ -14,6 +14,9 @@ export interface Lead {
   sessionId: string;
   data: Record<string, unknown>;
   createdAt: string;
+  source?: string;
+  phoneNormalized?: string; // إن موجودة
+  name?: string;            // إن موجودة
 }
 
 export interface LeadsSettings {

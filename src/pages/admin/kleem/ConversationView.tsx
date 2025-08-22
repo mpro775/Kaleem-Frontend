@@ -1,9 +1,9 @@
 // src/pages/admin/ConversationView.tsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getSession } from "../../../api/adminKleem";
+import { getSession } from "@/features/admin/api/adminKleem";
 import { Avatar, Box, Paper, Typography } from "@mui/material";
-import type { ChatSession } from "../../../api/adminKleem";
+import type { ChatSession } from "@/features/admin/api/adminKleem";
 
 export default function ConversationView() {
   const { sessionId } = useParams();

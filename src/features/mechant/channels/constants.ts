@@ -11,11 +11,28 @@ export type ChannelKey =
 
 export type ChannelData = {
   enabled?: boolean;
+  // Telegram
   token?: string;
-  sessionId?: string;
-  status?: string;
+  chatId?: string;
   webhookUrl?: string;
+
+  // WhatsApp QR (Evolution)
+  sessionId?: string;
+  instanceId?: string;
+  status?: string;
   qr?: string;
+  phone?: string;
+
+  // WhatsApp Cloud API (Meta)
+  accessToken?: string;
+  appSecret?: string;
+  verifyToken?: string;
+  phoneNumberId?: string;
+  wabaId?: string;
+
+  // Webchat
+  widgetSettings?: Record<string, unknown>;
+
   [key: string]: unknown;
 };
 
@@ -29,12 +46,17 @@ export type ChannelDef = {
 };
 
 export const CHANNELS: ChannelDef[] = [
-  { key: "telegram",     title: "تيليجرام",   icon: null, connectVia: "dialog" },
-  { key: "whatsappQr",   title: "واتساب QR",   icon: null, connectVia: "dialog" },
-  { key: "webchat",      title: "كليم",       icon: null, connectVia: "dialog" },
-  { key: "whatsappApi",  title: "واتساب رسمي", icon: null, connectVia: "none" },
-  { key: "instagram",    title: "إنستجرام",   icon: null, connectVia: "none" },
-  { key: "messenger",    title: "ماسنجر",     icon: null, connectVia: "none" },
+  { key: "telegram", title: "تيليجرام", icon: null, connectVia: "dialog" },
+  { key: "whatsappQr", title: "واتساب - QR", icon: null, connectVia: "dialog" },
+  {
+    key: "whatsappApi",
+    title: "واتساب رسمي",
+    icon: null,
+    connectVia: "dialog",
+  },
+  { key: "webchat", title: "كليم (ويب شات)", icon: null, connectVia: "dialog" },
+  { key: "instagram", title: "إنستجرام", icon: null, connectVia: "none" }, // قريباً
+  { key: "messenger", title: "ماسنجر", icon: null, connectVia: "none" }, // قريباً
 ];
 
 // مساعد لإخفاء التوكن

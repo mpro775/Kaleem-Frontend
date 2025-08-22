@@ -1,6 +1,6 @@
 // src/features/storefront-theme/StorefrontThemePage.tsx
 import { Box, Paper, Typography, Button, Snackbar, Alert, Stack } from "@mui/material";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { ColorPickerField } from "@/features/mechant/storefront-theme/ui/ColorPickerField";
 import { ButtonStyleSelect } from "@/features/mechant/storefront-theme/ui/ButtonStyleSelect";
 import { SlugLinkField } from "@/features/mechant/storefront-theme/ui/SlugLinkField";

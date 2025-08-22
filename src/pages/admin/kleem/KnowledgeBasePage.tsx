@@ -12,7 +12,7 @@ import {
   type BotFaqSearchItem,
   semanticSearch,
   updateFaq,
-} from "../../../api/adminKleem";
+} from "@/features/admin/api/adminKleem";
 import {
   Box,
   Button,

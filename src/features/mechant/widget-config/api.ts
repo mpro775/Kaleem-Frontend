@@ -1,5 +1,5 @@
 // src/features/widget-config/api.ts
-import axios from "@/api/axios";
+import axios from "@/shared/api/axios";
 import type { ChatWidgetSettings } from "./types";
 import { API_BASE } from "@/context/config";
 

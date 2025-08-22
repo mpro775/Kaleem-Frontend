@@ -1,7 +1,7 @@
 
 // src/features/chat/model/mutations.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ChannelType } from "@/types/chat";
+import type { ChannelType } from "@/features/mechant/Conversations/type";
 import * as api from "../api";
 
 export function useSendAgentMessage(merchantId?: string, sessionId?: string, channel?: ChannelType) {

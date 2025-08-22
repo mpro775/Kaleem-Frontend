@@ -1,6 +1,6 @@
 // src/pages/admin/ConversationsPage.tsx
 import { useEffect, useState } from "react";
-import { listSessions } from "../../../api/adminKleem";
+import { listSessions } from "@/features/admin/api/adminKleem";
 import { Link } from "react-router-dom";
 import {
   Paper,
@@ -11,7 +11,7 @@ import {
   TableBody,
   Pagination,
 } from "@mui/material";
-import type { ChatSession } from "../../../api/adminKleem";
+import type { ChatSession } from "@/features/admin/api/adminKleem";
 
 export default function ConversationsKleemPage() {
   const [page, setPage] = useState(1);
