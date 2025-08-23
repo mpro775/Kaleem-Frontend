@@ -53,11 +53,7 @@ export function AdvancedTemplatePane({
       <Header>
         <Typography variant="h6">محرر متقدم</Typography>
         <Box>
-          {onGenerateAI && (
-            <Button size="small" onClick={onGenerateAI} sx={{ mr: 1 }}>
-              توليد ذكي
-            </Button>
-          )}
+       
           <IconButton onClick={() => setIsFullscreen((f) => !f)}>
             {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
           </IconButton>

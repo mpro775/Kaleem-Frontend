@@ -7,6 +7,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  CircularProgress,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import { useState, useRef, useEffect } from "react";
@@ -16,41 +17,86 @@ interface Message {
   text: string;
 }
 
-export function ChatSimulator() {
+type Props = {
+  merchantId: string;                 // ضروري
+  // endpoint اللي يرجّع botReply (اختَر واحد):
+  // 1) بروكسيك: /api/tools/prompt-test (لو عاملناه)
+  // 2) أو Webhook n8n التجريبي اللي يرد JSON { botReply }
+  promptTestUrl: string;
+  // باك-إند “ردّ التستنج” (اختياري لكن مُستحسن للتخزين/الـWS):
+  testBotReplyBase?: string;          // افتراضي: https://api.kaleem-ai.com/api/webhooks
+};
+
+export function ChatSimulator({
+  merchantId,
+  promptTestUrl,
+  testBotReplyBase = "https://api.kaleem-ai.com/api/webhooks",
+}: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const send = () => {
+  const scrollToBottom = () => {
+    listRef.current?.scrollTo(0, listRef.current.scrollHeight);
+  };
+  useEffect(scrollToBottom, [messages]);
+
+  const send = async () => {
     const userText = input.trim();
-    if (!userText) return;
+    if (!userText || loading) return;
+
+    const sessionId = `dash-${Date.now()}`;
+    const channel = "dashboard-test";
 
     setMessages((m) => [...m, { from: "user", text: userText }]);
     setInput("");
+    setLoading(true);
 
-    setTimeout(() => {
-      const botReply = "شكرًا لسؤالك، سأتحقق من ذلك وأعود إليك قريبًا.";
-      setMessages((m) => [...m, { from: "bot", text: botReply }]);
-    }, 600);
+    try {
+      // 1) اطلب ردّ الذكاء من مسار التستنج (يرجع { botReply })
+      const res = await fetch(promptTestUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          merchantId,
+          text: userText,
+          sessionId,
+          channel,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: { botReply?: string } = await res.json();
+      const reply = data.botReply ?? "—";
+
+      // 2) اعرض الرد فورًا
+      setMessages((m) => [...m, { from: "bot", text: reply }]);
+
+      // 3) (اختياري) خزّنه وادفعه عبر الـ WebSocket في الباك-إند
+      //     POST /api/webhooks/:merchantId/test-bot-reply
+      //     body: { sessionId, text, channel: 'dashboard-test' }
+      try {
+        await fetch(`${testBotReplyBase}/${merchantId}/test-bot-reply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, text: reply, channel }),
+        });
+      } catch {
+        // غير حرِج — فقط تسجيل داخلي
+      }
+    } catch (e) {
+      setMessages((m) => [
+        ...m,
+        { from: "bot", text: "تعذّر إجراء الاختبار الآن. تأكد من المسارات." },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => {
-    listRef.current?.scrollTo(0, listRef.current.scrollHeight);
-  }, [messages]);
-
   return (
-    <Paper
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        minWidth: 0,
-      }}
-    >
-      <Typography
-        variant="h6"
-        sx={{ p: 1, borderBottom: "1px solid rgba(0,0,0,0.12)" }}
-      >
+    <Paper sx={{ height: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <Typography variant="h6" sx={{ p: 1, borderBottom: "1px solid rgba(0,0,0,0.12)" }}>
         محاكاة المحادثة
       </Typography>
 
@@ -58,12 +104,7 @@ export function ChatSimulator() {
       <Box sx={{ flexGrow: 1, overflowY: "auto", p: 1, minWidth: 0 }}>
         <List ref={listRef}>
           {messages.map((m, i) => (
-            <ListItem
-              key={i}
-              sx={{
-                justifyContent: m.from === "user" ? "flex-end" : "flex-start",
-              }}
-            >
+            <ListItem key={i} sx={{ justifyContent: m.from === "user" ? "flex-end" : "flex-start" }}>
               <Box
                 sx={{
                   bgcolor: m.from === "user" ? "primary.main" : "grey.200",
@@ -78,35 +119,26 @@ export function ChatSimulator() {
             </ListItem>
           ))}
           {messages.length === 0 && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ textAlign: "center", mt: 2 }}
-            >
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", mt: 2 }}>
               ابدأ بكتابة رسالة لإجراء المحاكاة...
             </Typography>
           )}
         </List>
       </Box>
 
-      {/* حقل الإدخال */}
-      <Box
-        sx={{
-          display: "flex",
-          p: 1,
-          borderTop: "1px solid rgba(0,0,0,0.12)",
-        }}
-      >
+      {/* الإدخال */}
+      <Box sx={{ display: "flex", p: 1, borderTop: "1px solid rgba(0,0,0,0.12)" }}>
         <TextField
           fullWidth
-          placeholder="اكتب رسالة..."
+          placeholder={loading ? "جارٍ الإرسال..." : "اكتب رسالة..."}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           size="small"
+          disabled={loading}
         />
-        <IconButton color="primary" onClick={send}>
-          <SendIcon />
+        <IconButton color="primary" onClick={send} disabled={loading}>
+          {loading ? <CircularProgress size={20} /> : <SendIcon />}
         </IconButton>
       </Box>
     </Paper>
