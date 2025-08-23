@@ -168,9 +168,31 @@ class PerformanceMonitor {
   saveResults(analysis) {
     const filename = `test-performance-${new Date().toISOString().split('T')[0]}.json`;
     const filepath = path.join(this.resultsDir, filename);
-    
+
     fs.writeFileSync(filepath, JSON.stringify(analysis, null, 2));
     console.log(`💾 تم حفظ النتائج في: ${filepath}`);
+
+    // تحديث بيانات لوحة التحكم
+    this.updateDashboardData(analysis);
+  }
+
+  updateDashboardData(analysis) {
+    const dashboardPath = path.join(this.resultsDir, 'dashboard-data.json');
+    let data = [];
+    try {
+      if (fs.existsSync(dashboardPath)) {
+        data = JSON.parse(fs.readFileSync(dashboardPath, 'utf8'));
+      }
+    } catch {
+      data = [];
+    }
+    data.push({
+      timestamp: analysis.timestamp,
+      totalTime: analysis.totalTime,
+      averageTime: analysis.averageTime,
+      performanceScore: analysis.performanceScore
+    });
+    fs.writeFileSync(dashboardPath, JSON.stringify(data, null, 2));
   }
 
   generateReport(analysis) {
