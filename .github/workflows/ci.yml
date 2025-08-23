@@ -1,23 +1,217 @@
-name: CI
+name: 🧪 CI/CD Pipeline - Kaleem Frontend
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # تشغيل يومياً في الساعة 2 صباحاً
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '20'
+  NPM_CACHE: '~/.npm'
 
 jobs:
-  test:
+  # 🔍 فحص جودة الكود
+  lint-and-format:
+    name: 🔍 فحص جودة الكود
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: 📥 تحميل الكود
+        uses: actions/checkout@v4
+        
+      - name: 🟢 إعداد Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      - run: npm ci
-      - run: npm test
-      - run: npm run test:performance
-      - uses: actions/upload-artifact@v4
+          
+      - name: 📦 تثبيت التبعيات
+        run: npm ci
+        
+      - name: 🔍 فحص ESLint
+        run: npm run lint
+        
+      - name: 🎨 فحص Prettier
+        run: npm run format:check
+        
+      - name: 🔒 فحص الأمان
+        run: npm audit --audit-level=moderate
+
+  # 🧪 اختبارات الوحدة
+  unit-tests:
+    name: 🧪 اختبارات الوحدة
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 21]
+    steps:
+      - name: 📥 تحميل الكود
+        uses: actions/checkout@v4
+        
+      - name: 🟢 إعداد Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
-          name: test-performance
-          path: test-performance
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: 📦 تثبيت التبعيات
+        run: npm ci
+        
+      - name: 🧪 تشغيل الاختبارات
+        run: npm test -- --reporter=verbose --run
+        
+      - name: 📊 تحليل الأداء
+        run: npm run test:performance
+        
+      - name: 💾 حفظ نتائج الأداء
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-performance-${{ matrix.node-version }}
+          path: test-performance/
+          retention-days: 30
+
+  # 📊 تقارير التغطية
+  coverage:
+    name: 📊 تقارير التغطية
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: 📥 تحميل الكود
+        uses: actions/checkout@v4
+        
+      - name: 🟢 إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 📦 تثبيت التبعيات
+        run: npm ci
+        
+      - name: 🧪 تشغيل الاختبارات مع التغطية
+        run: npm run test:coverage
+        
+      - name: 📊 رفع التغطية إلى Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          
+      - name: 📈 إنشاء تقرير التغطية
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json', 'utf8'));
+            
+            const summary = `## 📊 تقرير التغطية
+            
+            **إجمالي التغطية:** ${coverage.total.lines.pct}%
+            
+            ### تفاصيل التغطية:
+            - **Lines:** ${coverage.total.lines.pct}% (${coverage.total.lines.covered}/${coverage.total.lines.total})
+            - **Statements:** ${coverage.total.statements.pct}% (${coverage.total.statements.covered}/${coverage.total.statements.total})
+            - **Functions:** ${coverage.total.functions.pct}% (${coverage.total.functions.covered}/${coverage.total.functions.total})
+            - **Branches:** ${coverage.total.branches.pct}% (${coverage.total.branches.covered}/${coverage.total.branches.total})
+            
+            ### الملفات الأقل تغطية:
+            ${Object.entries(coverage)
+              .filter(([key]) => key !== 'total')
+              .sort((a, b) => a[1].lines.pct - b[1].lines.pct)
+              .slice(0, 5)
+              .map(([file, data]) => `- **${file}:** ${data.lines.pct}%`)
+              .join('\n')}
+            `;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  # 🚀 النشر التلقائي
+  deploy:
+    name: 🚀 النشر التلقائي
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, unit-tests, coverage]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - name: 📥 تحميل الكود
+        uses: actions/checkout@v4
+        
+      - name: 🟢 إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 📦 تثبيت التبعيات
+        run: npm ci
+        
+      - name: 🧪 تشغيل الاختبارات النهائية
+        run: npm test -- --run
+        
+      - name: 🏗️ بناء المشروع
+        run: npm run build
+        
+      - name: 📊 إنشاء تقرير النشر
+        run: |
+          echo "## 🚀 تقرير النشر - $(date)" >> deploy-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> deploy-report.md
+          echo "**Commit:** ${{ github.sha }}" >> deploy-report.md
+          echo "**Author:** ${{ github.actor }}" >> deploy-report.md
+          echo "**Build Time:** $(date)" >> deploy-report.md
+          echo "" >> deploy-report.md
+          echo "### ✅ المهام المكتملة:" >> deploy-report.md
+          echo "- فحص جودة الكود" >> deploy-report.md
+          echo "- اختبارات الوحدة" >> deploy-report.md
+          echo "- تقارير التغطية" >> deploy-report.md
+          echo "- بناء المشروع" >> deploy-report.md
+          
+      - name: 💾 حفظ تقرير النشر
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-report
+          path: deploy-report.md
+          retention-days: 90
+
+  # 📋 ملخص النتائج
+  summary:
+    name: 📋 ملخص النتائج
+    runs-on: ubuntu-latest
+    needs: [lint-and-format, unit-tests, coverage]
+    if: always()
+    steps:
+      - name: 📊 إنشاء ملخص
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { lint, tests, coverage } = context.job;
+            
+            const summary = `## 📋 ملخص CI/CD Pipeline
+            
+            ### 🔍 فحص جودة الكود: ${lint.conclusion === 'success' ? '✅ نجح' : '❌ فشل'}
+            ### 🧪 اختبارات الوحدة: ${tests.conclusion === 'success' ? '✅ نجحت' : '❌ فشلت'}
+            ### 📊 تقارير التغطية: ${coverage.conclusion === 'success' ? '✅ نجحت' : '❌ فشلت'}
+            
+            **الوقت الإجمالي:** ${Math.round((Date.now() - new Date(context.payload.head_commit.timestamp).getTime()) / 1000)}s
+            
+            ---
+            *تم إنشاء هذا التقرير تلقائياً بواسطة GitHub Actions* 🤖
+            `;
+            
+            if (context.eventName === 'pull_request') {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summary
+              });
+            }

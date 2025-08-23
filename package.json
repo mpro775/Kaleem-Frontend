@@ -12,8 +12,16 @@
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
     "test:cov": "vitest run --coverage",
+    "test:coverage": "vitest --run --coverage",
     "test:performance": "node scripts/performance-monitor.js",
     "test:performance:baseline": "node scripts/performance-monitor.js baseline",
+    "test:fast": "vitest --config vitest.config.fast.ts --run",
+    "test:comprehensive": "vitest --config vitest.config.comprehensive.ts --run",
+    "test:parallel": "vitest --config vitest.config.parallel.ts --run",
+    "test:e2e": "vitest --config vitest.config.e2e.ts --run",
+    "test:all": "npm run test:fast && npm run test:comprehensive && npm run test:parallel",
+    "test:ci": "vitest --run --reporter=verbose --pool=forks --maxConcurrency=4",
+    "test:debug": "vitest --run --reporter=verbose --pool=forks --maxConcurrency=1",
     "e2e": "playwright test"
   },
   "dependencies": {
@@ -75,6 +83,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
+    "@playwright/test": "^1.55.0",
     "@testing-library/jest-dom": "^6.7.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

@@ -1,0 +1,102 @@
+name: 🌙 اختبارات ليلية شاملة
+
+on:
+  schedule:
+    # تشغيل يومياً في الساعة 3 صباحاً
+    - cron: '0 3 * * *'
+  workflow_dispatch: # تشغيل يدوي
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  comprehensive-tests:
+    name: 🧪 اختبارات شاملة
+    runs-on: ubuntu-latest
+    timeout-minutes: 60 # وقت أطول للاختبارات الشاملة
+    
+    steps:
+      - name: 📥 تحميل الكود
+        uses: actions/checkout@v4
+        
+      - name: 🟢 إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 📦 تثبيت التبعيات
+        run: npm ci
+        
+      - name: 🔍 فحص شامل للكود
+        run: npm run lint
+        
+      - name: 🎨 فحص التنسيق
+        run: npm run format:check
+        
+      - name: 🔒 فحص الأمان
+        run: npm audit --audit-level=moderate
+        
+      - name: 🧪 اختبارات شاملة
+        run: npm test -- --run --reporter=verbose --pool=forks
+        
+      - name: 📊 تحليل الأداء الشامل
+        run: npm run test:performance
+        
+      - name: 📈 اختبارات التغطية
+        run: npm run test:coverage
+        
+      - name: 💾 حفظ جميع النتائج
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-test-results
+          path: |
+            test-performance/
+            coverage/
+            test-results.json
+          retention-days: 30
+          
+      - name: 📊 إنشاء تقرير ليلي
+        run: |
+          echo "## 🌙 التقرير الليلي - $(date)" >> nightly-report.md
+          echo "" >> nightly-report.md
+          echo "### 📊 إحصائيات الاختبارات:" >> nightly-report.md
+          echo "- **التاريخ:** $(date)" >> nightly-report.md
+          echo "- **Branch:** ${{ github.ref_name }}" >> nightly-report.md
+          echo "- **Commit:** ${{ github.sha }}" >> nightly-report.md
+          echo "" >> nightly-report.md
+          echo "### 🎯 المهام المكتملة:" >> nightly-report.md
+          echo "- فحص جودة الكود" >> nightly-report.md
+          echo "- فحص التنسيق" >> nightly-report.md
+          echo "- فحص الأمان" >> nightly-report.md
+          echo "- اختبارات شاملة" >> nightly-report.md
+          echo "- تحليل الأداء" >> nightly-report.md
+          echo "- اختبارات التغطية" >> nightly-report.md
+          
+      - name: 💾 حفظ التقرير
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-report
+          path: nightly-report.md
+          retention-days: 30
+          
+      - name: 📧 إرسال تقرير (اختياري)
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = '## 🌙 التقرير الليلي\n\n';
+            
+            try {
+              if (fs.existsSync('nightly-report.md')) {
+                report = fs.readFileSync('nightly-report.md', 'utf8');
+              }
+            } catch (e) {
+              report += '**Status:** ' + context.job.conclusion + '\n';
+              report += '**Time:** ' + new Date().toISOString() + '\n';
+            }
+            
+            // يمكن إرسال التقرير إلى Slack أو Discord هنا
+            console.log('📧 التقرير الليلي جاهز للإرسال');
+            console.log(report);

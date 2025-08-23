@@ -1,0 +1,60 @@
+version: 2
+updates:
+  # تحديث تبعيات npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    assignees:
+      - "kaleem-team"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+    ignore:
+      # تجاهل التحديثات الكبيرة
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    # فحص الاختبارات قبل الدمج
+    rebase-strategy: "auto"
+    target-branch: "develop"
+
+  # تحديث GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "10:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "kaleem-team"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # تحديث Docker (إذا كان موجود)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "11:00"
+    open-pull-requests-limit: 3
+    assignees:
+      - "kaleem-team"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"

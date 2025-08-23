@@ -1,0 +1,64 @@
+name: 🚀 اختبارات سريعة
+
+on:
+  push:
+    branches: [ main, develop, feature/*, bugfix/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch: # تشغيل يدوي
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  quick-tests:
+    name: 🧪 اختبارات سريعة
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # timeout سريع
+    
+    steps:
+      - name: 📥 تحميل الكود
+        uses: actions/checkout@v4
+        
+      - name: 🟢 إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: 📦 تثبيت التبعيات
+        run: npm ci
+        
+      - name: 🔍 فحص سريع للكود
+        run: npm run lint --silent
+        
+      - name: 🧪 اختبارات سريعة
+        run: npm test -- --run --reporter=basic --pool=forks --maxConcurrency=4
+        
+      - name: 📊 تحليل الأداء السريع
+        run: npm run test:performance
+        
+      - name: 💾 حفظ النتائج
+        uses: actions/upload-artifact@v4
+        with:
+          name: quick-test-results
+          path: |
+            test-performance/
+            test-results.json
+          retention-days: 7
+          
+      - name: 📈 تقرير سريع
+        if: always()
+        run: |
+          echo "## 🚀 نتائج الاختبارات السريعة" >> quick-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> quick-report.md
+          echo "**Commit:** ${{ github.sha }}" >> quick-report.md
+          echo "**Status:** ${{ job.status }}" >> quick-report.md
+          echo "**Time:** $(date)" >> quick-report.md
+          
+      - name: 💾 حفظ التقرير
+        uses: actions/upload-artifact@v4
+        with:
+          name: quick-report
+          path: quick-report.md
+          retention-days: 7

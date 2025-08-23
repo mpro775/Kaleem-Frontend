@@ -1,0 +1,39 @@
+# ملف ملكية الكود - Kaleem Frontend
+# هذا الملف يحدد من يجب أن يراجع التغييرات في كل قسم
+
+# المالك العام للمشروع
+* @kaleem-team
+
+# المكونات الأساسية
+/src/app/ @kaleem-team
+/src/context/ @kaleem-team
+/src/auth/ @kaleem-team
+
+# صفحات التطبيق
+/src/pages/ @kaleem-team
+
+# المكونات المشتركة
+/src/shared/ @kaleem-team
+/src/components/ @kaleem-team
+
+# الميزات
+/src/features/ @kaleem-team
+
+# الاختبارات
+/src/**/*.test.tsx @kaleem-team
+/src/**/*.test.ts @kaleem-team
+/tests/ @kaleem-team
+
+# إعدادات المشروع
+/package.json @kaleem-team
+/vite.config.ts @kaleem-team
+/vitest.config.ts @kaleem-team
+/tsconfig.json @kaleem-team
+
+# ملفات CI/CD
+/.github/ @kaleem-team
+/.github/workflows/ @kaleem-team
+
+# ملفات التوثيق
+/docs/ @kaleem-team
+/README.md @kaleem-team

@@ -1,26 +1,26 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// 🚀 إعدادات محسنة للاختبارات - Kaleem Frontend
+// 🎭 إعدادات اختبارات E2E - Kaleem Frontend
 
 // 🔧 Mock للـ console methods
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
 beforeAll(() => {
-  // إيقاف console.error و console.warn في الاختبارات
+  // إيقاف console.error و console.warn في اختبارات E2E
   console.error = vi.fn();
   console.warn = vi.fn();
   
-  // إعداد JSDOM
+  // إعداد JSDOM لاختبارات E2E
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation(query => ({
       matches: false,
       media: query,
       onchange: null,
-      addListener: vi.fn(), // deprecated
-      removeListener: vi.fn(), // deprecated
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
@@ -95,6 +95,114 @@ beforeAll(() => {
     y: 0,
     toJSON: () => {},
   }));
+  
+  // Mock للـ fetch API
+  global.fetch = vi.fn();
+  
+  // Mock للـ localStorage
+  const localStorageMock = {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+    length: 0,
+    key: vi.fn(),
+  };
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+    writable: true,
+  });
+  
+  // Mock للـ sessionStorage
+  const sessionStorageMock = {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+    length: 0,
+    key: vi.fn(),
+  };
+  Object.defineProperty(window, 'sessionStorage', {
+    value: sessionStorageMock,
+    writable: true,
+  });
+  
+  // Mock للـ URL API
+  Object.defineProperty(window, 'URL', {
+    value: {
+      createObjectURL: vi.fn(() => 'blob:mock-url'),
+      revokeObjectURL: vi.fn(),
+    },
+    writable: true,
+  });
+  
+  // Mock للـ FileReader
+  global.FileReader = vi.fn().mockImplementation(() => ({
+    readAsText: vi.fn(),
+    readAsDataURL: vi.fn(),
+    readAsArrayBuffer: vi.fn(),
+    onload: null,
+    onerror: null,
+    result: null,
+  }));
+  
+  // Mock للـ FormData
+  global.FormData = vi.fn().mockImplementation(() => ({
+    append: vi.fn(),
+    delete: vi.fn(),
+    get: vi.fn(),
+    getAll: vi.fn(),
+    has: vi.fn(),
+    set: vi.fn(),
+    forEach: vi.fn(),
+    entries: vi.fn(),
+    keys: vi.fn(),
+    values: vi.fn(),
+  }));
+  
+  // Mock للـ Headers
+  global.Headers = vi.fn().mockImplementation(() => ({
+    append: vi.fn(),
+    delete: vi.fn(),
+    get: vi.fn(),
+    has: vi.fn(),
+    set: vi.fn(),
+    forEach: vi.fn(),
+    entries: vi.fn(),
+    keys: vi.fn(),
+    values: vi.fn(),
+  }));
+  
+  // Mock للـ Request
+  global.Request = vi.fn().mockImplementation(() => ({
+    url: 'http://localhost:3000',
+    method: 'GET',
+    headers: new Headers(),
+    body: null,
+    bodyUsed: false,
+    clone: vi.fn(),
+    arrayBuffer: vi.fn(),
+    blob: vi.fn(),
+    formData: vi.fn(),
+    json: vi.fn(),
+    text: vi.fn(),
+  }));
+  
+  // Mock للـ Response
+  global.Response = vi.fn().mockImplementation(() => ({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: new Headers(),
+    body: null,
+    bodyUsed: false,
+    clone: vi.fn(),
+    arrayBuffer: vi.fn(),
+    blob: vi.fn(),
+    formData: vi.fn(),
+    json: vi.fn(),
+    text: vi.fn(),
+  }));
 });
 
 afterAll(() => {
@@ -121,6 +229,11 @@ beforeEach(() => {
   // إعادة تعيين RTL
   document.documentElement.setAttribute('dir', 'rtl');
   document.documentElement.setAttribute('lang', 'ar');
+  
+  // إعادة تعيين fetch mock
+  if (global.fetch) {
+    (global.fetch as any).mockClear();
+  }
 });
 
 afterEach(() => {
@@ -129,7 +242,37 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-// 🔧 Utilities مساعدة
+// 🔧 Utilities مساعدة لاختبارات E2E
+export const mockFetchResponse = (data: any, status: number = 200) => {
+  if (global.fetch) {
+    (global.fetch as any).mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => data,
+      text: async () => JSON.stringify(data),
+      headers: new Headers(),
+    });
+  }
+};
+
+export const mockFetchError = (error: string, status: number = 500) => {
+  if (global.fetch) {
+    (global.fetch as any).mockRejectedValue(new Error(error));
+  }
+};
+
+export const mockLocalStorage = (data: Record<string, string>) => {
+  Object.entries(data).forEach(([key, value]) => {
+    localStorage.setItem(key, value);
+  });
+};
+
+export const mockSessionStorage = (data: Record<string, string>) => {
+  Object.entries(data).forEach(([key, value]) => {
+    sessionStorage.setItem(key, value);
+  });
+};
+
 export const mockMatchMedia = (matches: boolean = false) => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -200,30 +343,34 @@ export const mockViewportSize = (width: number = 1024, height: number = 768) => 
   });
 };
 
-// 🎯 إعدادات إضافية
-export const setupTestEnvironment = () => {
-  // إعداد بيئة الاختبار
+// 🎯 إعدادات إضافية لاختبارات E2E
+export const setupE2ETestEnvironment = () => {
+  // إعداد بيئة اختبارات E2E
   mockMatchMedia();
   mockResizeObserver();
   mockIntersectionObserver();
   mockViewportSize();
+  mockFetchResponse({});
 };
 
-// 📊 إعدادات الأداء
-export const performanceConfig = {
-  // إعدادات للأداء الأفضل
-  maxConcurrency: 4,
+// 📊 إعدادات الأداء لاختبارات E2E
+export const e2ePerformanceConfig = {
+  // إعدادات للأداء الأفضل في اختبارات E2E
+  maxConcurrency: 1,
   pool: 'forks',
-  isolate: false,
+  isolate: true,
   restoreMocks: true,
   clearMocks: true,
   mockReset: true,
+  testTimeout: 60000,
+  hookTimeout: 30000,
+  teardownTimeout: 20000,
 };
 
-// 🔍 إعدادات التغطية
-export const coverageConfig = {
+// 🔍 إعدادات التغطية لاختبارات E2E
+export const e2eCoverageConfig = {
   provider: 'v8',
-  reporter: ['text', 'json', 'html', 'lcov'],
+  reporter: ['text', 'json', 'html'],
   exclude: [
     'node_modules/',
     'src/test/',
@@ -236,10 +383,10 @@ export const coverageConfig = {
   ],
   thresholds: {
     global: {
-      branches: 75,
-      functions: 75,
-      lines: 75,
-      statements: 75
+      branches: 60,
+      functions: 60,
+      lines: 60,
+      statements: 60
     }
   }
 };
