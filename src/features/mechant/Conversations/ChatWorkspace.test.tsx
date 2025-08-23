@@ -24,6 +24,7 @@ vi.mock("@/features/mechant/Conversations/ui/FeedbackDialog", () => ({ default: 
 
 test("renders workspace layout", () => {
   renderWithProviders(<ChatWorkspace merchantId="m1" />);
+  expect(screen.getByTestId("header")).toBeInTheDocument();
   expect(screen.getByTestId("sidebar")).toBeInTheDocument();
   expect(screen.getByTestId("sessions")).toBeInTheDocument();
   expect(screen.getByTestId("window")).toBeInTheDocument();
