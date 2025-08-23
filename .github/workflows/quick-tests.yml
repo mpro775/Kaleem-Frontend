@@ -18,7 +18,7 @@ jobs:
     
     steps:
       - name: 📥 تحميل الكود
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         
       - name: 🟢 إعداد Node.js
         uses: actions/setup-node@v4
