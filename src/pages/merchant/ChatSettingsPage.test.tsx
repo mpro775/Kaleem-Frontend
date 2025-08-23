@@ -9,13 +9,17 @@ vi.mock("@/context/AuthContext", async () => {
 });
 
 vi.mock("@/features/mechant/widget-config/model", () => ({
-  useWidgetSettings: () => ({ data: null, isLoading: false }),
+  useWidgetSettings: () => ({ data: null, loading: true, error: null }),
 }));
 vi.mock("@/features/mechant/widget-config/api", () => ({
   updateWidgetSettings: vi.fn(),
   syncWidgetSettings: vi.fn(),
 }));
-vi.mock("@/features/mechant/widget-config/utils", () => ({ genWidgetSnippet: () => "" }));
+vi.mock("@/features/mechant/widget-config/utils", () => ({
+  genWidgetSnippet: () => "",
+  buildEmbedScript: () => "",
+  buildChatLink: () => "",
+}));
 vi.mock("@/features/mechant/widget-config/ui/SectionCard", () => ({ default: ({ children }: any) => <div>{children}</div> }));
 vi.mock("@/features/mechant/widget-config/ui/ColorPickerButton", () => ({ default: () => <div /> }));
 vi.mock("@/features/mechant/widget-config/ui/PreviewPane", () => ({ default: () => <div /> }));

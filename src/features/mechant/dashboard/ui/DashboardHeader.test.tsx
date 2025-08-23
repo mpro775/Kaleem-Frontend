@@ -21,6 +21,6 @@ test("handles tab change", async () => {
 
 test("calls refresh", async () => {
   const { refresh } = setup();
-  await userEvent.click(screen.getByRole("button", { name: /refresh/i }));
+  await userEvent.click(screen.getByRole("button", { name: /تحديث البيانات/i }));
   expect(refresh).toHaveBeenCalled();
 });

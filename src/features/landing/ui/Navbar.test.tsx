@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import Navbar from "./Navbar";
 import { renderWithProviders } from "@/test/test-utils";
 
-vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: null, token: null }) }));
+vi.mock("@/context/AuthContext", () => ({
+  AuthProvider: ({ children }: any) => <>{children}</>,
+  useAuth: () => ({ user: null, token: null }),
+}));
 
 test("renders nav links and toggles drawer", async () => {
   renderWithProviders(<Navbar />);
