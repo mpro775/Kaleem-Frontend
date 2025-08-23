@@ -31,10 +31,18 @@ vi.mock("@/features/mechant/prompt-studio/ui/PromptToolbar", () => ({
     </div>
   ),
 }));
-vi.mock("@/features/mechant/prompt-studio/ui/LivePreviewPane", () => ({ default: () => <div /> }));
-vi.mock("@/features/mechant/prompt-studio/ui/AdvancedTemplatePane", () => ({ default: () => <div /> }));
-vi.mock("@/features/mechant/prompt-studio/ui/ChatSimulator", () => ({ default: () => <div /> }));
-vi.mock("@/features/mechant/prompt-studio/ui/QuickSetupPane", () => ({ default: () => <div /> }));
+vi.mock("@/features/mechant/prompt-studio/ui/LivePreviewPane", () => ({
+  LivePreviewPane: () => <div />,
+}));
+vi.mock("@/features/mechant/prompt-studio/ui/AdvancedTemplatePane", () => ({
+  AdvancedTemplatePane: () => <div />,
+}));
+vi.mock("@/features/mechant/prompt-studio/ui/ChatSimulator", () => ({
+  ChatSimulator: () => <div />,
+}));
+vi.mock("@/features/mechant/prompt-studio/ui/QuickSetupPane", () => ({
+  QuickSetupPane: () => <div />,
+}));
 
 vi.mock("@/shared/ui/TagsInput", () => ({ default: () => <div /> }));
 

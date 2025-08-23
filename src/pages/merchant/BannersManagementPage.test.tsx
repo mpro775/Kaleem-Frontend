@@ -10,12 +10,12 @@ vi.mock("@/context/AuthContext", async () => {
 
 vi.mock("@/features/store/ui/BannersEditor", () => ({ default: () => <div /> }));
 vi.mock("@/features/mechant/storefront-theme/api", () => ({
-  getStorefrontInfo: () => Promise.resolve(null),
+  getStorefrontInfo: () => Promise.resolve({ banners: [] }),
   updateStorefrontInfo: vi.fn(),
 }));
 
 
-test("renders heading", () => {
+test("renders heading", async () => {
   renderWithProviders(<BannersManagementPage />);
-  expect(screen.getByText("إدارة البانرات الإعلانية")).toBeInTheDocument();
+  expect(await screen.findByText("إدارة البانرات الإعلانية")).toBeInTheDocument();
 });

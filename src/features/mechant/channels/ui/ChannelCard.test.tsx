@@ -15,6 +15,6 @@ test("يستدعي onToggle عند تغيير الحالة", async () => {
       onGuide={() => {}}
     />
   );
-  await userEvent.click(screen.getByRole("checkbox"));
+  await userEvent.click(screen.getByRole("switch"));
   expect(onToggle).toHaveBeenCalled();
 });

@@ -1,11 +1,16 @@
 import { screen } from "@testing-library/react";
 import KnowledgePage from "./KnowledgePage";
 import { renderWithProviders } from "@/test/test-utils";
+import { vi } from "vitest";
 
-vi.mock("@/features/mechant/dashboard/ui/MessagesTimelineChart", () => ({ default: () => <div /> }));
-vi.mock("@/features/mechant/dashboard/ui/ProductsChart", () => ({ default: () => <div /> }));
-vi.mock("@/features/mechant/dashboard/ui/KeywordsChart", () => ({ default: () => <div /> }));
-vi.mock("@/features/mechant/dashboard/ui/ChannelsPieChart", () => ({ default: () => <div /> }));
+vi.mock("@/context/AuthContext", async () => {
+  const actual: any = await vi.importActual("@/context/AuthContext");
+  return { ...actual, useAuth: () => ({ user: { merchantId: "m1" } }) };
+});
+
+vi.mock("@/features/mechant/knowledge/ui/DocsTab", () => ({ default: () => <div /> }));
+vi.mock("@/features/mechant/knowledge/ui/LinksTab", () => ({ default: () => <div /> }));
+vi.mock("@/features/mechant/knowledge/ui/FaqsTab", () => ({ default: () => <div /> }));
 
 test("renders heading", () => {
   renderWithProviders(<KnowledgePage />);
