@@ -144,7 +144,12 @@ beforeAll(() => {
     onload: null,
     onerror: null,
     result: null,
-  }));
+  })) as any;
+  
+  // Add static properties to FileReader
+  (global.FileReader as any).EMPTY = 0;
+  (global.FileReader as any).LOADING = 1;
+  (global.FileReader as any).DONE = 2;
   
   // Mock للـ FormData
   global.FormData = vi.fn().mockImplementation(() => ({
@@ -202,7 +207,12 @@ beforeAll(() => {
     formData: vi.fn(),
     json: vi.fn(),
     text: vi.fn(),
-  }));
+  })) as any;
+  
+  // Add static methods to Response
+  (global.Response as any).error = vi.fn(() => new Response());
+  (global.Response as any).json = vi.fn((data: any) => new Response(JSON.stringify(data)));
+  (global.Response as any).redirect = vi.fn((url: string) => new Response(null, { status: 302, headers: { Location: url } }));
 });
 
 afterAll(() => {
@@ -310,7 +320,7 @@ export const mockIntersectionObserver = (isIntersecting: boolean = false) => {
   // تشغيل callback فوراً إذا كان مطلوباً
   if (isIntersecting) {
     setTimeout(() => {
-      const observer = global.IntersectionObserver.mock.results[0].value;
+      const observer = (global.IntersectionObserver as any).mock.results[0].value;
       if (observer.callback) {
         observer.callback([{
           isIntersecting: true,

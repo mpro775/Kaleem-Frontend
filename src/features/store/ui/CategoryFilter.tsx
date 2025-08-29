@@ -22,7 +22,7 @@ export function CategoryFilter({ categories, activeCategory, onChange }: Props) 
           textTransform: 'none',
           fontWeight: 'bold',
           justifyContent: 'flex-start',
-          backgroundColor: activeCategory ? 'transparent' : theme.palette.primary.main,
+          background: "var(--brand)",
           color: activeCategory ? theme.palette.text.primary : 'white',
           '&:hover': {
             backgroundColor: activeCategory ? 'rgba(0, 0, 0, 0.04)' : theme.palette.primary.dark,
@@ -44,10 +44,10 @@ export function CategoryFilter({ categories, activeCategory, onChange }: Props) 
             textTransform: 'none',
             fontWeight: 'bold',
             justifyContent: 'flex-start',
-            backgroundColor: activeCategory === cat._id ? theme.palette.primary.main : 'transparent',
-            color: activeCategory === cat._id ? 'white' : theme.palette.text.primary,
+            background: "var(--brand)",
+            color: "var(--on-brand)",
             '&:hover': {
-              backgroundColor: activeCategory === cat._id ? theme.palette.primary.dark : 'rgba(0, 0, 0, 0.04)',
+              background: "var(--brand)",
             },
             px: 3,
             py: 1.5,

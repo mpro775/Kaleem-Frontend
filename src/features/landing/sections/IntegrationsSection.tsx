@@ -223,19 +223,26 @@ export default function IntegrationsSection() {
   }, [perView]);
 
   // Move to specific page
-  const scrollToPage = (p: number) => {
-    const newPage = Math.max(0, Math.min(p, totalPages - 1));
-    setPage(newPage);
-    setAutoScroll(false);
+// استبدل scrollToPage بالكامل بهذه النسخة
+const scrollToPage = (p: number) => {
+  const el = trackRef.current;
+  if (!el) return;
 
-    // Clear existing interval
-    if (scrollInterval.current) {
-      clearTimeout(scrollInterval.current);
-    }
+  const newPage = Math.max(0, Math.min(p, totalPages - 1));
+  setPage(newPage);
+  setAutoScroll(false);
 
-    // Resume auto-scroll after 10s
-    setTimeout(() => setAutoScroll(true), 10000);
-  };
+  // أوّل عنصر في هذه الصفحة
+  const firstIndex = newPage * perView;
+  const child = el.children.item(firstIndex) as HTMLElement | null;
+  const left = child ? child.offsetLeft : newPage * el.clientWidth;
+
+  el.scrollTo({ left, behavior: "smooth" });
+
+  if (scrollInterval.current) clearTimeout(scrollInterval.current as any);
+  setTimeout(() => setAutoScroll(true), 10000);
+};
+
 
   const next = () => scrollToPage(page + 1);
   const prev = () => scrollToPage(page - 1);
@@ -244,25 +251,34 @@ export default function IntegrationsSection() {
   const onScroll = () => {
     const el = trackRef.current;
     if (!el || isScrolling) return;
-
-    // Calculate current page based on scroll position
-    const scrollPos = el.scrollLeft;
-    const containerWidth = el.clientWidth;
-    const currentPage = Math.round(scrollPos / containerWidth);
-
-    if (currentPage !== page && currentPage >= 0 && currentPage < totalPages) {
-      setPage(currentPage);
+  
+    // ابنِ قائمة مواضع أوّل عنصر في كل صفحة
+    const firsts: number[] = [];
+    for (let p = 0; p < totalPages; p++) {
+      const idx = p * perView;
+      const child = el.children.item(idx) as HTMLElement | null;
+      firsts.push(child ? child.offsetLeft : p * el.clientWidth);
+    }
+  
+    // اختر أقرب صفحة للموضع الحالي
+    const x = el.scrollLeft;
+    let nearest = 0;
+    let best = Infinity;
+    for (let p = 0; p < firsts.length; p++) {
+      const d = Math.abs(firsts[p] - x);
+      if (d < best) { best = d; nearest = p; }
+    }
+  
+    if (nearest !== page) {
+      setPage(nearest);
       setAutoScroll(false);
-      if (scrollInterval.current) {
-        clearTimeout(scrollInterval.current);
-      }
-      // Resume auto-scroll after 10 seconds
+      if (scrollInterval.current) clearTimeout(scrollInterval.current as any);
       setTimeout(() => setAutoScroll(true), 10000);
     }
   };
-
+  
   return (
-    <Section>
+    <Section id="integrations">
       <Typography
         variant="h4"
         textAlign="center"
@@ -333,7 +349,7 @@ export default function IntegrationsSection() {
                 },
                 mx: 0,
                 my: 1,
-                scrollSnapAlign: { xs: "center", md: "unset" },
+                scrollSnapAlign: { xs: "start", md: "unset" },
                 transition: "transform 0.3s ease, box-shadow 0.3s ease",
                 "&:hover": {
                   transform: "translateY(-8px)",

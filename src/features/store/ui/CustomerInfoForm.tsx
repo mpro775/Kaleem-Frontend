@@ -1,8 +1,9 @@
-// src/components/CustomerInfoForm.tsx
 import React, { useState, useEffect } from "react";
 import { Box, TextField, Button, Stack } from "@mui/material";
 import axios from "@/shared/api/axios";
-import type { CustomerInfo, Lead } from "../type";
+import type { CustomerInfo } from "../type";
+import { getLocalCustomer, saveLocalCustomer } from "@/shared/utils/customer";
+import { getSessionId } from "@/shared/utils/session";
 
 export default function CustomerInfoForm({
   merchantId,
@@ -18,18 +19,11 @@ export default function CustomerInfoForm({
   });
   const [loading, setLoading] = useState(false);
 
-  // جلب البيانات إذا كانت محفوظة مسبقًا
+  // املأ من التخزين المحلي لتبسيط أول إطلاق
   useEffect(() => {
-    const sessionId = localStorage.getItem("sessionId");
-    if (!sessionId) return;
-    axios
-      .get(`/merchants/${merchantId}/leads`)
-      .then((res) => {
-        const lead = res.data.find((l: Lead) => l.sessionId === sessionId);
-        if (lead) setForm(lead.data);
-      })
-      .catch(() => {});
-  }, [merchantId]);
+    const existing = getLocalCustomer();
+    if (existing?.phone) setForm(existing as CustomerInfo);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -38,16 +32,15 @@ export default function CustomerInfoForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    let sessionId = localStorage.getItem("sessionId");
-    if (!sessionId) {
-      sessionId = crypto.randomUUID();
-      localStorage.setItem("sessionId", sessionId);
-    }
-    await axios.post(`/merchants/${merchantId}/leads`, {
+    const sessionId = getSessionId();
+
+    await axios.post(`/storefront/merchant/${merchantId}/leads`, {
       sessionId,
       data: form,
       source: "storefront",
     });
+
+    saveLocalCustomer(form);
     setLoading(false);
     onComplete(form);
   };
@@ -76,7 +69,16 @@ export default function CustomerInfoForm({
           onChange={handleChange}
           required
         />
-        <Button variant="contained" type="submit" disabled={loading}>
+        <Button
+          variant="contained"
+          type="submit"
+          disabled={loading}
+          sx={{
+            backgroundColor: "var(--brand)",
+            color: "var(--on-brand)",
+            "&:hover": { backgroundColor: "var(--brand-hover)" },
+          }}
+        >
           {loading ? "جارٍ الحفظ..." : "متابعة"}
         </Button>
       </Stack>

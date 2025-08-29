@@ -2,25 +2,22 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2022",
-    "lib": ["ES2023"],
+    "lib": ["ES2023"], // Node فقط
     "module": "ESNext",
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "types": ["node"],
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "types": ["node"]
   },
-  "include": ["src", "src/global.d.ts"]
+  "include": [
+    "vite.config.*",
+    "vitest.config*.ts",
+    "eslint.config.*",
+    "scripts/**/*.ts",
+    "playwright.config.*"
+  ],
+  "exclude": ["src"] // ✅ أهم سطر
 }

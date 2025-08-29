@@ -15,6 +15,7 @@ const HeroSection: React.FC = () => {
 	const navigate = useNavigate();
 	return (
 		<Box
+			id="hero"
 			sx={{
 				position: "relative",
 				backgroundColor: "#fff",

@@ -1,6 +1,5 @@
-import { Box, Paper, Typography, Tabs, Tab } from "@mui/material";
+import { Box, Paper, Typography, Tabs, Tab, Chip } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
-import DocsTab from "@/features/mechant/knowledge/ui/DocsTab";
 import LinksTab from "@/features/mechant/knowledge/ui/LinksTab";
 import FaqsTab from "@/features/mechant/knowledge/ui/FaqsTab";
 import { useState } from "react";
@@ -13,60 +12,62 @@ export default function KnowledgePage() {
   if (!merchantId) return <div>تأكد من تسجيل الدخول كتاجر.</div>;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
+    <Box
+      sx={{ p: { xs: 1.5, md: 3 }, bgcolor: "#f9fafb", minHeight: "100dvh" }}
+    >
+      <Typography
+        variant={{ xs: "h5", md: "h4" } as any}
+        gutterBottom
+        fontWeight={800}
+      >
         إدارة مصادر المعرفة
       </Typography>
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} centered>
+
+      <Paper
+        sx={{
+          mb: 3,
+          borderRadius: 2,
+          border: "1px solid",
+          borderColor: "divider",
+          bgcolor: "#fff",
+        }}
+      >
+        <Tabs
+          value={tab}
+          onChange={(_, v) => setTab(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
           <Tab label="الأسئلة الشائعة" />
           <Tab label="روابط المواقع" />
-          <Tab 
+          <Tab
             label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <span>الملفات</span>
-                <Box 
-                  sx={{ 
-                    backgroundColor: '#ff9800', 
-                    color: 'white', 
-                    px: 1, 
-                    py: 0.5, 
-                    borderRadius: 1, 
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  قريباً
-                </Box>
+                <Chip label="قريباً" color="warning" size="small" />
               </Box>
             }
             disabled
-            sx={{
-              opacity: 0.6,
-              cursor: 'not-allowed',
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)'
-              }
-            }}
           />
         </Tabs>
       </Paper>
+
       {tab === 0 && <FaqsTab merchantId={merchantId} />}
       {tab === 1 && <LinksTab merchantId={merchantId} />}
       {tab === 2 && (
-        <Box 
-          sx={{ 
-            textAlign: 'center', 
-            py: 8, 
+        <Box
+          sx={{
+            textAlign: "center",
+            py: 8,
             opacity: 0.6,
-            backgroundColor: '#f5f5f5',
-            borderRadius: 2
+            bgcolor: "#fff",
+            borderRadius: 2,
           }}
         >
-          <Typography variant="h5" color="text.secondary" gutterBottom>
+          <Typography variant="h5" gutterBottom>
             🚧 الملفات قريباً 🚧
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1">
             هذه الميزة قيد التطوير وستكون متاحة قريباً
           </Typography>
         </Box>

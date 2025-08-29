@@ -5,13 +5,14 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
 import GlobalGradients from "./GlobalGradients";
 import InstructionsPage from "@/pages/merchant/InstructionsPage";
-
+import ContactPage from "@/pages/public/Contact";
 // === Public ===
 const Home = lazy(() => import("@/pages/public/Home"));
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const SignUpPage = lazy(() => import("@/pages/auth/SignUpPage"));
 const VerifyEmailPage = lazy(() => import("@/pages/auth/VerifyEmailPage"));
 const ChatPage = lazy(() => import("@/pages/ChatPage"));
+const ErrorTestPage = lazy(() => import("@/pages/ErrorTestPage"));
 
 // Storefront (public)
 const StorePage = lazy(() => import("@/pages/store/StorePage"));
@@ -20,7 +21,7 @@ const ProductDetailsPage = lazy(
   () => import("@/pages/store/ProductDetailsPage")
 );
 const AboutPage = lazy(() => import("@/pages/store/AboutPage"));
-
+const MyOrdersPage = lazy(() => import("@/pages/store/MyOrdersPage"));
 // Onboarding
 const OnboardingPage = lazy(() => import("@/pages/onboarding/OnboardingPage"));
 const SourceSelectPage = lazy(
@@ -41,9 +42,9 @@ const KnowledgePage = lazy(() => import("@/pages/merchant/KnowledgePage"));
 const LeadsManagerPage = lazy(
   () => import("@/pages/merchant/LeadsManagerPage")
 );
-const SupportPage = lazy(() => import("@/pages/merchant/SupportPage"));
+    const SupportPage = lazy(() => import("@/pages/merchant/SupportCenterPage"));
 const AccountSettingsPage = lazy(
-  () => import("@/pages/merchant/AccountSettingsPage")
+  () => import("@/pages/merchant/SettingsAdvancedPage")
 );
 const ChatSettingsPage = lazy(
   () => import("@/pages/merchant/ChatSettingsPage")
@@ -96,8 +97,8 @@ const KleemRatingsPage = lazy(
 
 export default function App() {
   return (
-    <Suspense fallback={null}>
-      <GlobalGradients />
+<Suspense fallback={<div style={{padding:16}}>جارِ التحميل…</div>}>
+<GlobalGradients />
 
       <Routes>
         {/* Public */}
@@ -105,19 +106,22 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/chat/:widgetSlug" element={<ChatPage />} />
-
+        <Route path="/error-test" element={<ErrorTestPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         {/* Storefront */}
-        <Route path="/store/:slugOrId" element={<StorePage />} />
+<Route path="/chat/:slug" element={<ChatPage />} />
+
+        <Route path="/store/:slug" element={<StorePage />} />
         <Route
-          path="/store/:slugOrId/order/:orderId"
+          path="/store/:slug/order/:orderId"
           element={<OrderDetailsPage />}
         />
+        <Route path="/store/:slug/my-orders" element={<MyOrdersPage />} />
         <Route
-          path="/store/:slugOrId/product/:productId"
+          path="/store/:slug/product/:productId"
           element={<ProductDetailsPage />}
         />
-        <Route path="/store/:slugOrId/about" element={<AboutPage />} />
+        <Route path="/store/:slug/about" element={<AboutPage />} />
 
         {/* Onboarding */}
         <Route
@@ -165,7 +169,7 @@ export default function App() {
           <Route path="setting" element={<AccountSettingsPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="banners" element={<BannersManagementPage />} />
-          <Route path="channel" element={<ChannelsIntegrationPage />} />
+          <Route path="channels" element={<ChannelsIntegrationPage />} />
           <Route path="marchinfo" element={<MerchantSettingsPage />} />
           <Route path="storefront-theme" element={<StorefrontThemePage />} />
           <Route path="knowledge" element={<KnowledgePage />} />

@@ -44,12 +44,13 @@ export default function FAQSection() {
   const theme = useTheme();
   const [expanded, setExpanded] = useState<string | false>(false);
 
-  const handleChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+  const handleChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpanded(isExpanded ? panel : false);
   };
 
   return (
     <Box 
+      id="faq"
       sx={{ 
         py: { xs: 6, md: 10 },
         backgroundColor: alpha(theme.palette.primary.main, 0.02),

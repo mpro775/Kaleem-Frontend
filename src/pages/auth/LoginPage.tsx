@@ -14,31 +14,45 @@ import { useTheme } from "@mui/material/styles";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import { RiEyeCloseLine } from "react-icons/ri";
 import { TfiEye } from "react-icons/tfi";
-import { toast } from "react-toastify";
 import { useAuth } from "@/context/AuthContext";
 import { loginAPI } from "@/auth/api";
 import AuthLayout from "@/auth/AuthLayout";
 import GradientIcon from "@/shared/ui/GradientIcon";
-import { getAxiosMessage } from "@/shared/lib/errors";
+import { useErrorHandler, applyServerFieldErrors } from "@/shared/errors";
+import { useForm } from "react-hook-form";
+
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 
 export default function LoginPage() {
   const theme = useTheme();
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { handleError } = useErrorHandler();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors }
+  } = useForm<LoginFormData>();
 
-  const handleLogin = async () => {
-    if (!email || !password)
-      return toast.error("يرجى إدخال البريد وكلمة المرور");
+  const handleLogin = async (data: LoginFormData) => {
     try {
       setLoading(true);
-      const { accessToken, user } = await loginAPI(email, password);
+      const { accessToken, user } = await loginAPI(data.email, data.password);
       login(user, accessToken);
-      toast.success("تم تسجيل الدخول بنجاح!");
-    } catch (err) {
-      toast.error(getAxiosMessage(err));
+    } catch (err: any) {
+      // إذا كان الخطأ يحتوي على أخطاء حقول، قم بتطبيقها
+      if (err.fields) {
+        applyServerFieldErrors(err.fields, setError);
+      } else {
+        // عرض رسالة خطأ عامة
+        handleError(err);
+      }
     } finally {
       setLoading(false);
     }
@@ -63,19 +77,23 @@ export default function LoginPage() {
     >
       <Box
         component="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleLogin();
-        }}
+        onSubmit={handleSubmit(handleLogin)}
         autoComplete="off"
         dir="rtl"
       >
         <TextField
+          {...register('email', { 
+            required: 'البريد الإلكتروني مطلوب',
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: 'بريد إلكتروني غير صحيح'
+            }
+          })}
           label="البريد الإلكتروني"
           fullWidth
           sx={{ mb: 3 }}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          error={!!errors.email}
+          helperText={errors.email?.message || ''}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start" aria-hidden>
@@ -91,12 +109,19 @@ export default function LoginPage() {
         />
 
         <TextField
+          {...register('password', { 
+            required: 'كلمة المرور مطلوبة',
+            minLength: {
+              value: 6,
+              message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
+            }
+          })}
           label="كلمة المرور"
           type={showPassword ? "text" : "password"}
           fullWidth
           sx={{ mb: 4 }}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          error={!!errors.password}
+          helperText={errors.password?.message || ''}
           autoComplete="current-password"
           InputProps={{
             startAdornment: (

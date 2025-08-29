@@ -36,7 +36,14 @@ export default function LiteIdentityCard({ merchantId }: { merchantId: string })
         <TextField label="الاسم" value={name} onChange={(e)=>setName(e.target.value)} fullWidth />
         <TextField label="الجوال" value={phone} onChange={(e)=>setPhone(e.target.value)} fullWidth required />
         <TextField label="العنوان" value={address} onChange={(e)=>setAddress(e.target.value)} fullWidth />
-        <Button onClick={onSubmit} variant="contained" disabled={loading || !phone}>حفظ</Button>
+        <Button
+          onClick={onSubmit}
+          variant="contained"
+          disabled={loading || !phone}
+          sx={{ backgroundColor: "var(--brand)", color: "var(--on-brand)", "&:hover": { backgroundColor: "var(--brand-hover)" } }}
+        >
+          حفظ
+        </Button>
       </Stack>
       {ok && <Alert sx={{ mt: 2 }} severity="success">تم حفظ بياناتك—سنظهر طلباتك تلقائيًا.</Alert>}
     </Box>

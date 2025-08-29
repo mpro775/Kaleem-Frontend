@@ -61,7 +61,7 @@ export default function ChannelCard({
       )}
       <Stack alignItems="center" spacing={2}>
         <Box sx={{ fontSize: 44, color: statusColor || "primary.main" }}>{icon}</Box>
-        <Typography variant="h6" fontWeight={700}>
+        <Typography variant="h6" fontWeight={700} sx={{ textAlign: 'center' }}>
           {title}
         </Typography>
         <Switch
@@ -81,8 +81,7 @@ export default function ChannelCard({
             if (!disabled) onGuide();
           }}
         >
-          طريقة الربط
-        </Button>
+تفاصيل        </Button>
       </Stack>
     </Box>
   );

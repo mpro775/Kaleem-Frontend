@@ -4,14 +4,20 @@ import { useParams } from "react-router-dom";
 import { getSession } from "@/features/admin/api/adminKleem";
 import { Avatar, Box, Paper, Typography } from "@mui/material";
 import type { ChatSession } from "@/features/admin/api/adminKleem";
+import { useErrorHandler } from '@/shared/errors';
 
 export default function ConversationView() {
+  const { handleError } = useErrorHandler();
   const { sessionId } = useParams();
   const [sess, setSess] = useState<ChatSession | null>(null);
 
   useEffect(() => {
-    if (sessionId) getSession(sessionId).then(setSess);
-  }, [sessionId]);
+    if (sessionId) {
+      getSession(sessionId)
+        .then(setSess)
+        .catch(handleError);
+    }
+  }, [sessionId, handleError]);
 
   if (!sess) return null;
   return (

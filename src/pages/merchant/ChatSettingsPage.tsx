@@ -16,6 +16,8 @@ import {
   Tooltip,
   CircularProgress,
   Snackbar,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   ContentCopy,
@@ -28,11 +30,10 @@ import {
   Save,
   Cancel,
 } from "@mui/icons-material";
-import { useTheme } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 
 import SectionCard from "@/features/mechant/widget-config/ui/SectionCard";
-import ColorPickerButton from "@/features/mechant/widget-config/ui/ColorPickerButton";
+import { BrandSwatches } from "@/features/mechant/storefront-theme/ui/BrandSwatches";
 import PreviewPane from "@/features/mechant/widget-config/ui/PreviewPane";
 
 import { API_BASE } from "@/context/config";
@@ -42,58 +43,87 @@ import type {
   ChatWidgetSettings,
 } from "@/features/mechant/widget-config/types";
 import { useWidgetSettings } from "@/features/mechant/widget-config/model";
-import {
-  generateSlug,
-  saveWidgetSettings,
-} from "@/features/mechant/widget-config/api";
+import { saveWidgetSettings } from "@/features/mechant/widget-config/api";
 import {
   buildChatLink,
   buildEmbedScript,
 } from "@/features/mechant/widget-config/utils";
+import { getMerchantInfo } from "@/features/mechant/merchant-settings/api";
+
+const ALLOWED_BRAND_DARK = [
+  "#111827", // slate
+  "#1f2937", // charcoal
+  "#0b1f4b", // navy
+  "#1e1b4b", // indigo
+  "#3b0764", // purple
+  "#134e4a", // teal
+  "#064e3b", // emerald
+  "#14532d", // forest
+  "#4a0e0e", // maroon
+  "#3e2723", // chocolate
+] as const;
 
 export default function ChatWidgetConfigSinglePage() {
   const theme = useTheme();
+  const isSm = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const merchantId = user?.merchantId ?? "";
-
   const ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
   const WIDGET_HOST = ORIGIN;
+
+  const [publicSlug, setPublicSlug] = useState<string | undefined>(undefined);
 
   const {
     data: serverSettings,
     loading,
     error,
   } = useWidgetSettings(merchantId);
+
   const [settings, setSettings] = useState<SettingsView>({
     botName: "Musaid Bot",
     welcomeMessage: "",
-    brandColor: "#FF8500",
-    widgetSlug: "smart",
+    brandColor: ALLOWED_BRAND_DARK[0],
+    widgetSlug: "",
     fontFamily: "Tajawal",
-    headerBgColor: "#FF8500",
-    bodyBgColor: "#FFF5E6",
+    headerBgColor: undefined as any,
+    bodyBgColor: undefined as any,
     embedMode: "bubble",
-    shareUrl: `${ORIGIN}/chat/${merchantId}`,
+    shareUrl: `${ORIGIN}/chat/`,
   });
+
   const [draft, setDraft] = useState<SettingsView | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // حمّل إعدادات السيرفر
   useEffect(() => {
     if (!serverSettings) return;
-    setSettings((prev) => {
-      const widgetSlug = serverSettings.widgetSlug ?? prev.widgetSlug;
-      return {
-        ...prev,
-        ...serverSettings,
-        shareUrl: widgetSlug ? `${ORIGIN}/chat/${widgetSlug}` : prev.shareUrl,
-        widgetSlug,
-      };
-    });
-  }, [serverSettings, ORIGIN]);
+    setSettings((prev) => ({
+      ...prev,
+      ...serverSettings,
+      brandColor: serverSettings.brandColor || prev.brandColor,
+      headerBgColor: undefined as any,
+      bodyBgColor: undefined as any,
+    }));
+  }, [serverSettings]);
+
+  // حمّل publicSlug
+  useEffect(() => {
+    if (!merchantId) return;
+    getMerchantInfo(merchantId)
+      .then((info) => setPublicSlug(info.publicSlug))
+      .catch(() => setPublicSlug(undefined));
+  }, [merchantId]);
 
   const effective = draft ?? settings;
+
+  // فرض اللون ضمن المسموح
+  const safeBrand = (ALLOWED_BRAND_DARK as readonly string[]).includes(
+    effective.brandColor ?? ""
+  )
+    ? (effective.brandColor as string)
+    : ALLOWED_BRAND_DARK[0];
 
   const embedTag = useMemo(
     () =>
@@ -101,30 +131,26 @@ export default function ChatWidgetConfigSinglePage() {
         merchantId,
         apiBaseUrl: API_BASE,
         mode: effective.embedMode,
-        brandColor: effective.brandColor,
+        brandColor: safeBrand,
         welcomeMessage: effective.welcomeMessage,
         fontFamily: effective.fontFamily,
-        headerBgColor: effective.headerBgColor,
-        bodyBgColor: effective.bodyBgColor,
-        widgetSlug: settings.widgetSlug,
+        publicSlug,
         widgetHost: WIDGET_HOST,
       }),
     [
       merchantId,
       effective.embedMode,
-      effective.brandColor,
       effective.welcomeMessage,
+      effective.brandColor,
       effective.fontFamily,
-      effective.headerBgColor,
-      effective.bodyBgColor,
-      settings.widgetSlug,
+      publicSlug,
       WIDGET_HOST,
     ]
   );
 
   const chatLink = useMemo(
-    () => buildChatLink(ORIGIN, settings.widgetSlug),
-    [ORIGIN, settings.widgetSlug]
+    () => (publicSlug ? buildChatLink(ORIGIN, publicSlug) : "—"),
+    [ORIGIN, publicSlug]
   );
 
   const handleChange = <K extends keyof SettingsView>(
@@ -144,39 +170,16 @@ export default function ChatWidgetConfigSinglePage() {
     try {
       const dto: ChatWidgetSettings = {
         botName: draft.botName,
-        brandColor: draft.brandColor,
+        brandColor: safeBrand,
         welcomeMessage: draft.welcomeMessage,
         fontFamily: draft.fontFamily,
-        headerBgColor: draft.headerBgColor,
-        bodyBgColor: draft.bodyBgColor,
-        widgetSlug: draft.widgetSlug,
       };
       await saveWidgetSettings(merchantId, dto);
-      setSettings(draft);
+      setSettings({ ...draft, brandColor: safeBrand });
       setDraft(null);
       setShowSuccess(true);
     } catch {
       setApiError("فشل حفظ الإعدادات. حاول مجددًا.");
-    }
-  };
-
-  const handleGenerateSlug = async () => {
-    if (!merchantId) return;
-    try {
-      const slug = await generateSlug(merchantId);
-      setSettings((prev) => ({
-        ...prev,
-        widgetSlug: slug,
-        shareUrl: `${ORIGIN}/chat/${slug}`,
-      }));
-      if (draft)
-        setDraft((prev) => ({
-          ...prev!,
-          widgetSlug: slug,
-          shareUrl: `${ORIGIN}/chat/${slug}`,
-        }));
-    } catch {
-      setApiError("تعذّر توليد رابط جديد");
     }
   };
 
@@ -196,7 +199,7 @@ export default function ChatWidgetConfigSinglePage() {
 
   if (loading) {
     return (
-      <Box sx={{ mt: 6, textAlign: "center" }}>
+      <Box sx={{ minHeight: "70vh", display: "grid", placeItems: "center" }}>
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>جاري التحميل…</Typography>
       </Box>
@@ -204,7 +207,16 @@ export default function ChatWidgetConfigSinglePage() {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, md: 4 } }}>
+    <Box
+      dir="rtl"
+      sx={{
+        maxWidth: 1400,
+        mx: "auto",
+        p: { xs: 2, md: 4 },
+        minHeight: "100vh",
+        bgcolor: "#fafafa",
+      }}
+    >
       <Snackbar
         open={showSuccess}
         autoHideDuration={3000}
@@ -213,12 +225,12 @@ export default function ChatWidgetConfigSinglePage() {
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       />
       {apiError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {apiError}
         </Alert>
       )}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           فشل جلب الإعدادات من الخادم.
         </Alert>
       )}
@@ -226,13 +238,15 @@ export default function ChatWidgetConfigSinglePage() {
       {/* Header */}
       <Box
         sx={{
+          mb: 3,
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          mb: 4,
+          justifyContent: "space-between",
+          gap: 2,
+          flexWrap: "wrap",
         }}
       >
-        <Typography variant="h4" fontWeight={700}>
+        <Typography variant="h4" fontWeight={800}>
           إعدادات الدردشة
         </Typography>
         {!draft ? (
@@ -240,7 +254,7 @@ export default function ChatWidgetConfigSinglePage() {
             تعديل الإعدادات
           </Button>
         ) : (
-          <Stack direction="row" spacing={2}>
+          <Stack direction="row" spacing={1}>
             <Button
               variant="outlined"
               startIcon={<Cancel />}
@@ -255,22 +269,22 @@ export default function ChatWidgetConfigSinglePage() {
         )}
       </Box>
 
-      {/* Content */}
+      {/* محتوى بعمودين */}
       <Box
         sx={{
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          gap: 3,
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          gap: 16 / 2,
         }}
       >
-        {/* Left column */}
-        <Box sx={{ flex: 1 }}>
-          <Stack spacing={3}>
+        {/* العمود الأيسر */}
+        <Box>
+          <Stack spacing={2}>
             <SectionCard>
               <CardContent>
-                <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
                   <SettingsIcon color="primary" />
-                  <Typography variant="h6" fontWeight={600}>
+                  <Typography variant="h6" fontWeight={700}>
                     الإعدادات العامة
                   </Typography>
                 </Stack>
@@ -297,12 +311,21 @@ export default function ChatWidgetConfigSinglePage() {
 
             <SectionCard>
               <CardContent>
-                <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                   <Palette color="primary" />
-                  <Typography variant="h6" fontWeight={600}>
+                  <Typography variant="h6" fontWeight={700}>
                     المظهر والتنسيق
                   </Typography>
                 </Stack>
+                <Typography
+                  variant="body2"
+                  sx={{ mb: 2 }}
+                  color="text.secondary"
+                >
+                  يتم استخدام لون واحد داكن فقط في الويب شات. الخلفية تبقى
+                  بيضاء.
+                </Typography>
+
                 <Stack spacing={2}>
                   <FormControl fullWidth>
                     <InputLabel>نوع الخط</InputLabel>
@@ -317,43 +340,18 @@ export default function ChatWidgetConfigSinglePage() {
                       <MenuItem value="Inter">Inter</MenuItem>
                       <MenuItem value="Roboto">Roboto</MenuItem>
                       <MenuItem value="Arial">Arial</MenuItem>
-                      <MenuItem value="Custom">مخصص</MenuItem>
                     </Select>
                   </FormControl>
 
-                  <Typography variant="body2" fontWeight={500}>
-                    تخصيص الألوان:
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <Tooltip title="لون العلامة التجارية">
-                      <Stack alignItems="center" spacing={1}>
-                        <ColorPickerButton
-                          colorHex={effective.brandColor ?? "#FF8500"}
-                          onChange={(v) => handleChange("brandColor", v)}
-                        />
-                        <Typography variant="caption">العلامة</Typography>
-                      </Stack>
-                    </Tooltip>
-
-                    <Tooltip title="لون خلفية الرأس">
-                      <Stack alignItems="center" spacing={1}>
-                        <ColorPickerButton
-                          colorHex={effective.headerBgColor ?? "#FF8500"}
-                          onChange={(v) => handleChange("headerBgColor", v)}
-                        />
-                        <Typography variant="caption">الرأس</Typography>
-                      </Stack>
-                    </Tooltip>
-
-                    <Tooltip title="لون خلفية الجسم">
-                      <Stack alignItems="center" spacing={1}>
-                        <ColorPickerButton
-                          colorHex={effective.bodyBgColor ?? "#FFF5E6"}
-                          onChange={(v) => handleChange("bodyBgColor", v)}
-                        />
-                        <Typography variant="caption">الخلفية</Typography>
-                      </Stack>
-                    </Tooltip>
+                  <Box>
+                    <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+                      اللون الموحّد:
+                    </Typography>
+                    <BrandSwatches
+                      value={safeBrand}
+                      onChange={(hex) => handleChange("brandColor", hex)}
+                      allowed={ALLOWED_BRAND_DARK as unknown as string[]}
+                    />
                   </Box>
                 </Stack>
               </CardContent>
@@ -361,9 +359,9 @@ export default function ChatWidgetConfigSinglePage() {
 
             <SectionCard>
               <CardContent>
-                <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
                   <Code color="primary" />
-                  <Typography variant="h6" fontWeight={600}>
+                  <Typography variant="h6" fontWeight={700}>
                     خيارات التضمين
                   </Typography>
                 </Stack>
@@ -388,16 +386,15 @@ export default function ChatWidgetConfigSinglePage() {
                   <TextField
                     label="رابط المشاركة"
                     fullWidth
-                    value={settings.shareUrl}
+                    value={publicSlug ? `${ORIGIN}/chat/${publicSlug}` : "—"}
                     InputProps={{ readOnly: true }}
                   />
                   <TextField
                     label="رابط صفحة الدردشة (slug)"
                     fullWidth
-                    value={settings.widgetSlug ?? ""}
+                    value={publicSlug ?? ""}
                     InputProps={{ readOnly: true }}
                   />
-                  <Button onClick={handleGenerateSlug}>توليد رابط جديد</Button>
 
                   {/* رابط الدردشة */}
                   <Box>
@@ -406,7 +403,7 @@ export default function ChatWidgetConfigSinglePage() {
                       justifyContent="space-between"
                       mb={1}
                     >
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography variant="body2" fontWeight={600}>
                         رابط الدردشة
                       </Typography>
                       <Tooltip title={copied ? "تم النسخ!" : "نسخ الرابط"}>
@@ -432,7 +429,7 @@ export default function ChatWidgetConfigSinglePage() {
                       justifyContent="space-between"
                       mb={1}
                     >
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography variant="body2" fontWeight={600}>
                         كود التضمين
                       </Typography>
                       <Tooltip title={copied ? "تم النسخ!" : "نسخ الكود"}>
@@ -452,8 +449,9 @@ export default function ChatWidgetConfigSinglePage() {
                       value={embedTag}
                       InputProps={{ readOnly: true }}
                       sx={{
-                        fontFamily: "monospace",
-                        fontSize: "0.8rem",
+                        fontFamily:
+                          "ui-monospace, SFMono-Regular, Menlo, monospace",
+                        fontSize: ".85rem",
                         bgcolor: theme.palette.grey[100],
                         borderRadius: 1,
                       }}
@@ -465,17 +463,28 @@ export default function ChatWidgetConfigSinglePage() {
           </Stack>
         </Box>
 
-        {/* Right column - Preview */}
-        <Box sx={{ flex: 1 }}>
+        {/* العمود الأيمن — المعاينة */}
+        <Box>
           <SectionCard>
             <CardContent>
-              <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
                 <Visibility color="primary" />
-                <Typography variant="h6" fontWeight={600}>
+                <Typography variant="h6" fontWeight={700}>
                   معاينة الدردشة
                 </Typography>
               </Stack>
-              <PreviewPane embedTag={embedTag} />
+              <Box
+                sx={{
+                  height: { xs: 420, md: 560 },
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1.5,
+                  overflow: "hidden",
+                  bgcolor: "#fff",
+                }}
+              >
+                <PreviewPane embedTag={embedTag} />
+              </Box>
             </CardContent>
           </SectionCard>
         </Box>

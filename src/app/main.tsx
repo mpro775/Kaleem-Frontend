@@ -13,6 +13,7 @@ import stylisRTLPlugin from "stylis-plugin-rtl";
 import { CacheProvider } from "@emotion/react";
 import * as Sentry from "@sentry/react";
 import AppProviders from "@/app/providers/QueryClientProvider";
+import { AppErrorIntegration } from "@/shared/errors";
 
 const cacheRtl = createCache({ key: "muirtl", stylisPlugins: [stylisRTLPlugin], prepend: true });
 
@@ -33,7 +34,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <AppProviders>
             <AuthProvider>
               <CartProvider>
-                <App />
+                <AppErrorIntegration>
+                  <App />
+                </AppErrorIntegration>
               </CartProvider>
             </AuthProvider>
           </AppProviders>

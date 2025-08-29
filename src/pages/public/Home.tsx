@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import {
   SEOHead,
   JsonLd,
@@ -15,8 +14,7 @@ import {
   FAQSection,
   Footer,
 } from "@/features/landing";
-import { Box } from "@mui/material";
-
+import { Box, Container, Typography } from "@mui/material";
 import { motion } from "framer-motion";
 
 const SectionReveal = ({
@@ -46,9 +44,45 @@ const SectionReveal = ({
 const Home = () => {
   return (
     <Box dir="rtl">
-      <SEOHead />
-      <JsonLd />
+      {/* هيدر SEO ثابت ومتّسق مع الدومين */}
+      <SEOHead
+        title="كليم — مساعد متاجر ذكي بالعربية | بوت ذكاء اصطناعي للتجارة الإلكترونية"
+        description="كليم يساعد متاجرك على بيع وخدمة العملاء عبر الويب وواتساب وتيليجرام. تكامل مع Salla وZid وShopify وWooCommerce."
+        canonical="https://kaleem-ai.com/"
+        ogImage="https://kaleem-ai.com/og-image.jpg"
+      />
+      {/* JSON-LD للـ Organization/WebSite (مكوّن واحد فقط هنا لتجنب التكرار) */}
+      <JsonLd
+        type="WebSite"
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          url: "https://kaleem-ai.com",
+          name: "كليم",
+          inLanguage: "ar",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://kaleem-ai.com/search?q={query}",
+            "query-input": "required name=query",
+          },
+        }}
+      />
+
       <Navbar />
+
+      {/* H1 نصي واضح يساعد الظهور باسم العلامة */}
+      <Container sx={{ pt: 6, pb: 1 }}>
+        <Typography
+          variant="h1"
+          sx={{ fontSize: { xs: 28, md: 36 }, fontWeight: 800, mb: 1 }}
+        >
+          كليم — مساعد متاجر ذكي بالعربية
+        </Typography>
+        <Typography color="text.secondary">
+          شغّل بوت التجارة الإلكترونية بالعربي، يرد ويبيع 24/7 ويتكامل مع منصاتك
+          المفضلة.
+        </Typography>
+      </Container>
 
       <SectionReveal>
         <HeroSection />

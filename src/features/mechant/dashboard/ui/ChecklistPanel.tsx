@@ -1,6 +1,23 @@
+// src/features/mechant/dashboard/ui/ChecklistPanel.tsx
 import {
-  Paper, Typography, Stack, Box, Chip, Tooltip, IconButton,
-  CircularProgress, useTheme, Button, Accordion, AccordionSummary, AccordionDetails
+  Paper,
+  Typography,
+  Stack,
+  Box,
+  Chip,
+  Tooltip,
+  IconButton,
+  CircularProgress,
+  useTheme,
+  Button,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  useMediaQuery,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -8,6 +25,7 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import type { ChecklistGroup } from "@/features/mechant/dashboard/type";
+import { useState } from "react";
 
 export default function ChecklistPanel({
   checklist = [],
@@ -19,228 +37,199 @@ export default function ChecklistPanel({
   loading?: boolean;
 }) {
   const theme = useTheme();
-  const allItems = checklist.flatMap((group) => group.items);
-  const completed = allItems.filter((i) => i.isComplete || i.isSkipped).length;
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const safeChecklist = Array.isArray(checklist) ? checklist : [];
+  const allItems = safeChecklist.flatMap((g) => g.items || []);
+  const completed = allItems.filter(
+    (i) => i?.isComplete || i?.isSkipped
+  ).length;
   const total = allItems.length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // نفس السلوك السابق: إخفاء اللوحة عند التحميل أو الاكتمال
-  if (percent === 100 || loading) return null;
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  return (
-    <Paper
-      sx={{
-        p: { xs: 1.5, md: 3 },
-        borderRadius: 3,
-        mb: 3,
-        position: "relative",
-        overflow: "hidden",
-        boxShadow: theme.shadows[1],
-      }}
-    >
-      {/* العنوان والتقدم */}
-      <Box
+  if (loading) return null;
+  if (total === 0) {
+    return (
+      <Paper sx={{ p: 2, borderRadius: 3, mb: 3 }}>
+        <Typography variant="h6" fontWeight={800}>
+          قائمة التحقق لإكمال تفعيل المتجر
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          لا توجد مهام متاحة حالياً.
+        </Typography>
+      </Paper>
+    );
+  }
+
+  // 🎉 حالة النجاح
+  if (percent === 100) {
+    return (
+      <Paper
         sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          flexWrap: "wrap",
-          minWidth: 0,
-          mb: 1.5,
+          p: 2,
+          borderRadius: 3,
+          mb: 3,
+          background: "linear-gradient(135deg, #4caf50 0%, #45a049 100%)",
+          color: "white",
         }}
       >
-        <Box sx={{ position: "relative", display: "inline-flex", mr: 1 }}>
+        <Typography variant="h6" fontWeight={800}>
+          🎉 تم إكمال جميع المهام!
+        </Typography>
+        <Typography variant="body2">
+          متجرك جاهز بالكامل! تم إكمال جميع خطوات التفعيل.
+        </Typography>
+      </Paper>
+    );
+  }
+
+  return (
+    <>
+      <Paper sx={{ p: 2, borderRadius: 3, mb: 3 }}>
+        {/* رأس اللوحة */}
+        <Box display="flex" alignItems="center" gap={2} mb={2}>
           <CircularProgress
             variant="determinate"
             value={percent}
-            size={52}
+            size={48}
             thickness={5}
-            sx={{
-              color:
-                percent === 100
-                  ? theme.palette.success.main
-                  : theme.palette.primary.main,
-              background: "#f5f5f5",
-              borderRadius: "50%",
-            }}
+            sx={{ color: percent === 100 ? "success.main" : "primary.main" }}
           />
-          <Box
-            sx={{
-              top: 0,
-              left: 0,
-              bottom: 0,
-              right: 0,
-              position: "absolute",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography variant="subtitle2" fontWeight="bold">
-              {completed}/{total}
-            </Typography>
-          </Box>
+          <Typography variant="h6" fontWeight={800} flex={1}>
+            قائمة التحقق
+          </Typography>
+          <Chip label={`${completed}/${total}`} color="primary" size="small" />
         </Box>
 
-        <Typography variant="h6" fontWeight={800} sx={{ flex: 1, minWidth: 0 }}>
-          قائمة التحقق لإكمال تفعيل المتجر
-        </Typography>
-      </Box>
-
-      <Typography variant="body2" sx={{ mb: 3, color: "text.secondary" }}>
-        أتمم الخطوات التالية ليصبح متجرك فعالاً بالكامل.
-      </Typography>
-
-      <Stack spacing={3}>
-        {checklist.map((group, idx) => (
-          <Accordion key={group.key} defaultExpanded={idx === 0}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="subtitle1" fontWeight={700}>
-                {group.title}
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Stack spacing={1} sx={{ pl: 1 }}>
-                {group.items.map((item) => {
-                  const isComplete = item.isComplete || item.isSkipped;
-                  return (
-                    <Box
-                      key={item.key}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        flexWrap: "wrap",
-                        minWidth: 0,
-                        opacity: isComplete ? 0.65 : 1,
-                        border: isComplete
-                          ? "1.5px solid " + theme.palette.grey[200]
-                          : "2px solid " + theme.palette.primary.light,
-                        borderRadius: 2,
-                        background: isComplete
-                          ? "#f8f8f8"
-                          : theme.palette.action.hover,
-                        px: 2,
-                        py: 1,
-                        transition: "background 0.2s, border 0.2s",
-                        boxShadow: isComplete ? undefined : theme.shadows[1],
-                      }}
-                    >
-                      {item.isComplete ? (
-                        <CheckCircleIcon color="success" sx={{ fontSize: 24 }} />
-                      ) : item.isSkipped ? (
-                        <SkipNextIcon color="info" sx={{ fontSize: 24 }} />
-                      ) : (
-                        <RadioButtonUncheckedIcon
-                          color="warning"
-                          sx={{ fontSize: 24 }}
-                        />
-                      )}
-
-                      <Typography
-                        variant="body1"
-                        noWrap
-                        fontWeight={isComplete ? 500 : 700}
-                        sx={{
-                          flex: 1,
-                          minWidth: 0,
-                          color: isComplete
-                            ? "text.secondary"
-                            : "text.primary",
-                        }}
-                      >
-                        {item.title}
-                      </Typography>
-
-                      {/* زر إكمال */}
-                      {!isComplete && item.actionPath && (
-                        <Tooltip
-                          title={item.message || "انتقل لإكمال هذه الخطوة"}
+        {isMobile ? (
+          // 📱 نسخة الهاتف — فقط قائمة صغيرة
+          <Stack spacing={1}>
+            {allItems.map((item) => {
+              const isComplete = item?.isComplete || item?.isSkipped;
+              return (
+                <Paper
+                  key={item?.key}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    opacity: isComplete ? 0.6 : 1,
+                    cursor: isComplete ? "default" : "pointer",
+                  }}
+                  onClick={() => !isComplete && setSelectedItem(item)}
+                >
+                  <Typography
+                    fontWeight={isComplete ? 400 : 700}
+                    fontSize={14}
+                    noWrap
+                  >
+                    {item?.title}
+                  </Typography>
+                  {isComplete ? (
+                    <CheckCircleIcon color="success" fontSize="small" />
+                  ) : (
+                    <ExpandMoreIcon fontSize="small" />
+                  )}
+                </Paper>
+              );
+            })}
+          </Stack>
+        ) : (
+          // 💻 نسخة الديسكتوب — Accordion كامل
+          <Stack spacing={2}>
+            {safeChecklist.map((group, idx) => (
+              <Accordion key={group.key || idx} defaultExpanded={idx === 0}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    {group.title}
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Stack spacing={1}>
+                    {group.items?.map((item) => {
+                      const isComplete = item?.isComplete || item?.isSkipped;
+                      return (
+                        <Box
+                          key={item.key}
+                          display="flex"
+                          alignItems="center"
+                          gap={2}
                         >
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            color="primary"
-                            sx={{ minWidth: 100 }}
-                            href={item.actionPath}
-                          >
-                            إكمال
-                          </Button>
-                        </Tooltip>
-                      )}
-
-                      {/* زر تخطي */}
-                      {!isComplete && item.skippable && !item.isSkipped && (
-                        <Tooltip title="تخطي هذه الخطوة">
-                          <Button
-                            variant="text"
-                            size="small"
-                            color="info"
-                            sx={{ minWidth: 64, mr: 1 }}
-                            onClick={() => onSkip?.(item.key)}
-                            startIcon={<SkipNextIcon />}
-                          >
-                            تخطي
-                          </Button>
-                        </Tooltip>
-                      )}
-
-                      {/* زر معلومات */}
-                      {!isComplete && (
-                        <Tooltip title={item.message || ""}>
-                          {item.actionPath ? (
-                            <IconButton
-                              color="primary"
-                              size="small"
-                              href={item.actionPath}
-                            >
-                              <InfoIcon />
-                            </IconButton>
+                          {isComplete ? (
+                            <CheckCircleIcon color="success" />
                           ) : (
-                            <IconButton color="primary" size="small" disabled>
-                              <InfoIcon />
-                            </IconButton>
+                            <RadioButtonUncheckedIcon color="warning" />
                           )}
-                        </Tooltip>
-                      )}
+                          <Typography flex={1}>{item.title}</Typography>
+                          {!isComplete && item?.skippable && (
+                            <Button
+                              onClick={() => onSkip?.(item.key)}
+                              size="small"
+                              color="info"
+                              startIcon={<SkipNextIcon />}
+                            >
+                              تخطي
+                            </Button>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </Stack>
+        )}
+      </Paper>
 
-                      {item.isComplete && (
-                        <Chip
-                          label="مكتمل"
-                          color="success"
-                          size="small"
-                          sx={{ ml: 1 }}
-                        />
-                      )}
-                      {item.isSkipped && (
-                        <Chip
-                          label="تم التخطي"
-                          color="info"
-                          size="small"
-                          sx={{ ml: 1 }}
-                        />
-                      )}
-                    </Box>
-                  );
-                })}
-              </Stack>
-            </AccordionDetails>
-          </Accordion>
-        ))}
-      </Stack>
-
-      {/* Progress Label في الأسفل للموبايل */}
-      <Box
-        sx={{
-          mt: 2,
-          textAlign: "center",
-          display: { xs: "block", md: "none" },
-        }}
-      >
-        <Typography variant="caption" color="primary" fontWeight={700}>
-          نسبة الإنجاز: {percent}%
-        </Typography>
-      </Box>
-    </Paper>
+      {/* 📱 BottomSheet للموبايل */}
+      {selectedItem && (
+        <Dialog
+          open={!!selectedItem}
+          onClose={() => setSelectedItem(null)}
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: "16px 16px 0 0",
+              bottom: 0,
+              position: "absolute",
+            },
+          }}
+        >
+          <DialogTitle>{selectedItem.title}</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              {selectedItem.message || "أكمل هذه الخطوة لتفعيل متجرك"}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            {selectedItem.skippable && (
+              <Button
+                color="info"
+                onClick={() => {
+                  onSkip?.(selectedItem.key);
+                  setSelectedItem(null);
+                }}
+              >
+                تخطي
+              </Button>
+            )}
+            {selectedItem.actionPath && (
+              <Button
+                color="primary"
+                variant="contained"
+                href={selectedItem.actionPath}
+              >
+                إكمال
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
+      )}
+    </>
   );
 }

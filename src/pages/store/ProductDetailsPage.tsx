@@ -32,15 +32,20 @@ import {
 } from "@mui/icons-material";
 import type { ProductResponse } from "@/features/mechant/products/type";
 import { useCart } from "@/context/CartContext";
-type Currency = 'SAR' | 'YER' | 'USD';
+
+// ⬅️ سحب لون المتجر الداكن وتطبيق المتغيّرات
+import { getStorefrontInfo } from "@/features/mechant/storefront-theme/api";
+import { setBrandVars } from "@/features/shared/brandCss";
+
+type Currency = "SAR" | "YER" | "USD";
 
 const CURRENCY_INFO: Record<Currency, { symbol: string; locale: string }> = {
-  SAR: { symbol: 'ر.س', locale: 'ar-SA' },
-  YER: { symbol: '﷼',   locale: 'ar-SA' },
-  USD: { symbol: '$',    locale: 'en-US' },
+  SAR: { symbol: "ر.س", locale: "ar-SA" },
+  YER: { symbol: "﷼", locale: "ar-SA" },
+  USD: { symbol: "$", locale: "en-US" },
 };
 
-function formatMoney(value: number, currency: Currency = 'SAR') {
+function formatMoney(value: number, currency: Currency = "SAR") {
   const c = CURRENCY_INFO[currency] ?? CURRENCY_INFO.SAR;
   return `${value.toLocaleString(c.locale)} ${c.symbol}`;
 }
@@ -55,8 +60,13 @@ function isOfferActive(offer?: {
   if (!offer?.enabled) return false;
   const now = Date.now();
   const start = offer.startAt ? new Date(offer.startAt).getTime() : -Infinity;
-  const end   = offer.endAt   ? new Date(offer.endAt).getTime()   : +Infinity;
-  return now >= start && now <= end && (typeof offer.newPrice === 'number') && offer.newPrice > 0;
+  const end = offer.endAt ? new Date(offer.endAt).getTime() : +Infinity;
+  return (
+    now >= start &&
+    now <= end &&
+    typeof offer.newPrice === "number" &&
+    offer.newPrice > 0
+  );
 }
 
 function discountPct(oldP?: number, newP?: number) {
@@ -64,122 +74,153 @@ function discountPct(oldP?: number, newP?: number) {
   return Math.round((1 - newP / oldP) * 100);
 }
 
-// محاولة عرض “الابن — الأب” أو أي مسار يصلنا من الباك
 function renderCategoryTrail(product: any): string | null {
   const c = (product as any)?.category;
   if (!c) return null;
-
-  // لو الباك رجّع كائناً فيه name أو trail
-  if (typeof c === 'object') {
+  if (typeof c === "object") {
     if (Array.isArray((c as any).trail) && (c as any).trail.length) {
-      return (c as any).trail.join(' › ');
+      return (c as any).trail.join(" › ");
     }
     const childName = (c as any).name;
     const parentName =
       (c as any).parentName ||
       (c as any).parent?.name ||
-      (Array.isArray((c as any).ancestors) && (c as any).ancestorsNames?.at?.(-1));
-    if (childName) return parentName ? `${childName} — ${parentName}` : childName;
+      (Array.isArray((c as any).ancestors) &&
+        (c as any).ancestorsNames?.at?.(-1));
+    if (childName)
+      return parentName ? `${childName} — ${parentName}` : childName;
     return null;
   }
-
-  // لو مجرد id… نكتفي بعدم العرض هنا (أو أضف جلب الفئات لو تحب)
   return null;
 }
 
 export default function ProductDetailsPage() {
   const theme = useTheme();
-  const { productId } = useParams<{ productId: string }>();
+  const navigate = useNavigate();
+  const { productId, slug } = useParams<{
+    productId: string;
+    slug: string;
+  }>();
+  const unwrap = (x: any) => x?.data?.data ?? x?.data ?? x;
+
   const [product, setProduct] = useState<ProductResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState(0);
   const { addItem } = useCart();
-  const navigate = useNavigate();
-  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
+  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>(
+    {}
+  );
+
   const trail = renderCategoryTrail(product);
 
-  useEffect(() => {
-    setLoading(true);
-    axiosInstance
-      .get<ProductResponse>(`/products/${productId}`)
-      .then((res) => {
-        setProduct(res.data);
-        // ضبط السمات المختارة افتراضياً
-        const init: Record<string, string> = {};
-        const attrs = (res.data as any).attributes as Record<string, string[]> | undefined;
-        if (attrs) {
-          Object.entries(attrs).forEach(([k, vals]) => {
-            if (Array.isArray(vals) && vals[0]) init[k] = String(vals[0]);
-          });
+  // ⬅️ طبّق لون المتجر الداكن حتى لو دخل مباشرة على صفحة المنتج
+useEffect(() => {
+  if (!slug) return;
+  axiosInstance
+    .get(`/storefront/${slug}`)
+    .then(async (res) => {
+      try {
+        const merchantId =
+          res?.data?.merchant?._id ||
+          res?.data?.merchant?._id ||
+          res?.data?.data?.merchant?._id;
+        if (merchantId) {
+          const sf = await getStorefrontInfo(merchantId as string);
+          setBrandVars((sf as any)?.brandDark || "#111827");
+        } else {
+          setBrandVars("#111827");
         }
-        setSelectedAttrs(init);
+      } catch {
+        setBrandVars("#111827");
+      }
+    })
+    .catch(() => setBrandVars("#111827"));
+}, [slug]);
+
+// ⬅️ جلب المنتج (مع فكّ التغليف + معالجة الأخطاء)
+useEffect(() => {
+  let mounted = true;
+  (async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(`/products/${productId}`);
+      const prod = unwrap(res) as ProductResponse | null;
+
+      if (!mounted) return;
+
+      if (!prod || !prod._id) {
+        // المنتج غير موجود
+        setProduct(null);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [productId]);
-  if (!product) return null;
-  const activeOffer = isOfferActive(product.offer);
+        return;
+      }
+
+      setProduct(prod);
+
+      // ضبط السمات المختارة افتراضياً
+      const init: Record<string, string> = {};
+      const attrs = (prod as any).attributes as
+        | Record<string, string[]>
+        | undefined;
+
+      if (attrs) {
+        Object.entries(attrs).forEach(([k, vals]) => {
+          if (Array.isArray(vals) && vals[0]) init[k] = String(vals[0]);
+        });
+      }
+      setSelectedAttrs(init);
+      setLoading(false);
+    } catch (e) {
+      if (!mounted) return;
+      setProduct(null);
+      setLoading(false);
+    }
+  })();
+  return () => {
+    mounted = false;
+  };
+}, [productId]);
+
+  if (!product) return loading ? <ProductDetailsSkeleton /> : null;
+
   const offerOld = product.offer?.oldPrice ?? product.price;
   const offerNew = product.offer?.newPrice ?? product.price;
   const pct = discountPct(offerOld, offerNew);
+
   const handleAddToCart = () => {
-    if (product) {
-      // لو addItem يقبل بيانات إضافية:
-      addItem({ ...product, selectedAttributes: selectedAttrs } as any, quantity);
-    }
+    if (product)
+      addItem(
+        { ...product, selectedAttributes: selectedAttrs } as any,
+        quantity
+      );
   };
-  
 
   const renderStars = (rating: number) => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
-
-    for (let i = 0; i < fullStars; i++) {
+    for (let i = 0; i < fullStars; i++)
       stars.push(
         <Star key={`full-${i}`} sx={{ color: theme.palette.warning.main }} />
       );
-    }
-
-    if (hasHalfStar) {
+    if (hasHalfStar)
       stars.push(
         <StarHalf key="half" sx={{ color: theme.palette.warning.main }} />
       );
-    }
-
     const emptyStars = 5 - stars.length;
-    for (let i = 0; i < emptyStars; i++) {
+    for (let i = 0; i < emptyStars; i++)
       stars.push(
         <StarBorder
           key={`empty-${i}`}
           sx={{ color: theme.palette.grey[400] }}
         />
       );
-    }
-
     return stars;
   };
 
   if (loading) return <ProductDetailsSkeleton />;
-
-  if (!product)
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "70vh",
-          textAlign: "center",
-        }}
-      >
-        <Typography variant="h5" color="error" data-testid="error-message">
-          تعذر تحميل المنتج
-        </Typography>
-      </Box>
-    );
 
   return (
     <Box
@@ -188,6 +229,7 @@ export default function ProductDetailsPage() {
         mx: "auto",
         py: 4,
         px: { xs: 2, sm: 3, md: 4 },
+        bgcolor: "#fff",
       }}
     >
       <Box sx={{ mb: 3 }}>
@@ -196,11 +238,12 @@ export default function ProductDetailsPage() {
           العودة
         </IconButton>
       </Box>
-{trail && (
-  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-    {trail}
-  </Typography>
-)}
+
+      {trail && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {trail}
+        </Typography>
+      )}
 
       <Box
         sx={{
@@ -232,31 +275,37 @@ export default function ProductDetailsPage() {
               py: 1,
             }}
           >
-            {product.images?.map((img, index) => (
-              <Box
-                key={index}
-                onClick={() => setSelectedImage(index)}
-                sx={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  border:
-                    selectedImage === index
-                      ? `2px solid ${theme.palette.primary.main}`
+            {product.images?.map((img, index) => {
+              const selected = selectedImage === index;
+              return (
+                <Box
+                  key={index}
+                  onClick={() => setSelectedImage(index)}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    cursor: "pointer",
+                    border: selected
+                      ? "2px solid var(--brand)"
                       : `1px solid ${theme.palette.divider}`,
-                  opacity: selectedImage === index ? 1 : 0.7,
-                  flexShrink: 0,
-                }}
-              >
-                <img
-                  src={img}
-                  alt={`${product.name} thumbnail ${index}`}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </Box>
-            ))}
+                    opacity: selected ? 1 : 0.7,
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`${product.name} thumbnail ${index}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </Box>
+              );
+            })}
           </Box>
 
           {/* الصورة الرئيسية */}
@@ -329,10 +378,7 @@ export default function ProductDetailsPage() {
           <Typography
             variant="h3"
             fontWeight="bold"
-            sx={{
-              mb: 2,
-              fontSize: { xs: "1.8rem", md: "2.2rem" },
-            }}
+            sx={{ mb: 2, fontSize: { xs: "1.8rem", md: "2.2rem" } }}
           >
             {product.name}
           </Typography>
@@ -352,65 +398,98 @@ export default function ProductDetailsPage() {
             </Typography>
           </Box>
 
-          {activeOffer ? (
-  <Box sx={{ mb: 3 }}>
-    <Typography variant="h4" fontWeight="bold" color="error.main" sx={{ display: 'inline', mr: 1 }}>
-      {formatMoney(offerNew, (product as any).currency || 'SAR')}
-    </Typography>
-    <Typography
-      component="span"
-      sx={{ textDecoration: 'line-through', color: 'text.disabled', mr: 1 }}
-    >
-      {formatMoney(offerOld, (product as any).currency || 'SAR')}
-    </Typography>
-    {pct > 0 && (
-      <Chip label={`-${pct}%`} color="error" size="small" sx={{ fontWeight: 'bold' }} />
-    )}
-  </Box>
-) : (
-  <Typography variant="h4" fontWeight="bold" color="primary" sx={{ mb: 3 }}>
-    {formatMoney(product.price ?? 0, (product as any).currency || 'SAR')}
-  </Typography>
-)}
-
+          {isOfferActive(product.offer) ? (
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="h4"
+                fontWeight="bold"
+                color="error.main"
+                sx={{ display: "inline", mr: 1 }}
+              >
+                {formatMoney(offerNew, (product as any).currency || "SAR")}
+              </Typography>
+              <Typography
+                component="span"
+                sx={{
+                  textDecoration: "line-through",
+                  color: "text.disabled",
+                  mr: 1,
+                }}
+              >
+                {formatMoney(offerOld, (product as any).currency || "SAR")}
+              </Typography>
+              {pct > 0 && (
+                <Chip
+                  label={`-${pct}%`}
+                  color="error"
+                  size="small"
+                  sx={{ fontWeight: "bold" }}
+                />
+              )}
+            </Box>
+          ) : (
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+              sx={{ mb: 3, color: "var(--brand)" }}
+            >
+              {formatMoney(
+                product.price ?? 0,
+                (product as any).currency || "SAR"
+              )}
+            </Typography>
+          )}
 
           <Typography
-            sx={{
-              mb: 4,
-              color: theme.palette.text.secondary,
-              lineHeight: 1.8,
-            }}
+            sx={{ mb: 4, color: theme.palette.text.secondary, lineHeight: 1.8 }}
           >
             {product.description || "لا يوجد وصف متوفر لهذا المنتج."}
           </Typography>
 
           <Divider sx={{ mb: 3 }} />
+
+          {/* سمات المنتج */}
           {product.attributes && Object.keys(product.attributes).length > 0 && (
-  <Box sx={{ mb: 3 }}>
-    {Object.entries(product.attributes).map(([key, values]) => (
-      <Box key={key} sx={{ mb: 2 }}>
-        <Typography fontWeight="bold" sx={{ mb: 1 }}>{key}</Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {(values as string[]).map((val) => {
-            const selected = selectedAttrs[key] === val;
-            return (
-              <Chip
-                key={val}
-                label={val}
-                clickable
-                onClick={() => setSelectedAttrs((s) => ({ ...s, [key]: val }))}
-                color={selected ? 'primary' : 'default'}
-                variant={selected ? 'filled' : 'outlined'}
-                data-testid="attribute-chip"
-              />
-            );
-          })}
-        </Box>
-      </Box>
-    ))}
-  </Box>
-)}
-<Divider sx={{ mb: 3 }} />
+            <Box sx={{ mb: 3 }}>
+              {Object.entries(product.attributes).map(([key, values]) => (
+                <Box key={key} sx={{ mb: 2 }}>
+                  <Typography fontWeight="bold" sx={{ mb: 1 }}>
+                    {key}
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                    {(values as string[]).map((val) => {
+                      const selected = selectedAttrs[key] === val;
+                      return (
+                        <Chip
+                          key={val}
+                          label={val}
+                          clickable
+                          onClick={() =>
+                            setSelectedAttrs((s) => ({ ...s, [key]: val }))
+                          }
+                          variant={selected ? "filled" : "outlined"}
+                          sx={{
+                            ...(selected
+                              ? {
+                                  bgcolor: "var(--brand)",
+                                  color: "var(--on-brand)",
+                                  borderColor: "transparent",
+                                }
+                              : {}),
+                            fontWeight: "bold",
+                          }}
+                          data-testid="attribute-chip"
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          <Divider sx={{ mb: 3 }} />
+
           {/* الكمية */}
           <Box sx={{ mb: 4 }}>
             <Typography fontWeight="bold" sx={{ mb: 2 }}>
@@ -429,16 +508,16 @@ export default function ProductDetailsPage() {
                 value={quantity}
                 onChange={(e) => {
                   const value = parseInt(e.target.value);
-                  if (!isNaN(value) && value > 0) {
-                    setQuantity(value);
-                  }
+                  if (!isNaN(value) && value > 0) setQuantity(value);
                 }}
                 inputProps={{ min: 1, max: product.quantity || 999 }}
                 sx={{ width: 80, textAlign: "center" }}
                 data-testid="quantity-input"
               />
               <IconButton
-                onClick={() => setQuantity(Math.min(product.quantity || 999, quantity + 1))}
+                onClick={() =>
+                  setQuantity(Math.min(product.quantity || 999, quantity + 1))
+                }
                 disabled={quantity >= (product.quantity || 999)}
                 data-testid="quantity-plus"
               >
@@ -448,14 +527,7 @@ export default function ProductDetailsPage() {
           </Box>
 
           {/* أزرار الإجراءات */}
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 2,
-              mb: 4,
-            }}
-          >
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 4 }}>
             <Button
               variant="contained"
               size="large"
@@ -468,6 +540,9 @@ export default function ProductDetailsPage() {
                 py: 1.5,
                 borderRadius: 2,
                 fontWeight: "bold",
+                background: "var(--brand)",
+                color: "var(--on-brand)",
+                "&:hover": { background: "var(--brand-hover)" },
               }}
             >
               أضف إلى السلة
@@ -477,10 +552,7 @@ export default function ProductDetailsPage() {
               variant="outlined"
               size="large"
               startIcon={<FavoriteBorder />}
-              sx={{
-                borderRadius: 2,
-                fontWeight: "bold",
-              }}
+              sx={{ borderRadius: 2, fontWeight: "bold", background: "var(--brand)", color: "var(--on-brand)" }}
             >
               المفضلة
             </Button>
@@ -510,12 +582,7 @@ export default function ProductDetailsPage() {
               borderRadius: 2,
             }}
           >
-            <LocalShipping
-              sx={{
-                color: theme.palette.primary.main,
-                fontSize: 40,
-              }}
-            />
+            <LocalShipping sx={{ color: "var(--brand)", fontSize: 40 }} />
             <Box>
               <Typography fontWeight="bold" sx={{ mb: 0.5 }}>
                 الشحن والتوصيل
@@ -527,14 +594,7 @@ export default function ProductDetailsPage() {
           </Box>
 
           {/* سياسات المتجر */}
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 2,
-              mb: 3,
-            }}
-          >
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 3 }}>
             <Chip
               icon={<Autorenew fontSize="small" />}
               label="استبدال خلال 7 أيام"
@@ -556,7 +616,12 @@ export default function ProductDetailsPage() {
         <Tabs
           value={activeTab}
           onChange={(_, newValue) => setActiveTab(newValue)}
-          sx={{ borderBottom: 1, borderColor: "divider" }}
+          sx={{
+            borderBottom: 1,
+            borderColor: "divider",
+            "& .MuiTabs-indicator": { backgroundColor: "var(--brand)" },
+            "& .MuiTab-root.Mui-selected": { color: "var(--brand)" },
+          }}
         >
           <Tab label="المواصفات" data-testid="specs-tab" />
           <Tab label="التقييمات" data-testid="reviews-tab" />
@@ -576,12 +641,7 @@ export default function ProductDetailsPage() {
             {product.specsBlock && product.specsBlock.length > 0 ? (
               <Box
                 component="ul"
-                sx={{
-                  pl: 2,
-                  m: 0,
-                  columnCount: { md: 2 },
-                  columnGap: 4,
-                }}
+                sx={{ pl: 2, m: 0, columnCount: { md: 2 }, columnGap: 4 }}
               >
                 {product.specsBlock.map((spec, index) => (
                   <Box
@@ -590,7 +650,7 @@ export default function ProductDetailsPage() {
                     sx={{
                       mb: 1.5,
                       breakInside: "avoid",
-                      "&::marker": { color: theme.palette.primary.main },
+                      "&::marker": { color: "var(--brand)" },
                     }}
                   >
                     <Typography>{spec}</Typography>
@@ -614,7 +674,6 @@ export default function ProductDetailsPage() {
             }}
             data-testid="tab-content"
           >
-            {/* تقييمات المستخدمين */}
             {[...Array(3)].map((_, i) => (
               <Box
                 key={i}
@@ -631,8 +690,8 @@ export default function ProductDetailsPage() {
                       width: 48,
                       height: 48,
                       mr: 2,
-                      backgroundColor: theme.palette.primary.main,
-                      color: "white",
+                      backgroundColor: "var(--brand)",
+                      color: "var(--on-brand)",
                     }}
                   >
                     {["م", "ع", "ح"][i]}
@@ -689,10 +748,7 @@ export default function ProductDetailsPage() {
               <Box key={i} sx={{ mb: 3 }}>
                 <Typography
                   fontWeight="bold"
-                  sx={{
-                    mb: 1,
-                    color: theme.palette.primary.main,
-                  }}
+                  sx={{ mb: 1, color: "var(--brand)" }}
                 >
                   {faq.question}
                 </Typography>
@@ -703,20 +759,12 @@ export default function ProductDetailsPage() {
         )}
       </Box>
 
-      {/* منتجات ذات صلة */}
-      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3 }}>
+      {/* منتجات قد تعجبك (Placeholder/Skeleton) */}
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: "var(--brand)" }}>
         منتجات قد تعجبك
       </Typography>
 
-      <Box
-        sx={{
-          display: "flex",
-          gap: 3,
-          overflowX: "auto",
-          py: 1,
-          pb: 3,
-        }}
-      >
+      <Box sx={{ display: "flex", gap: 3, overflowX: "auto", py: 1, pb: 3 }}>
         {[...Array(4)].map((_, i) => (
           <Paper
             key={i}
@@ -739,12 +787,11 @@ export default function ProductDetailsPage() {
             >
               <Skeleton variant="rectangular" width={120} height={120} />
             </Box>
-
             <Box sx={{ p: 2 }}>
               <Typography fontWeight="bold" sx={{ mb: 1 }}>
                 <Skeleton variant="text" width="80%" />
               </Typography>
-              <Typography color="primary" fontWeight="bold">
+              <Typography sx={{ color: "var(--brand)", fontWeight: "bold" }}>
                 <Skeleton variant="text" width="40%" />
               </Typography>
             </Box>
@@ -756,14 +803,7 @@ export default function ProductDetailsPage() {
 }
 
 const ProductDetailsSkeleton = () => (
-  <Box
-    sx={{
-      maxWidth: "lg",
-      mx: "auto",
-      py: 4,
-      px: { xs: 2, sm: 3, md: 4 },
-    }}
-  >
+  <Box sx={{ maxWidth: "lg", mx: "auto", py: 4, px: { xs: 2, sm: 3, md: 4 } }}>
     <Box sx={{ mb: 3 }}>
       <Skeleton
         variant="rectangular"
@@ -810,7 +850,6 @@ const ProductDetailsSkeleton = () => (
               />
             ))}
           </Box>
-
           <Skeleton
             variant="rectangular"
             height={450}
@@ -893,15 +932,7 @@ const ProductDetailsSkeleton = () => (
     />
 
     <Skeleton variant="text" height={40} sx={{ mb: 3, width: "30%" }} />
-    <Box
-      sx={{
-        display: "flex",
-        gap: 3,
-        overflowX: "auto",
-        py: 1,
-        pb: 3,
-      }}
-    >
+    <Box sx={{ display: "flex", gap: 3, overflowX: "auto", py: 1, pb: 3 }}>
       {[...Array(4)].map((_, i) => (
         <Skeleton
           key={i}

@@ -151,19 +151,25 @@ export default function WhyChooseKaleem() {
   }, [perView]);
 
   // Move to specific page
-  const scrollToPage = (p: number) => {
-    const newPage = Math.max(0, Math.min(p, totalPages - 1));
-    setPage(newPage);
-    setAutoScroll(false);
+// استبدل scrollToPage بالكامل بهذه النسخة
+const scrollToPage = (p: number) => {
+  const el = trackRef.current;
+  if (!el) return;
 
-    // Clear existing interval
-    if (scrollInterval.current) {
-      clearTimeout(scrollInterval.current);
-    }
+  const newPage = Math.max(0, Math.min(p, totalPages - 1));
+  setPage(newPage);
+  setAutoScroll(false);
 
-    // Resume auto-scroll after 10s
-    setTimeout(() => setAutoScroll(true), 10000);
-  };
+  // أوّل عنصر في هذه الصفحة
+  const firstIndex = newPage * perView;
+  const child = el.children.item(firstIndex) as HTMLElement | null;
+  const left = child ? child.offsetLeft : newPage * el.clientWidth;
+
+  el.scrollTo({ left, behavior: "smooth" });
+
+  if (scrollInterval.current) clearTimeout(scrollInterval.current as any);
+  setTimeout(() => setAutoScroll(true), 10000);
+};
 
   const next = () => scrollToPage(page + 1);
   const prev = () => scrollToPage(page - 1);
@@ -172,25 +178,35 @@ export default function WhyChooseKaleem() {
   const onScroll = () => {
     const el = trackRef.current;
     if (!el || isScrolling) return;
-
-    // Calculate current page based on scroll position
-    const scrollPos = el.scrollLeft;
-    const containerWidth = el.clientWidth;
-    const currentPage = Math.round(scrollPos / containerWidth);
-
-    if (currentPage !== page && currentPage >= 0 && currentPage < totalPages) {
-      setPage(currentPage);
+  
+    // ابنِ قائمة مواضع أوّل عنصر في كل صفحة
+    const firsts: number[] = [];
+    for (let p = 0; p < totalPages; p++) {
+      const idx = p * perView;
+      const child = el.children.item(idx) as HTMLElement | null;
+      firsts.push(child ? child.offsetLeft : p * el.clientWidth);
+    }
+  
+    // اختر أقرب صفحة للموضع الحالي
+    const x = el.scrollLeft;
+    let nearest = 0;
+    let best = Infinity;
+    for (let p = 0; p < firsts.length; p++) {
+      const d = Math.abs(firsts[p] - x);
+      if (d < best) { best = d; nearest = p; }
+    }
+  
+    if (nearest !== page) {
+      setPage(nearest);
       setAutoScroll(false);
-      if (scrollInterval.current) {
-        clearTimeout(scrollInterval.current);
-      }
-      // Resume auto-scroll after 10 seconds
+      if (scrollInterval.current) clearTimeout(scrollInterval.current as any);
       setTimeout(() => setAutoScroll(true), 10000);
     }
   };
+  
 
   return (
-    <Box sx={{ my: 8, px: 2, backgroundColor: "#fff" }} dir="rtl">
+    <Box id="features" sx={{ my: 8, px: 2, backgroundColor: "#fff" }} dir="rtl">
       <Typography
         variant="h4"
         fontWeight="bold"
@@ -233,42 +249,43 @@ export default function WhyChooseKaleem() {
       >
         {/* المسار */}
         <Box
-          ref={trackRef}
-          onScroll={onScroll}
-          dir="ltr"
-          sx={{
-            display: "flex",
-            overflowX: "auto",
-            scrollSnapType: "x mandatory",
-            scrollBehavior: "smooth",
-            scrollbarWidth: "none",
-            "&::-webkit-scrollbar": { display: "none" },
-            gap: { xs: 8, sm: 16 },
-            px: { xs: 2, sm: 2 },
-            justifyContent: { xs: "center", sm: "flex-start" },
-          }}
-        >
+  ref={trackRef}
+  onScroll={onScroll}
+  dir="ltr"
+  sx={{
+    display: "flex",
+    overflowX: "auto",
+    // فعّل snap فقط عندما perView === 1 (على الجوال عادةً)
+    scrollSnapType: { xs: "x mandatory", sm: perView === 1 ? "x mandatory" : "none" },
+    scrollBehavior: "smooth",
+    scrollbarWidth: "none",
+    "&::-webkit-scrollbar": { display: "none" },
+    gap: { xs: 8, sm: 16 },
+    px: { xs: 2, sm: 2 },          // إبقِ الـ padding هنا، وليس على العنصر
+    scrollPaddingInline: { xs: 8, sm: 16 }, // مهم مع snap
+    justifyContent: { xs: "center", sm: "flex-start" },
+  }}
+>
+
           {/* العنصر (الكارت) */}
           {features.map((feature, i) => (
-            <Box
-              key={i}
-              sx={{
-                flex: "0 0 auto",
-                // عرض الكارت بحسب perView مع هوامش
-                width: {
-                  xs: "calc(100% - 16px)",
-                  sm: `calc(50% - 20px)`,
-                  md: `calc(25% - 24px)`,
-                },
-                mx: { xs: 1, sm: 1 },
-                my: 1,
-                scrollSnapAlign: "center",
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                "&:hover": {
-                  transform: "translateY(-8px)",
-                },
-              }}
-            >
+           <Box
+           key={i}
+           sx={{
+             flex: "0 0 auto",
+             width: {
+               xs: "calc(100% - 0px)",              // perView=1
+               sm: "calc((100% - 16px) / 2)",       // perView=2, gap=16
+               md: "calc((100% - 3 * 16px) / 4)",   // perView=4, gap=16
+             },
+             // لا margins جانبية هنا
+             my: 1,
+             scrollSnapAlign: { xs: "start", sm: "unset" }, // snap فقط عند 1-perView
+             transition: "transform 0.3s ease, box-shadow 0.3s ease",
+             "&:hover": { transform: "translateY(-8px)" },
+           }}
+         >
+         
               <Card
                 sx={{
                   height: "100%",

@@ -26,36 +26,87 @@ import {
   Description,
   Policy,
   ArrowBack,
-  Storefront,
+  Storefront as StorefrontIcon,
   Public,
   LocalShipping,
   Autorenew,
   Star,
   Email,
 } from "@mui/icons-material";
-import type { MerchantInfo, WorkingHour } from "@/features/mechant/merchant-settings/types";
+import type {
+  MerchantInfo,
+  WorkingHour,
+} from "@/features/mechant/merchant-settings/types";
+
+import { getStorefrontInfo } from "@/features/mechant/storefront-theme/api";
+import { setBrandVars } from "@/features/shared/brandCss";
+
+const unwrap = (x: any) => x?.data?.data ?? x?.data ?? x;
 
 export default function AboutPage() {
   const theme = useTheme();
-  const { slugOrId } = useParams<{ slugOrId: string }>();
+  // 👇 التقط أكثر من اسم بارام لتفادي mismatch
+  const params = useParams();
+  const slug =
+    (params.slug as string) ||
+    (params.slugOrId as string) ||
+    (params.id as string) ||
+    "";
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    setLoading(true);
-    axiosInstance.get(`/storefront/${slugOrId}`)
-    
-      .then((res) => {
-        setMerchant(res.data.merchant);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [slugOrId]);
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setErr("");
+
+        if (!slug) {
+          throw new Error("لا يوجد سلاج في المسار.");
+        }
+
+        // /storefront/:slugOrId يُرجع { merchant, products, categories }
+        const res = await axiosInstance.get(`/storefront/${slug}`);
+        const data = unwrap(res);
+
+        const m =
+          data?.merchant ||
+          data?.data?.merchant || // تحسباً لأي تغليف
+          null;
+
+        if (!m?._id) {
+          throw new Error("تعذر استخراج بيانات التاجر من الاستجابة.");
+        }
+
+        if (!mounted) return;
+
+        setMerchant(m);
+
+        // 👇 طبّق اللون الداكن
+        try {
+          const sf = await getStorefrontInfo(m._id);
+          setBrandVars((sf as any)?.brandDark || "#111827");
+        } catch {
+          setBrandVars("#111827");
+        }
+      } catch (e: any) {
+        if (!mounted) return;
+        setErr(e?.message || "تعذر تحميل معلومات المتجر");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [slug]);
 
   if (loading) return <LoadingSkeleton />;
 
-  if (!merchant)
+  if (err || !merchant)
     return (
       <Box
         sx={{
@@ -67,7 +118,7 @@ export default function AboutPage() {
         }}
       >
         <Typography variant="h5" color="error">
-          تعذر تحميل معلومات المتجر
+          {err || "تعذر تحميل معلومات المتجر"}
         </Typography>
       </Box>
     );
@@ -79,6 +130,7 @@ export default function AboutPage() {
         mx: "auto",
         py: 4,
         px: { xs: 2, sm: 3, md: 4 },
+        bgcolor: "#fff",
       }}
     >
       <Box sx={{ mb: 3 }}>
@@ -87,12 +139,14 @@ export default function AboutPage() {
           العودة
         </IconButton>
 
+        {/* Hero */}
         <Paper
           sx={{
             borderRadius: 3,
             overflow: "hidden",
-            background: "linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)",
-            color: "white",
+            background:
+              "linear-gradient(135deg, var(--brand-hover) 0%, var(--brand) 100%)",
+            color: "var(--on-brand)",
             p: { xs: 3, md: 5 },
             mb: 4,
             position: "relative",
@@ -101,29 +155,14 @@ export default function AboutPage() {
           <Box
             sx={{
               position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              inset: 0,
               background:
-                "radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 40%)",
+                "radial-gradient(circle at top right, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 40%)",
             }}
           />
 
-          <Box
-            sx={{
-              position: "relative",
-              zIndex: 2,
-              textAlign: "center",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                mb: 3,
-              }}
-            >
+          <Box sx={{ position: "relative", zIndex: 2, textAlign: "center" }}>
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
               {merchant.logoUrl ? (
                 <Avatar
                   src={merchant.logoUrl}
@@ -140,11 +179,11 @@ export default function AboutPage() {
                   sx={{
                     width: 120,
                     height: 120,
-                    bgcolor: "white",
-                    color: theme.palette.primary.main,
+                    bgcolor: "var(--on-brand)",
+                    color: "var(--brand)",
                   }}
                 >
-                  <Storefront sx={{ fontSize: 60 }} />
+                  <StorefrontIcon sx={{ fontSize: 60 }} />
                 </Avatar>
               )}
             </Box>
@@ -164,7 +203,7 @@ export default function AboutPage() {
             <Typography
               variant="h6"
               sx={{
-                opacity: 0.9,
+                opacity: 0.95,
                 maxWidth: 800,
                 mx: "auto",
                 fontSize: { xs: "1rem", md: "1.25rem" },
@@ -187,12 +226,7 @@ export default function AboutPage() {
         }}
       >
         {/* معلومات التواصل */}
-        <Box
-          sx={{
-            flex: 1,
-            minWidth: 0, // يمنع تجاوز الحاوية
-          }}
-        >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Card sx={{ borderRadius: 3, height: "100%" }}>
             <CardContent>
               <Typography
@@ -202,7 +236,7 @@ export default function AboutPage() {
                   display: "flex",
                   alignItems: "center",
                   fontWeight: "bold",
-                  color: theme.palette.primary.main,
+                  color: "var(--brand)",
                 }}
               >
                 <Phone sx={{ mr: 1 }} />
@@ -212,7 +246,7 @@ export default function AboutPage() {
               <List>
                 <ListItem>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Phone color="primary" />
+                    <Phone sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="رقم الهاتف"
@@ -221,16 +255,17 @@ export default function AboutPage() {
                   />
                 </ListItem>
 
-                {merchant.addresses && (
+                {merchant.addresses && merchant.addresses.length > 0 && (
                   <ListItem>
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                      <LocationOn color="primary" />
+                      <LocationOn sx={{ color: "var(--brand)" }} />
                     </ListItemIcon>
                     <ListItemText
                       primary="العنوان"
                       secondary={
                         <Typography sx={{ mb: 0.5 }}>
-                          {merchant.addresses[0].street}, {merchant.addresses[0].city},{" "}
+                          {merchant.addresses[0].street},{" "}
+                          {merchant.addresses[0].city},{" "}
                           {merchant.addresses[0].state}
                         </Typography>
                       }
@@ -240,7 +275,7 @@ export default function AboutPage() {
 
                 <ListItem>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Email color="primary" />
+                    <Email sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="البريد الإلكتروني"
@@ -251,11 +286,11 @@ export default function AboutPage() {
 
                 <ListItem>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Public color="primary" />
+                    <Public sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="الموقع الإلكتروني"
-                    secondary={merchant.storefrontUrl || "www.example.com"}
+                    secondary={(merchant as any).storefrontUrl || "www.example.com"}
                     secondaryTypographyProps={{ sx: { fontWeight: "bold" } }}
                   />
                 </ListItem>
@@ -265,12 +300,7 @@ export default function AboutPage() {
         </Box>
 
         {/* ساعات العمل */}
-        <Box
-          sx={{
-            flex: 1,
-            minWidth: 0, // يمنع تجاوز الحاوية
-          }}
-        >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Card sx={{ borderRadius: 3, height: "100%" }}>
             <CardContent>
               <Typography
@@ -280,7 +310,7 @@ export default function AboutPage() {
                   display: "flex",
                   alignItems: "center",
                   fontWeight: "bold",
-                  color: theme.palette.primary.main,
+                  color: "var(--brand)",
                 }}
               >
                 <Schedule sx={{ mr: 1 }} />
@@ -288,13 +318,7 @@ export default function AboutPage() {
               </Typography>
 
               {(merchant.workingHours || []).length > 0 ? (
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 2,
-                  }}
-                >
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
                   {merchant.workingHours.map((h: WorkingHour, idx: number) => (
                     <Box
                       key={idx}
@@ -316,9 +340,12 @@ export default function AboutPage() {
                         <Typography fontWeight="bold">{h.day}:</Typography>
                         <Chip
                           label={`${h.openTime} - ${h.closeTime}`}
-                          color="primary"
                           size="small"
-                          sx={{ fontWeight: "bold" }}
+                          sx={{
+                            fontWeight: "bold",
+                            bgcolor: "var(--brand)",
+                            color: "var(--on-brand)",
+                          }}
                         />
                       </Box>
                     </Box>
@@ -359,7 +386,7 @@ export default function AboutPage() {
                 display: "flex",
                 alignItems: "center",
                 fontWeight: "bold",
-                color: theme.palette.primary.main,
+                color: "var(--brand)",
               }}
             >
               <Policy sx={{ mr: 1 }} />
@@ -388,7 +415,7 @@ export default function AboutPage() {
                     display: "flex",
                     alignItems: "center",
                     mb: 2,
-                    color: theme.palette.primary.main,
+                    color: "var(--brand)",
                   }}
                 >
                   <Autorenew sx={{ mr: 1, fontSize: 30 }} />
@@ -417,7 +444,7 @@ export default function AboutPage() {
                     display: "flex",
                     alignItems: "center",
                     mb: 2,
-                    color: theme.palette.primary.main,
+                    color: "var(--brand)",
                   }}
                 >
                   <LocalShipping sx={{ mr: 1, fontSize: 30 }} />
@@ -446,7 +473,7 @@ export default function AboutPage() {
                     display: "flex",
                     alignItems: "center",
                     mb: 2,
-                    color: theme.palette.primary.main,
+                    color: "var(--brand)",
                   }}
                 >
                   <Description sx={{ mr: 1, fontSize: 30 }} />
@@ -464,106 +491,9 @@ export default function AboutPage() {
         </Card>
       </Box>
 
-      {/* لماذا نختارنا؟ */}
-      <Box sx={{ mb: 4 }}>
-        <Card sx={{ borderRadius: 3 }}>
-          <CardContent>
-            <Typography
-              variant="h5"
-              sx={{
-                mb: 3,
-                display: "flex",
-                alignItems: "center",
-                fontWeight: "bold",
-                color: theme.palette.primary.main,
-              }}
-            >
-              <Star sx={{ mr: 1 }} />
-              لماذا تختار متجرنا؟
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 3,
-              }}
-            >
-              {[
-                {
-                  icon: (
-                    <Star
-                      sx={{ color: theme.palette.warning.main, fontSize: 40 }}
-                    />
-                  ),
-                  title: "جودة عالية",
-                  desc: "منتجاتنا مختارة بعناية لتلبي أعلى معايير الجودة",
-                },
-                {
-                  icon: (
-                    <LocalShipping
-                      sx={{ color: theme.palette.success.main, fontSize: 40 }}
-                    />
-                  ),
-                  title: "شحن سريع",
-                  desc: "توصيل سريع لجميع أنحاء المملكة خلال 2-5 أيام عمل",
-                },
-                {
-                  icon: (
-                    <Phone
-                      sx={{ color: theme.palette.info.main, fontSize: 40 }}
-                    />
-                  ),
-                  title: "دعم فني",
-                  desc: "فريق دعم متاح على مدار الساعة لمساعدتك في أي استفسار",
-                },
-                {
-                  icon: (
-                    <Autorenew
-                      sx={{ color: theme.palette.secondary.main, fontSize: 40 }}
-                    />
-                  ),
-                  title: "ضمان الاستبدال",
-                  desc: "ضمان استبدال أو إرجاع المنتج خلال 14 يومًا",
-                },
-              ].map((item, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    width: {
-                      xs: "100%",
-                      sm: "calc(50% - 12px)",
-                      md: "calc(25% - 12px)",
-                    },
-                    minWidth: 0,
-                    textAlign: "center",
-                    p: 3,
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                  }}
-                >
-                  {item.icon}
-                  <Typography
-                    variant="h6"
-                    fontWeight="bold"
-                    sx={{ mt: 2, mb: 1 }}
-                  >
-                    {item.title}
-                  </Typography>
-                  <Typography color="text.secondary">{item.desc}</Typography>
-                </Box>
-              ))}
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
-
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Button
           variant="contained"
-          color="primary"
           size="large"
           sx={{
             px: 6,
@@ -571,8 +501,11 @@ export default function AboutPage() {
             borderRadius: 2,
             fontWeight: "bold",
             fontSize: 18,
+            background: "var(--brand)",
+            color: "var(--on-brand)",
+            "&:hover": { background: "var(--brand-hover)" },
           }}
-          onClick={() => navigate(`/store/${slugOrId}`)}
+          onClick={() => navigate(`/store/${slug}`)}
         >
           تصفح منتجاتنا
         </Button>
@@ -582,14 +515,7 @@ export default function AboutPage() {
 }
 
 const LoadingSkeleton = () => (
-  <Box
-    sx={{
-      maxWidth: "lg",
-      mx: "auto",
-      py: 4,
-      px: { xs: 2, sm: 3, md: 4 },
-    }}
-  >
+  <Box sx={{ maxWidth: "lg", mx: "auto", py: 4, px: { xs: 2, sm: 3, md: 4 } }}>
     <Box sx={{ mb: 3 }}>
       <Skeleton
         variant="rectangular"
@@ -630,14 +556,7 @@ const LoadingSkeleton = () => (
       sx={{ borderRadius: 3, mb: 4 }}
     />
 
-    <Box
-      sx={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 3,
-        mb: 4,
-      }}
-    >
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3, mb: 4 }}>
       {[...Array(4)].map((_, i) => (
         <Skeleton
           key={i}

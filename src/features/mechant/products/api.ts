@@ -30,8 +30,22 @@ export async function deleteProduct(id: string): Promise<{ message: string }> {
 
 // جلب منتجات التاجر
 export async function getMerchantProducts(merchantId: string): Promise<ProductResponse[]> {
-  const { data } = await axios.get<ProductResponse[]>("/products", { params: { merchantId } });
-  return data;
+  console.log('Fetching products for merchantId:', merchantId);
+  const { data } = await axios.get<{ success: boolean; data: ProductResponse[] }>("/products", { params: { merchantId } });
+  
+  console.log('Raw API response:', data);
+  
+  // Handle different response structures
+  if (data && data.success && Array.isArray(data.data)) {
+    console.log('Returning data.data:', data.data);
+    return data.data;
+  } else if (Array.isArray(data)) {
+    console.log('Returning data directly:', data);
+    return data;
+  } else {
+    console.warn('Unexpected API response structure:', data);
+    return [];
+  }
 }
 
 // رفع صور متعددة (حد 6) — replace=false يعني إضافة لما هو موجود

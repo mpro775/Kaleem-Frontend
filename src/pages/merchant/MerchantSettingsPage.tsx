@@ -1,16 +1,16 @@
+// src/pages/dashboard/MerchantSettingsPage.tsx
 import { useEffect, useState } from "react";
 import {
   Box,
-  Paper,
   Tabs,
   Tab,
   CircularProgress,
-  Snackbar,
   Alert,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
+import { useErrorHandler } from "@/shared/errors";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 import {
   updateMerchantInfo,
@@ -22,18 +22,13 @@ import { filterUpdatableFields } from "@/features/mechant/merchant-settings/util
 
 export default function MerchantSettingsPage() {
   const { user } = useAuth();
+  const { handleError } = useErrorHandler();
   const merchantId = user?.merchantId ?? null;
 
   const [data, setData] = useState<MerchantInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [tab, setTab] = useState(0);
-
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-  }>({ open: false, message: "", severity: "success" });
 
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
@@ -43,9 +38,12 @@ export default function MerchantSettingsPage() {
     if (!merchantId) return;
     setLoading(true);
     getMerchantInfo(merchantId)
-      .then(setData)
+      .then((response) => {
+        setData(response);
+      })
+      .catch(handleError)
       .finally(() => setLoading(false));
-  }, [merchantId]);
+  }, [merchantId, handleError]);
 
   const handleSectionSave = async (sectionData: Partial<MerchantInfo>) => {
     try {
@@ -55,66 +53,76 @@ export default function MerchantSettingsPage() {
       const newData: MerchantInfo = { ...data, ...sectionData };
       await updateMerchantInfo(merchantId, filterUpdatableFields(newData));
       setData(newData);
-
-      setSnackbar({
-        open: true,
-        message: "تم الحفظ بنجاح",
-        severity: "success",
-      });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "حدث خطأ أثناء الحفظ";
-      setSnackbar({ open: true, message: msg, severity: "error" });
+    } catch (error) {
+      handleError(error);
     } finally {
       setSaveLoading(false);
     }
   };
 
-  if (loading || !data) {
+  if (loading) {
     return (
-      <Box display="flex" justifyContent="center" mt={10}>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="100dvh"
+      >
         <CircularProgress />
       </Box>
     );
   }
 
+  if (!data) {
+    return (
+      <Box display="flex" flexDirection="column" alignItems="center" mt={10}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          لم يتم العثور على بيانات التاجر
+        </Alert>
+      </Box>
+    );
+  }
+
   return (
-    <Paper
-      elevation={3}
+    <Box
       sx={{
-        p: 0,
-        borderRadius: 3,
+        display: "flex",
+        flexDirection: "column",
+        height: "100dvh",
         width: "100%",
-        maxWidth: "1400px",
-        minHeight: "80vh",
-        mx: "auto",
-        my: 6,
-        overflow: "hidden",
+        bgcolor: "#f5f6fa",
       }}
     >
       <Box
         dir="rtl"
         sx={{
+          flex: 1,
           display: "flex",
           flexDirection: isMdUp ? "row" : "column",
-          minHeight: 500,
+          overflow: "hidden",
         }}
       >
-        {/* Tabs */}
+        {/* Tabs Sidebar */}
         <Box
           sx={{
             ...(isMdUp
               ? {
-                  width: 240,
+                  width: 260,
                   flexShrink: 0,
                   borderLeft: 1,
                   borderColor: "divider",
+                  overflowY: "auto",
+                  position: "sticky",
+                  top: 0,
+                  height: "100dvh",
                 }
               : {
                   width: "100%",
                   borderBottom: 1,
                   borderColor: "divider",
                 }),
-            bgcolor: "#f9f9f9",
+            bgcolor: "#fff",
+            zIndex: 2,
           }}
         >
           <Tabs
@@ -127,20 +135,18 @@ export default function MerchantSettingsPage() {
             sx={{
               py: 2,
               "& .MuiTab-root": {
-                alignItems: "flex-end",
-                fontWeight: "bold",
-                fontSize: 15,
-                color: "#757575",
+                fontWeight: 600,
+                fontSize: 14,
                 mx: isMdUp ? 1 : 0.5,
                 my: isMdUp ? 0.5 : 0,
                 borderRadius: 2,
                 textAlign: "right",
-                minHeight: 40,
+                minHeight: 42,
               },
               "& .Mui-selected": {
                 color: "primary.main",
-                bgcolor: "#fff",
-                boxShadow: isMdUp ? 2 : 0,
+                bgcolor: isMdUp ? "#f9f9f9" : "transparent",
+                boxShadow: isMdUp ? 1 : 0,
               },
               ...(isMdUp
                 ? {}
@@ -157,13 +163,13 @@ export default function MerchantSettingsPage() {
           </Tabs>
         </Box>
 
-        {/* محتوى التاب */}
+        {/* Content */}
         <Box
           sx={{
             flex: 1,
             p: { xs: 2, md: 4 },
             bgcolor: "#fff",
-            minWidth: 0, // مهم لمنع انفجار المحتوى
+            overflowY: "auto",
           }}
         >
           {SECTIONS.map(({ component: SectionComp }, i) =>
@@ -178,14 +184,6 @@ export default function MerchantSettingsPage() {
           )}
         </Box>
       </Box>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-      >
-        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
-      </Snackbar>
-    </Paper>
+    </Box>
   );
 }

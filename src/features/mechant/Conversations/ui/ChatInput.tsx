@@ -52,7 +52,7 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
   const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+    const MAX_LEN = 1200;
   // إرسال الرسالة
   function handleSend() {
     if (!text.trim() && !file && !audio) return;
@@ -240,11 +240,11 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
         <TextField
           fullWidth
           multiline
-          maxRows={4}
-          placeholder="اكتب رسالة..."
-          value={text}
-          disabled={!!file || !!audio || isRecording || loadingAudio}
-          onChange={(e) => setText(e.target.value)}
+          maxRows={{ xs: 6, md: 4 } as any}
+                    placeholder="اكتب رسالة..."
+                    value={text}
+                    disabled={!!file || !!audio || isRecording || loadingAudio}
+                    onChange={(e) => setText(e.target.value.slice(0, MAX_LEN))}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -323,7 +323,11 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
           </Tooltip>
         )}
       </Box>
-
+      {(!file && !audio) && (
++    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, px: 0.5 }}>
+        {text.length} / {MAX_LEN}
+      </Typography>
+    )}
       {/* صندوق الإيموجي */}
       {showEmoji && (
         <Box

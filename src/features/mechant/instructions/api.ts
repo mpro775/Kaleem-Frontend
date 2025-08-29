@@ -11,7 +11,18 @@ export async function listInstructions(params: {
   const p: { page: number; limit: number; active?: 'true' | 'false' } = { page: params.page ?? 1, limit: params.limit ?? 20 };
   if (params.active && params.active !== 'all') p.active = params.active;
   const { data } = await axios.get('/instructions', { params: p });
-  return data as Instruction[];
+  
+  // Handle different response structures
+  if (Array.isArray(data)) {
+    return data as Instruction[];
+  } else if (data && Array.isArray(data.items)) {
+    return data.items as Instruction[];
+  } else if (data && Array.isArray(data.data)) {
+    return data.data as Instruction[];
+  } else {
+    console.warn('Unexpected API response structure:', data);
+    return [] as Instruction[];
+  }
 }
 
 export async function createInstruction(payload: { instruction: string; type?: 'auto'|'manual' }) {

@@ -1,5 +1,5 @@
 // src/pages/Categories/CategoriesPage.tsx
-import {  useState } from "react";
+import { useState } from "react";
 import { Box, Typography, Button, Stack } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import CategoryTree from "@/features/mechant/categories/ui/CategoryTree";
@@ -27,12 +27,27 @@ export default function CategoriesPage() {
   const [openDel, setOpenDel] = useState(false);
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: "#f5f5f5" }} dir="rtl">
-      <Stack direction="row" justifyContent="space-between" alignItems={{ xs: "stretch", sm: "center" }} flexWrap="wrap" gap={1.5} mb={2}>
-        <Typography variant="h5" fontWeight={800}>إدارة الفئات</Typography>
+    <Box
+      sx={{ p: { xs: 2, md: 4 }, bgcolor: "#f9fafb", minHeight: "100vh" }}
+      dir="rtl"
+    >
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems={{ xs: "stretch", sm: "center" }}
+        flexWrap="wrap"
+        gap={1.5}
+        mb={2}
+      >
+        <Typography variant="h5" fontWeight={800}>
+          إدارة الفئات
+        </Typography>
         <Button
           variant="contained"
-          onClick={() => { setParentForAdd(null); setOpenAdd(true); }}
+          onClick={() => {
+            setParentForAdd(null);
+            setOpenAdd(true);
+          }}
           sx={{ alignSelf: { xs: "flex-start", sm: "center" } }}
         >
           إضافة فئة رئيسية
@@ -43,16 +58,25 @@ export default function CategoriesPage() {
       <CategoryTree
         merchantId={merchantId}
         refresh={refresh}
-        onAdd={(parent) => { setParentForAdd(parent ?? null); setOpenAdd(true); }}
+        onAdd={(parent) => {
+          setParentForAdd(parent ?? null);
+          setOpenAdd(true);
+        }}
         onEdit={(node) => setEditCat(node)}
-        onDelete={(node) => { setDelNode(node); setOpenDel(true); }}
+        onDelete={(node) => {
+          setDelNode(node);
+          setOpenDel(true);
+        }}
       />
 
       {/* Dialog الإضافة */}
       <AddCategoryDialog
         open={openAdd}
         onClose={() => setOpenAdd(false)}
-        onAdd={() => { setOpenAdd(false); bump(); }}
+        onAdd={() => {
+          setOpenAdd(false);
+          bump();
+        }}
         merchantId={merchantId}
         defaultParentId={parentForAdd?._id ?? ""}
       />
@@ -62,7 +86,10 @@ export default function CategoriesPage() {
         <EditCategoryDialog
           open={!!editCat}
           onClose={() => setEditCat(null)}
-          onSaved={() => { setEditCat(null); bump(); }}
+          onSaved={() => {
+            setEditCat(null);
+            bump();
+          }}
           merchantId={merchantId}
           category={editCat as any}
         />
@@ -72,8 +99,15 @@ export default function CategoriesPage() {
       {delNode && (
         <DeleteCategoryDialog
           open={openDel}
-          onClose={() => { setOpenDel(false); setDelNode(null); }}
-          onDeleted={() => { setOpenDel(false); setDelNode(null); bump(); }}
+          onClose={() => {
+            setOpenDel(false);
+            setDelNode(null);
+          }}
+          onDeleted={() => {
+            setOpenDel(false);
+            setDelNode(null);
+            bump();
+          }}
           categoryName={delNode.name}
           categoryId={delNode._id}
           merchantId={merchantId}

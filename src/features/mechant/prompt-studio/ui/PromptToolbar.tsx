@@ -22,6 +22,7 @@ import CodeIcon from "@mui/icons-material/Code";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useState } from "react";
+import { ToggleButton, ToggleButtonGroup } from "@mui/material"; // إذا تحب حل 2
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor:
@@ -35,8 +36,12 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
 const StyledTab = styled(Tab)(({ theme }) => ({
   minWidth: 120,
   fontWeight: 500,
-  "&.Mui-selected": {
-    color: theme.palette.primary.main,
+  "&.Mui-selected": { color: theme.palette.primary.main },
+  // ↓ على الشاشات الصغيرة خفّض العرض والحشوات
+  [theme.breakpoints.down("sm")]: {
+    minWidth: 0,
+    paddingInline: 8,
+    fontSize: 13,
   },
 }));
 
@@ -60,6 +65,7 @@ export function PromptToolbar({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const theme = useTheme();
   const isMdDown = useMediaQuery(theme.breakpoints.down("md"));
+  const isSmDown = useMediaQuery(theme.breakpoints.down("sm"));
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -70,10 +76,10 @@ export function PromptToolbar({
     }
   };
 
-  const formatLastUpdated = () => {
-    if (!lastUpdated) return "لم يتم التحديث بعد";
-    return format(lastUpdated, "HH:mm - dd MMM yyyy", { locale: ar });
-  };
+  const formatLastUpdated = () =>
+    lastUpdated
+      ? format(lastUpdated, "HH:mm - dd MMM yyyy", { locale: ar })
+      : "لم يتم التحديث بعد";
 
   return (
     <StyledAppBar position="sticky" elevation={0}>
@@ -92,47 +98,37 @@ export function PromptToolbar({
           minHeight: { xs: 64, md: 72 },
         }}
       >
-        {/* العنوان */}
-        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+        {/* 1) العنوان - خلي ترتيبه أوّل سطر دائمًا */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            minWidth: 0,
+            order: { xs: 1, md: 1 },
+          }}
+        >
           <AutoFixHighIcon color="primary" sx={{ mr: 1.5 }} />
           <Typography variant="h6" noWrap>
             استوديو البرومبت
           </Typography>
         </Box>
 
-        {/* التبويبات */}
-        <Box sx={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => onTabChange(newValue)}
-            variant="scrollable"
-            allowScrollButtonsMobile
-          >
-            <StyledTab
-              label={
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <AutoFixHighIcon fontSize="small" sx={{ mr: 1 }} />
-                  <span>الإعداد السريع</span>
-                </Box>
-              }
-              value="quick"
-            />
-            <StyledTab
-              label={
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <CodeIcon fontSize="small" sx={{ mr: 1 }} />
-                  <span>القالب المتقدم</span>
-                </Box>
-              }
-              value="advanced"
-            />
-          </Tabs>
-        </Box>
-
-        {/* أزرار اليمين */}
-        <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+        {/* 2) الأزرار (يمين) - على الجوال خلّها قبل التابات لتأخذ سطرها */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            minWidth: 0,
+            order: { xs: 2, md: 3 },
+          }}
+        >
           {!isMdDown && (
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 2 }} noWrap>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mr: 2 }}
+              noWrap
+            >
               آخر تحديث: {formatLastUpdated()}
             </Typography>
           )}
@@ -151,15 +147,66 @@ export function PromptToolbar({
             </span>
           </Tooltip>
 
+          {/* على الشاشات الصغيرة: زر أصغر نصه مختصر */}
           <Button
             startIcon={<SaveIcon />}
             variant="contained"
             onClick={onSave}
             disabled={isSaving}
-            sx={{ minWidth: 120, boxShadow: "none", "&:hover": { boxShadow: "none" } }}
+            sx={{
+              minWidth: { xs: 48, md: 120 },
+              px: { xs: 1, md: 2 },
+              boxShadow: "none",
+              "&:hover": { boxShadow: "none" },
+            }}
           >
-            {isSaving ? "جاري الحفظ..." : "حفظ التغييرات"}
+            {isMdDown
+              ? isSaving
+                ? "حفظ..."
+                : "حفظ"
+              : isSaving
+              ? "جاري الحفظ..."
+              : "حفظ التغييرات"}
           </Button>
+        </Box>
+
+        {/* 3) التبويبات - خَلِّها تأخذ صف كامل على الجوال */}
+        <Box
+          sx={{
+            order: { xs: 3, md: 2 },
+            flex: { xs: "1 0 100%", md: "0 1 auto" },
+            width: { xs: "100%", md: "auto" },
+            display: "flex",
+            justifyContent: { xs: "stretch", md: "center" },
+            mt: { xs: 0.5, md: 0 },
+          }}
+        >
+          <Tabs
+            value={activeTab}
+            onChange={(_, v) => onTabChange(v)}
+            variant={isSmDown ? "fullWidth" : "scrollable"}
+            allowScrollButtonsMobile
+            sx={{ width: { xs: "100%", md: "auto" } }}
+          >
+            <StyledTab
+              value="quick"
+              label={
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <AutoFixHighIcon fontSize="small" sx={{ mr: 1 }} />
+                  <span>الإعداد السريع</span>
+                </Box>
+              }
+            />
+            <StyledTab
+              value="advanced"
+              label={
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <CodeIcon fontSize="small" sx={{ mr: 1 }} />
+                  <span>القالب المتقدم</span>
+                </Box>
+              }
+            />
+          </Tabs>
         </Box>
       </Toolbar>
     </StyledAppBar>

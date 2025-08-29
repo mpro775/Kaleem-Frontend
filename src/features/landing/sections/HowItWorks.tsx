@@ -177,6 +177,7 @@ export default function HowItWorksStepsSection() {
 
   return (
     <Box
+      id="how-it-works"
       sx={{
         p: { xs: 3, md: 6 },
         my: 6,

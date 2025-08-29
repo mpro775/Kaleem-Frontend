@@ -104,5 +104,20 @@ export function useFaqs(merchantId: string) {
     setFaqs((prev) => prev.filter((f) => f._id !== id));
   };
 
-  return { faqs, loading, add, remove };
+  const removeAll = async () => {
+    // TODO: implement bulk delete if API supports it
+    setFaqs([]);
+  };
+
+  const addBulk = async (items: { question: string; answer: string }[]) => {
+    await faqsApi.add(merchantId, items);
+    await refresh();
+  };
+
+  const update = async (_id: string, _data: Partial<Pick<FaqItem, "question" | "answer">>) => {
+    // TODO: implement update if API supports it
+    await refresh();
+  };
+
+  return { faqs, loading, add, addBulk, remove, removeAll, update, refresh };
 }

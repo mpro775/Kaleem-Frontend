@@ -1,4 +1,3 @@
-// components/store/StoreNavbar.tsx
 import React, { useState } from "react";
 import {
   AppBar,
@@ -31,19 +30,18 @@ interface Props {
   storefront: Storefront;
 }
 
-export function StoreNavbar({ merchant, storefront }: Props) {
+export function StoreNavbar({ merchant }: Props) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { items } = useCart();
   const [openCart, setOpenCart] = useState(false);
-  const { slugOrId } = useParams<{ slugOrId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const { primaryColor } = storefront;
-
   const openMenu = Boolean(anchorEl);
-  const handleMenu = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
+  const handleMenu = (e: React.MouseEvent<HTMLElement>) =>
+    setAnchorEl(e.currentTarget);
   const handleCloseMenu = () => setAnchorEl(null);
 
   const sessionId = getSessionId();
@@ -55,8 +53,9 @@ export function StoreNavbar({ merchant, storefront }: Props) {
         position="sticky"
         sx={{
           mb: 4,
-          backgroundColor: primaryColor,
-          color: "#fff",
+          borderRadius: 0,
+          backgroundColor: "var(--brand)",
+          color: "var(--on-brand)",
           boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
         }}
       >
@@ -66,7 +65,13 @@ export function StoreNavbar({ merchant, storefront }: Props) {
               <Avatar
                 src={merchant.logoUrl}
                 alt={merchant.name}
-                sx={{ width: 48, height: 48, mr: 2, border: `1px solid ${theme.palette.divider}` }}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  mr: 2,
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  bgcolor: "transparent",
+                }}
               />
             )}
 
@@ -74,7 +79,7 @@ export function StoreNavbar({ merchant, storefront }: Props) {
               variant="h6"
               fontWeight="bold"
               sx={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-              onClick={() => navigate(`/store/${slugOrId}`)}
+              onClick={() => navigate(`/store/${slug}`)}
             >
               <StorefrontIcon sx={{ mr: 1 }} />
               {merchant.name}
@@ -83,14 +88,25 @@ export function StoreNavbar({ merchant, storefront }: Props) {
 
           {isMobile ? (
             <>
-              <IconButton size="large" color="inherit" onClick={handleMenu}>
+              <IconButton
+                size="large"
+                onClick={handleMenu}
+                sx={{
+                  color: "var(--on-brand)",
+                  "&:hover": { backgroundColor: "var(--brand-hover)" },
+                }}
+              >
                 <MenuIcon />
               </IconButton>
 
-              <Menu anchorEl={anchorEl} open={openMenu} onClose={handleCloseMenu}>
+              <Menu
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={handleCloseMenu}
+              >
                 <MenuItem
                   onClick={() => {
-                    navigate(`/store/${slugOrId}/about`);
+                    navigate(`/store/${slug}/about`);
                     handleCloseMenu();
                   }}
                 >
@@ -99,7 +115,7 @@ export function StoreNavbar({ merchant, storefront }: Props) {
 
                 <MenuItem
                   onClick={() => {
-                    navigate(`/store/${slugOrId}/my-orders`);
+                    navigate(`/store/${slug}/my-orders`);
                     handleCloseMenu();
                   }}
                 >
@@ -115,34 +131,68 @@ export function StoreNavbar({ merchant, storefront }: Props) {
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <ShoppingCartIcon sx={{ mr: 1 }} />
                     السلة
-                    {items.length > 0 && <Badge badgeContent={items.length} color="error" sx={{ ml: 1 }} />}
+                    {items.length > 0 && (
+                      <Badge
+                        badgeContent={items.length}
+                        color="error"
+                        sx={{ ml: 1 }}
+                      />
+                    )}
                   </Box>
                 </MenuItem>
               </Menu>
             </>
           ) : (
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <Button color="inherit" sx={{ fontWeight: "bold", mx: 1 }} onClick={() => navigate(`/store/${slugOrId}`)}>
+              <Button
+                sx={{
+                  fontWeight: "bold",
+                  mx: 1,
+                  background: "var(--brand)",
+                  color: "var(--on-brand)",
+                  "&:hover": { backgroundColor: "var(--brand-hover)" },
+                }}
+                onClick={() => navigate(`/store/${slug}`)}
+              >
                 الصفحة الرئيسية
               </Button>
 
               <Button
-                color="inherit"
-                sx={{ fontWeight: "bold", mx: 1 }}
-                onClick={() => navigate(`/store/${slugOrId}/about`)}
+                sx={{
+                  fontWeight: "bold",
+                  mx: 1,
+                  color: "var(--on-brand)",
+                  background: "var(--brand)",
+                  "&:hover": { backgroundColor: "var(--brand-hover)" },
+                }}
+
+                onClick={() => navigate(`/store/${slug}/about`)}
               >
                 من نحن
               </Button>
 
               <Button
-                color="inherit"
-                sx={{ fontWeight: "bold", mx: 1 }}
-                onClick={() => navigate(`/store/${slugOrId}/my-orders`)}
+                sx={{
+                  fontWeight: "bold",
+                  mx: 1,
+                  background: "var(--brand)",
+
+                  color: "var(--on-brand)",
+                  "&:hover": { backgroundColor: "var(--brand-hover)" },
+                }}
+                onClick={() => navigate(`/store/${slug}/my-orders`)}
               >
                 طلباتي
               </Button>
 
-              <IconButton color="inherit" sx={{ ml: 2 }} onClick={() => setOpenCart(true)}>
+              <IconButton
+                sx={{
+                  ml: 2,
+                  color: "var(--on-brand)",
+                  "&:hover": { backgroundColor: "var(--brand-hover)" },
+                }}
+                onClick={() => setOpenCart(true)}
+              >
                 <Badge badgeContent={items.length} color="error">
                   <ShoppingCartIcon />
                 </Badge>
@@ -159,7 +209,7 @@ export function StoreNavbar({ merchant, storefront }: Props) {
         sessionId={sessionId}
         defaultCustomer={defaultCustomer}
         onOrderSuccess={(orderId) => {
-          navigate(`/store/${slugOrId}/order/${orderId}`);
+          navigate(`/store/${slug}/order/${orderId}`);
         }}
       />
     </>

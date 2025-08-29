@@ -12,18 +12,22 @@ import {
   Pagination,
 } from "@mui/material";
 import type { ChatSession } from "@/features/admin/api/adminKleem";
+import { useErrorHandler } from '@/shared/errors';
 
 export default function ConversationsKleemPage() {
+  const { handleError } = useErrorHandler();
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<ChatSession[]>([]);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    listSessions(page, 20).then(({ data, total }) => {
-      setRows(data);
-      setTotal(total);
-    });
-  }, [page]);
+    listSessions(page, 20)
+      .then(({ data, total }) => {
+        setRows(data);
+        setTotal(total);
+      })
+      .catch(handleError);
+  }, [page, handleError]);
 
   return (
     <Paper sx={{ p: 2 }}>

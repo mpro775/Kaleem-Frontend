@@ -20,7 +20,7 @@ vi.mock("@/shared/utils/customer", () => ({ getLocalCustomer: () => ({}) }));
 vi.mock("./CartDialog", () => ({ default: () => <div data-testid="cart" /> }));
 vi.mock("react-router-dom", async (orig) => {
   const actual = await orig();
-  return { ...actual, useParams: () => ({ slugOrId: "s1" }), useNavigate: () => vi.fn() };
+  return { ...(actual as any), useParams: () => ({ slugOrId: "s1" }), useNavigate: () => vi.fn() };
 });
 
 test("renders navbar with merchant name", () => {

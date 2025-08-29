@@ -1,15 +1,12 @@
 // src/features/merchant-settings/utils.ts
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 
-
-
 export const filterUpdatableFields = (
-  data: MerchantInfo
+  data: Partial<MerchantInfo>   // <-- خليه Partial
 ): Partial<MerchantInfo> => {
   const {
     name,
     logoUrl,
-    slug,
     phone,
     storefrontUrl,
     businessDescription,
@@ -20,12 +17,13 @@ export const filterUpdatableFields = (
     shippingPolicy,
     socialLinks,
     customCategory,
+    publicSlug,           // 👈 مهم
+    publicSlugEnabled,    // 👈 مهم
   } = data;
 
   return {
     name,
     logoUrl,
-    slug,
     phone,
     storefrontUrl,
     businessDescription,
@@ -36,5 +34,7 @@ export const filterUpdatableFields = (
     shippingPolicy,
     socialLinks,
     customCategory,
+    publicSlug,           // 👈 مهم
+    publicSlugEnabled,    // 👈 مهم
   };
 };

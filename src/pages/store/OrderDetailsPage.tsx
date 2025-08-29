@@ -1,4 +1,3 @@
-// src/pages/OrderDetailsPage.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "@/shared/api/axios";
@@ -24,34 +23,41 @@ import {
   LocalShipping,
   Assignment,
   Payment,
-  Storefront,
+  Storefront as StorefrontIcon,
   Person,
   Phone,
   LocationOn,
   Receipt,
 } from "@mui/icons-material";
 import type { Order, OrderProduct } from "@/features/store/type";
-import type { MerchantInfo } from "@/features/mechant/merchant-settings/types"; // ⬅️ FIX: مسار النوع
+import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
+
+// ⬅️ لون المتجر الداكن
+import { getStorefrontInfo } from "@/features/mechant/storefront-theme/api";
+import { setBrandVars } from "@/features/shared/brandCss";
+import { useErrorHandler } from '@/shared/errors';
 
 export default function OrderDetailsPage() {
+  const { handleError } = useErrorHandler();
   const theme = useTheme();
   const navigate = useNavigate();
-
-  // ⬅️ FIX: استخرجنا slugOrId أيضًا
-  const { orderId, slugOrId } = useParams<{
+  const { orderId, slug } = useParams<{
     orderId: string;
-    slugOrId: string;
+    slug: string;
   }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
-  const isDemo = slugOrId === "demo"; // ⬅️ الآن يعمل
+  const isDemo = slug === "demo";
 
   useEffect(() => {
     setLoading(true);
-
+    if (!orderId) {
+      // لو وصلنا بدون id، ارجع للصفحة السابقة أو لصفحة المتجر
+      navigate(`/store/${slug}`);
+      return;
+    }
     if (isDemo && orderId?.startsWith("DEMO-")) {
-      // قراءة طلب الديمو من localStorage
       const raw = localStorage.getItem("kleem:lastDemoOrder");
       if (raw) {
         try {
@@ -61,52 +67,49 @@ export default function OrderDetailsPage() {
           console.error("Failed to parse demo order");
         }
       }
-      // جلب بيانات المتجر للعرض
+      // جلب بيانات المتجر للعرض + تطبيق اللون
       axiosInstance
-        .get(`/store/${slugOrId}`)
-        .then((res) => setMerchant(res.data.merchant))
+        .get(`/storefront/${slug}`)
+        .then(async (res) => {
+          setMerchant(res.data.merchant);
+          try {
+            const sf = await getStorefrontInfo(res.data.merchant._id);
+            setBrandVars(sf.brandDark || "#111827");
+          } catch {
+            setBrandVars("#111827");
+          }
+        })
         .catch(() => {});
       setLoading(false);
       return;
     }
 
-    // طلب حقيقي من الباك
+    // طلب حقيقي
     axiosInstance
       .get(`/orders/${orderId}`)
       .then((res) => setOrder(res.data))
-      .finally(() => setLoading(false));
-  }, [orderId, isDemo, slugOrId]);
+      
+      .catch(handleError)
+        .finally(() => setLoading(false));
+  }, [orderId, isDemo, slug]);
 
-  // عند الطلب الحقيقي: اجلب التاجر بحسب order.merchantId
+  // عند الطلب الحقيقي: اجلب التاجر ثم طبّق لون المتجر
   useEffect(() => {
     if (!isDemo && order?.merchantId) {
       axiosInstance
         .get(`/merchants/${order.merchantId}`)
-        .then((res) => setMerchant(res.data))
+        .then(async (res) => {
+          setMerchant(res.data);
+          try {
+            const sf = await getStorefrontInfo(res.data._id);
+            setBrandVars(sf.brandDark || "#111827");
+          } catch {
+            setBrandVars("#111827");
+          }
+        })
         .catch(() => {});
     }
   }, [order?.merchantId, isDemo]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending": return "warning";
-      case "paid": return "success";
-      case "shipped": return "info";
-      case "delivered": return "success";
-      case "refunded": return "default";
-      case "canceled": return "error";
-      default: return "primary";
-    }
-  };
-  const translateStatus = (status: string) => ({
-    pending: "قيد الانتظار",
-    paid: "مدفوع",
-    canceled: "ملغي",
-    shipped: "تم الشحن",
-    delivered: "تم التسليم",
-    refunded: "مسترد",
-  }[status] || status);
-  
 
   if (loading) return <OrderDetailsSkeleton />;
 
@@ -142,6 +145,7 @@ export default function OrderDetailsPage() {
         mx: "auto",
         py: 4,
         px: { xs: 2, sm: 3 },
+        bgcolor: "#fff",
       }}
     >
       <Box sx={{ mb: 3 }}>
@@ -159,10 +163,11 @@ export default function OrderDetailsPage() {
           mb: 4,
         }}
       >
+        {/* هيدر داكن موحّد */}
         <Box
           sx={{
-            backgroundColor: theme.palette.primary.main,
-            color: "white",
+            backgroundColor: "var(--brand)",
+            color: "var(--on-brand)",
             p: 3,
             display: "flex",
             flexDirection: { xs: "column", sm: "row" },
@@ -175,10 +180,19 @@ export default function OrderDetailsPage() {
           </Typography>
 
           <Chip
-            label={translateStatus(order.status)}
-            color={getStatusColor(order.status)}
+            label={
+              {
+                pending: "قيد الانتظار",
+                paid: "مدفوع",
+                canceled: "ملغي",
+                shipped: "تم الشحن",
+                delivered: "تم التسليم",
+                refunded: "مسترد",
+              }[order.status] || order.status
+            }
             sx={{
-              color: "white",
+              bgcolor: "var(--on-brand)",
+              color: "var(--brand)",
               fontWeight: "bold",
               fontSize: 16,
               px: 2,
@@ -189,33 +203,22 @@ export default function OrderDetailsPage() {
         </Box>
 
         <Box sx={{ p: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 4,
-              mb: 4,
-            }}
-          >
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4, mb: 4 }}>
             {/* معلومات العميل */}
             <Box sx={{ flex: 1, minWidth: 300 }}>
               <Typography
                 variant="h6"
                 fontWeight="bold"
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center",
-                }}
+                sx={{ mb: 2, display: "flex", alignItems: "center" }}
               >
-                <Person sx={{ mr: 1, color: theme.palette.primary.main }} />
+                <Person sx={{ mr: 1, color: "var(--brand)" }} />
                 معلومات العميل
               </Typography>
 
               <List>
                 <ListItem sx={{ px: 0 }}>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Person color="primary" />
+                    <Person sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="الاسم"
@@ -226,7 +229,7 @@ export default function OrderDetailsPage() {
 
                 <ListItem sx={{ px: 0 }}>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Phone color="primary" />
+                    <Phone sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="رقم الجوال"
@@ -237,7 +240,7 @@ export default function OrderDetailsPage() {
 
                 <ListItem sx={{ px: 0 }}>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <LocationOn color="primary" />
+                    <LocationOn sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="العنوان"
@@ -253,20 +256,16 @@ export default function OrderDetailsPage() {
               <Typography
                 variant="h6"
                 fontWeight="bold"
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center",
-                }}
+                sx={{ mb: 2, display: "flex", alignItems: "center" }}
               >
-                <Assignment sx={{ mr: 1, color: theme.palette.primary.main }} />
+                <Assignment sx={{ mr: 1, color: "var(--brand)" }} />
                 معلومات الطلب
               </Typography>
 
               <List>
                 <ListItem sx={{ px: 0 }}>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Receipt color="primary" />
+                    <Receipt sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="رقم الطلب"
@@ -277,7 +276,7 @@ export default function OrderDetailsPage() {
 
                 <ListItem sx={{ px: 0 }}>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Storefront color="primary" />
+                    <StorefrontIcon sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="المتجر"
@@ -285,17 +284,19 @@ export default function OrderDetailsPage() {
                     onClick={() =>
                       navigate(
                         `/store/${
-                          merchant?.slug || merchant?._id || order.merchantId
+                          merchant?.publicSlug || merchant?._id || order.merchantId
                         }`
                       )
                     }
-                    secondaryTypographyProps={{ sx: { fontWeight: "bold" } }}
+                    secondaryTypographyProps={{
+                      sx: { fontWeight: "bold", cursor: "pointer" },
+                    }}
                   />
                 </ListItem>
 
                 <ListItem sx={{ px: 0 }}>
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Payment color="primary" />
+                    <Payment sx={{ color: "var(--brand)" }} />
                   </ListItemIcon>
                   <ListItemText
                     primary="طريقة الدفع"
@@ -313,13 +314,9 @@ export default function OrderDetailsPage() {
           <Typography
             variant="h6"
             fontWeight="bold"
-            sx={{
-              mb: 3,
-              display: "flex",
-              alignItems: "center",
-            }}
+            sx={{ mb: 3, display: "flex", alignItems: "center" }}
           >
-            <LocalShipping sx={{ mr: 1, color: theme.palette.primary.main }} />
+            <LocalShipping sx={{ mr: 1, color: "var(--brand)" }} />
             تفاصيل الطلب
           </Typography>
 
@@ -352,7 +349,7 @@ export default function OrderDetailsPage() {
                     backgroundColor: theme.palette.grey[200],
                   }}
                 >
-                  <Storefront />
+                  <StorefrontIcon />
                 </Avatar>
 
                 <ListItemText
@@ -422,14 +419,18 @@ export default function OrderDetailsPage() {
                 <Typography variant="h6" fontWeight="bold">
                   الإجمالي النهائي:
                 </Typography>
-                <Typography variant="h5" fontWeight="bold" color="primary">
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                  sx={{ color: "var(--brand)" }}
+                >
                   {totalAmount.toFixed(2)} ر.س
                 </Typography>
               </Box>
             </Box>
           </Paper>
 
-          {/* حالة الطلب */}
+          {/* حالة الطلب (timeline مبسّط) */}
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>
               حالة الطلب
@@ -491,9 +492,11 @@ export default function OrderDetailsPage() {
                       height: 40,
                       mb: 1,
                       backgroundColor: step.active
-                        ? theme.palette.primary.main
+                        ? "var(--brand)"
                         : theme.palette.grey[300],
-                      color: "white",
+                      color: step.active
+                        ? "var(--on-brand)"
+                        : theme.palette.text.primary,
                     }}
                   >
                     {step.active ? <CheckCircle /> : index + 1}
@@ -523,8 +526,16 @@ export default function OrderDetailsPage() {
           >
             <Button
               variant="contained"
-              sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: "bold" }}
-              onClick={() => navigate(`/store/${merchant?.slug || ""}`)}
+              sx={{
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                fontWeight: "bold",
+                background: "var(--brand)",
+                color: "var(--on-brand)",
+                "&:hover": { background: "var(--brand-hover)" },
+              }}
+              onClick={() => navigate(`/store/${merchant?.publicSlug || ""}`)}
             >
               متابعة التسوق
             </Button>

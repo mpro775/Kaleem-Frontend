@@ -38,21 +38,25 @@ export async function fetchSessionMessages(
   return data.messages;
 }
 
+// src/features/mechant/Conversations/api/messages.ts
 export async function sendMessage(payload: {
-  merchantId: string;
+  merchantId?: string;                  // اختياري الآن
+  slug?: string;                        // ✅ جديد
   sessionId: string;
   channel: ChannelType;
+  embedMode?: "bubble" | "iframe" | "bar" | "conversational"; // ✅ جديد
   messages: Array<{ role: "customer" | "bot"; text: string }>;
 }) {
-  // اجلب رابط الـ webhook من الإعدادات أو ثبته مؤقتًا
-  const webhookUrl = `/webhooks/incoming/${payload.merchantId}`;
-  return axios.post(webhookUrl, {
-    from: payload.sessionId,
-    merchantId: payload.merchantId,
+  const url = payload.slug
+    ? `/webhooks/chat/incoming/${payload.slug}` // ✅ الموحّد
+    : `/webhooks/incoming/${payload.merchantId}`; // ⛔️ قديم كتوافق
+
+  return axios.post(url, {
+    sessionId: payload.sessionId,
     text: payload.messages[0].text,
-    channel: payload.channel,
+    channel: payload.channel || "webchat",
+    embedMode: payload.embedMode, // يوصَل كـ metadata
     messages: payload.messages,
-    // أضف customerName لو متوفر
   });
 }
 

@@ -11,6 +11,7 @@ export interface Offer {
 
 export interface ProductResponse {
   _id: string;
+  id?: string;
   merchantId: string;
   originalUrl?: string;
   platform?: string;

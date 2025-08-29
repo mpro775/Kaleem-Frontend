@@ -1,4 +1,4 @@
-import type { Currency } from '@/types/Product';
+import type { Currency } from "@/features/mechant/products/type";
 
 const SYMBOL: Record<Currency, string> = {
   SAR: 'ر.س',

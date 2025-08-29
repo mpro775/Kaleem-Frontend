@@ -1,5 +1,4 @@
-// src/widgets/merchant/channels/WhatsappApiConnectDialog.tsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -10,43 +9,66 @@ import {
   Typography,
   Box,
   CircularProgress,
-  Grid,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import Grid from "@mui/material/Grid";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import axios from "@/shared/api/axios";
 
 type Props = {
   open: boolean;
   onClose: (success: boolean) => void;
   merchantId: string;
-  initial?: {
-    accessToken?: string;
-    appSecret?: string;
-    verifyToken?: string;
-    phoneNumberId?: string;
-    wabaId?: string;
-    enabled?: boolean;
-  };
+  channelId?: string;
 };
 
 export default function WhatsappApiConnectDialog({
   open,
   onClose,
   merchantId,
-  initial,
+  channelId,
 }: Props) {
   const [form, setForm] = useState({
-    accessToken: initial?.accessToken ?? "",
-    appSecret: initial?.appSecret ?? "",
-    verifyToken: initial?.verifyToken ?? "",
-    phoneNumberId: initial?.phoneNumberId ?? "",
-    wabaId: initial?.wabaId ?? "",
+    accessToken: "",
+    appSecret: "",
+    verifyToken: "",
+    phoneNumberId: "",
+    wabaId: "",
   });
+  const [show, setShow] = useState({ accessToken: false, appSecret: false });
   const [loading, setLoading] = useState(false);
-  const [ok, setOk] = useState<boolean>(!!initial?.enabled);
+  const [ok, setOk] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (k: string, v: string) =>
     setForm((s) => ({ ...s, [k]: v }));
+  const toggleShow = (k: "accessToken" | "appSecret") =>
+    setShow((s) => ({ ...s, [k]: !s[k] }));
+
+  const webhookUrl = useMemo(() => {
+    const origin = window.location.origin.replace(/\/+$/, "");
+    // لو كان عندك public webhook base مختلف استخدمه من الـ backend بدلاً من توليفه هنا
+    return `${origin}/api/webhooks/${merchantId}/incoming`;
+  }, [merchantId]);
+
+  const copy = async (txt: string) => {
+    try {
+      await navigator.clipboard.writeText(txt);
+    } catch {}
+  };
+
+  const ensureChannel = async (): Promise<string> => {
+    if (channelId) return channelId;
+    const { data } = await axios.post(`/merchants/${merchantId}/channels`, {
+      provider: "whatsapp_cloud",
+      isDefault: true,
+      accountLabel: "WhatsApp Cloud",
+    });
+    return data._id as string;
+  };
 
   const handleSave = async () => {
     if (
@@ -63,8 +85,13 @@ export default function WhatsappApiConnectDialog({
     setLoading(true);
     setError(null);
     try {
-      await axios.patch(`/merchants/${merchantId}/channels/whatsappApi`, {
-        ...form,
+      await ensureChannel();
+      await axios.patch(`/channels/${channelId}`, {
+        accessToken: form.accessToken,
+        appSecret: form.appSecret,
+        verifyToken: form.verifyToken,
+        phoneNumberId: form.phoneNumberId,
+        wabaId: form.wabaId || undefined,
         enabled: true,
       });
       setOk(true);
@@ -81,28 +108,68 @@ export default function WhatsappApiConnectDialog({
       <DialogTitle dir="rtl">ربط واتساب الرسمي (Cloud API)</DialogTitle>
       <DialogContent dir="rtl" sx={{ pt: 1 }}>
         <Typography variant="body2" color="text.secondary" mb={2}>
-          أدخل بيانات واتساب السحابي من منصة Meta (WABA):
+          أدخل بيانات WABA من منصة Meta. انسخ Webhook التالي والصقه في إعدادات
+          التطبيق.
         </Typography>
+
+        <Box mb={2} display="flex" alignItems="center" gap={1}>
+          <TextField
+            label="Webhook URL"
+            fullWidth
+            value={webhookUrl}
+            InputProps={{ readOnly: true }}
+          />
+          <IconButton onClick={() => copy(webhookUrl)}>
+            <ContentCopyIcon />
+          </IconButton>
+        </Box>
+
         <Grid container spacing={2}>
-          <Grid size={{xs:12}}>
+          <Grid size={{ xs: 12 }}>
             <TextField
               label="Access Token"
               fullWidth
-              type="password"
+              type={show.accessToken ? "text" : "password"}
               value={form.accessToken}
               onChange={(e) => handleChange("accessToken", e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => toggleShow("accessToken")}>
+                      {show.accessToken ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
           </Grid>
-          <Grid size={{xs:12,sm:6}}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               label="App Secret"
               fullWidth
-              type="password"
+              type={show.appSecret ? "text" : "password"}
               value={form.appSecret}
               onChange={(e) => handleChange("appSecret", e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => toggleShow("appSecret")}>
+                      {show.appSecret ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
           </Grid>
-          <Grid size={{xs:12,sm:6}}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               label="Verify Token"
               fullWidth
@@ -110,7 +177,7 @@ export default function WhatsappApiConnectDialog({
               onChange={(e) => handleChange("verifyToken", e.target.value)}
             />
           </Grid>
-          <Grid size={{xs:12,sm:6}}>
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               label="Phone Number ID"
               fullWidth
@@ -118,7 +185,7 @@ export default function WhatsappApiConnectDialog({
               onChange={(e) => handleChange("phoneNumberId", e.target.value)}
             />
           </Grid>
-          <Grid size={{xs:12,sm:6}} >
+          <Grid size={{ xs: 12, sm: 6 }}>
             <TextField
               label="WABA ID (اختياري)"
               fullWidth

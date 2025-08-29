@@ -1,4 +1,3 @@
-// src/components/CartDialog.tsx
 import {
   Dialog,
   DialogTitle,
@@ -42,7 +41,7 @@ export default function CartDialog({
   onOrderSuccess: (orderId: string) => void;
   demo?: boolean;
   sessionId: string;
-  defaultCustomer?: CustomerInfo; // جعلها اختيارية
+  defaultCustomer?: CustomerInfo;
 }) {
   const theme = useTheme();
   const { items, clearCart, removeItem, updateQuantity } = useCart();
@@ -52,10 +51,9 @@ export default function CartDialog({
 
   const [customer, setCustomer] = useState<CustomerInfo>(getInitialCustomer());
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1); // 1: السلة, 2: بيانات العميل, 3: تأكيد
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // خزّن بيانات العميل محليًا كلما تغيّرت
   useEffect(() => {
     saveLocalCustomer({
       name: customer.name,
@@ -83,72 +81,53 @@ export default function CartDialog({
   };
 
   const handleOrder = async () => {
-    if (demo) {
-      // طلب ديمو: اجعل الحالة "paid" لتتوافق مع الـ schema
-      const demoOrderId = `DEMO-${Date.now()}`;
-      const demoOrder = {
-        _id: demoOrderId,
-        status: "paid",
-        merchantId,
-        products: items.map(({ product, quantity }) => ({
-          productId: product._id,
-          name: product.name,
-          image: product.images?.[0],
-          price: product.price,
-          quantity,
-        })),
-        customer: { ...customer },
-        createdAt: new Date().toISOString(),
-      };
-      localStorage.setItem("kleem:lastDemoOrder", JSON.stringify(demoOrder));
-      clearCart();
-      onClose();
-      onOrderSuccess(demoOrderId);
-      setStep(1);
-      return;
-    }
-
     setLoading(true);
-
-    // حوّل عناصر السلة إلى حقل products (المطلوب في الـ schema)
+  
     const products = items.map(({ product, quantity }) => ({
-      product: product._id, // ObjectId اختياري في الـ schema
+      product: product._id || product.id, // لازم 24-hex، وإلا خلّها undefined
       name: product.name,
-      price: product.price,
+      price: Number(product.price) || 0,
       quantity,
     }));
-
+  
     try {
-      const res = await axiosInstance.post("/orders", {
+      const res = await axiosInstance.post('/orders', {
         merchantId,
-        sessionId, // مهم لإسناد الطلب للجلسة
-        source: "mini-store",
-        customer: {
-          name: customer.name,
-          phone: customer.phone,
-          address: customer.address,
-        },
+        sessionId,
+        source: 'storefront',
+        customer: { name: customer.name, phone: customer.phone, address: customer.address },
         products,
       });
-
-      // خزّن بيانات العميل للاستخدام لاحقًا
-      saveLocalCustomer({
-        name: customer.name,
-        phone: customer.phone,
-        address: customer.address,
-      });
-
+  
+      // ✅ حاول كل الأشكال المحتملة للاستجابة
+      const order =
+        res.data?.data ??        // لو عندك Response Wrapper
+        res.data?.order ??       // لو السيرفر يعيد 'order'
+        res.data ??              // لو يعيد الجسم مباشرة
+        null;
+  
+      const id = order?._id || order?.id;
+  
+      if (!id) {
+        console.error("No order id in response:", res.data);
+        // اختياري: أظهر Alert للمستخدم
+        setLoading(false);
+        return;
+      }
+  
+      saveLocalCustomer({ name: customer.name, phone: customer.phone, address: customer.address });
+  
       clearCart();
-      onOrderSuccess(res.data._id);
+      onOrderSuccess(id);        // ✅ الآن نمرر الـ id الصحيح دائمًا
       onClose();
       setStep(1);
-    } catch (error) {
-      console.error("فشل في إرسال الطلب:", error);
+    } catch (e) {
+       console.error('ORDER_CREATE_ERR', e); throw e; 
     } finally {
       setLoading(false);
     }
   };
-
+  
   const totalAmount = items.reduce(
     (sum, { product, quantity }) => sum + (product.price || 0) * quantity,
     0
@@ -167,8 +146,8 @@ export default function CartDialog({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          backgroundColor: theme.palette.primary.main,
-          color: "white",
+          backgroundColor: "var(--brand)", // ✅ لون داكن موحد
+          color: "var(--on-brand)",
           py: 2,
         }}
       >
@@ -182,15 +161,23 @@ export default function CartDialog({
               : "تأكيد الطلب"}
           </Typography>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: "white" }}>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            color: "var(--on-brand)",
+            "&:hover": { background: "var(--brand-hover)" },
+          }}
+        >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ p: 0 }}>
-        {/* تنبيه الديمو */}
         {demo && (
-          <Alert severity="info" sx={{ m: 2, borderRadius: 2, fontWeight: "bold" }}>
+          <Alert
+            severity="info"
+            sx={{ m: 2, borderRadius: 2, fontWeight: "bold" }}
+          >
             هذه نسخة تجريبية — لن يتم إنشاء طلب حقيقي.
           </Alert>
         )}
@@ -205,7 +192,14 @@ export default function CartDialog({
             borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", maxWidth: 600, width: "100%" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              maxWidth: 600,
+              width: "100%",
+            }}
+          >
             {[1, 2, 3].map((s) => (
               <React.Fragment key={s}>
                 <Box
@@ -216,11 +210,12 @@ export default function CartDialog({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: step >= s ? theme.palette.primary.main : "white",
+                    backgroundColor: step >= s ? "var(--brand)" : "#fff",
                     border: `2px solid ${
-                      step >= s ? theme.palette.primary.main : theme.palette.grey[400]
+                      step >= s ? "var(--brand)" : theme.palette.grey[400]
                     }`,
-                    color: step >= s ? "white" : theme.palette.grey[400],
+                    color:
+                      step >= s ? "var(--on-brand)" : theme.palette.grey[500],
                     fontWeight: "bold",
                     position: "relative",
                     zIndex: 2,
@@ -233,7 +228,8 @@ export default function CartDialog({
                     sx={{
                       flex: 1,
                       height: 2,
-                      backgroundColor: step > s ? theme.palette.primary.main : theme.palette.grey[400],
+                      backgroundColor:
+                        step > s ? "var(--brand)" : theme.palette.grey[400],
                     }}
                   />
                 )}
@@ -253,18 +249,22 @@ export default function CartDialog({
               textAlign: "center",
             }}
           >
-            <ShoppingCartCheckoutIcon sx={{ fontSize: 64, color: theme.palette.grey[400], mb: 2 }} />
+            <ShoppingCartCheckoutIcon
+              sx={{ fontSize: 64, color: theme.palette.grey[400], mb: 2 }}
+            />
             <Typography variant="h6" sx={{ mb: 1 }}>
               سلة الشراء فارغة
             </Typography>
-            <Typography color="text.secondary">لم تقم بإضافة أي منتجات إلى سلة الشراء بعد</Typography>
-            <Button variant="outlined" sx={{ mt: 3 }} onClick={onClose}>
+            <Typography color="text.secondary">
+              لم تقم بإضافة أي منتجات إلى سلة الشراء بعد
+            </Typography>
+            <Button variant="outlined" sx={{ mt: 3, background: "var(--brand)", color: "var(--on-brand)" }} onClick={onClose}>
               مواصلة التسوق
             </Button>
           </Box>
         ) : (
           <Box sx={{ p: 3 }}>
-            {/* الخطوة 1: السلة */}
+            {/* الخطوة 1 */}
             {step === 1 && (
               <>
                 <Box sx={{ maxHeight: 400, overflowY: "auto", mb: 3 }}>
@@ -295,7 +295,11 @@ export default function CartDialog({
                           <img
                             src={product.images[0]}
                             alt={product.name}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
                           />
                         ) : (
                           <Box
@@ -308,7 +312,9 @@ export default function CartDialog({
                               backgroundColor: theme.palette.grey[200],
                             }}
                           >
-                            <Typography color="text.secondary">لا صورة</Typography>
+                            <Typography color="text.secondary">
+                              لا صورة
+                            </Typography>
                           </Box>
                         )}
                       </Box>
@@ -317,20 +323,29 @@ export default function CartDialog({
                         <Typography fontWeight="bold" sx={{ mb: 0.5 }}>
                           {product.name}
                         </Typography>
-                        <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+                        <Typography
+                          color="text.secondary"
+                          sx={{ fontSize: 14 }}
+                        >
                           {product.description?.substring(0, 50)}...
                         </Typography>
-                        <Typography fontWeight="bold" color="primary" sx={{ mt: 1 }}>
+                        <Typography
+                          fontWeight="bold"
+                          sx={{ mt: 1, color: "var(--brand)" }}
+                        >
                           {product.price?.toFixed(2)} ر.س
                         </Typography>
                       </Box>
 
-                      <Box sx={{ display: "flex", alignItems: "center", ml: 2 }}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", ml: 2 }}
+                      >
                         <IconButton
                           size="small"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (quantity > 1) updateQuantity(product._id, quantity - 1);
+                            if (quantity > 1)
+                              updateQuantity(product._id, quantity - 1);
                             else removeItem(product._id);
                           }}
                         >
@@ -375,7 +390,11 @@ export default function CartDialog({
                   }}
                 >
                   <Typography fontWeight="bold">الإجمالي:</Typography>
-                  <Typography fontWeight="bold" fontSize={20} color="primary">
+                  <Typography
+                    fontWeight="bold"
+                    fontSize={20}
+                    sx={{ color: "var(--brand)" }}
+                  >
                     {totalAmount.toFixed(2)} ر.س
                   </Typography>
                 </Box>
@@ -384,7 +403,15 @@ export default function CartDialog({
                   variant="contained"
                   fullWidth
                   size="large"
-                  sx={{ mt: 3, py: 1.5, borderRadius: 2, fontWeight: "bold" }}
+                  sx={{
+                    mt: 3,
+                    py: 1.5,
+                    borderRadius: 2,
+                    fontWeight: "bold",
+                    background: "var(--brand)",
+                    color: "var(--on-brand)",
+                    "&:hover": { backgroundColor: "var(--brand-hover)" },
+                  }}
                   onClick={handleNextStep}
                   startIcon={<Person />}
                 >
@@ -393,14 +420,19 @@ export default function CartDialog({
               </>
             )}
 
-            {/* الخطوة 2: بيانات العميل */}
+            {/* الخطوة 2 */}
             {step === 2 && (
               <>
                 <Typography
                   variant="h6"
-                  sx={{ mb: 3, fontWeight: "bold", display: "flex", alignItems: "center" }}
+                  sx={{
+                    mb: 3,
+                    fontWeight: "bold",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
                 >
-                  <Person sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  <Person sx={{ mr: 1, color: "var(--brand)" }} />
                   معلومات العميل
                 </Typography>
 
@@ -408,7 +440,9 @@ export default function CartDialog({
                   <TextField
                     label="الاسم بالكامل"
                     value={customer.name}
-                    onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomer((c) => ({ ...c, name: e.target.value }))
+                    }
                     error={!!errors.name}
                     helperText={errors.name}
                     fullWidth
@@ -417,7 +451,9 @@ export default function CartDialog({
                   <TextField
                     label="رقم الجوال"
                     value={customer.phone}
-                    onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomer((c) => ({ ...c, phone: e.target.value }))
+                    }
                     error={!!errors.phone}
                     helperText={errors.phone}
                     fullWidth
@@ -427,7 +463,9 @@ export default function CartDialog({
                   <TextField
                     label="العنوان التفصيلي"
                     value={customer.address}
-                    onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))}
+                    onChange={(e) =>
+                      setCustomer((c) => ({ ...c, address: e.target.value }))
+                    }
                     error={!!errors.address}
                     helperText={errors.address}
                     fullWidth
@@ -440,7 +478,7 @@ export default function CartDialog({
                       variant="outlined"
                       fullWidth
                       size="large"
-                      sx={{ py: 1.5, borderRadius: 2, fontWeight: "bold" }}
+                      sx={{ py: 1.5, borderRadius: 2, fontWeight: "bold", background: "var(--brand)", color: "var(--on-brand)" }}
                       onClick={handlePrevStep}
                     >
                       رجوع
@@ -450,7 +488,14 @@ export default function CartDialog({
                       variant="contained"
                       fullWidth
                       size="large"
-                      sx={{ py: 1.5, borderRadius: 2, fontWeight: "bold" }}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        fontWeight: "bold",
+                        background: "var(--brand)",
+                        color: "var(--on-brand)",
+                        "&:hover": { backgroundColor: "var(--brand-hover)" },
+                      }}
                       onClick={handleNextStep}
                       startIcon={<PaymentIcon />}
                     >
@@ -461,14 +506,19 @@ export default function CartDialog({
               </>
             )}
 
-            {/* الخطوة 3: التأكيد */}
+            {/* الخطوة 3 */}
             {step === 3 && (
               <>
                 <Typography
                   variant="h6"
-                  sx={{ mb: 3, fontWeight: "bold", display: "flex", alignItems: "center" }}
+                  sx={{
+                    mb: 3,
+                    fontWeight: "bold",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
                 >
-                  <PaymentIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  <PaymentIcon sx={{ mr: 1, color: "var(--brand)" }} />
                   تأكيد الطلب
                 </Typography>
 
@@ -500,17 +550,31 @@ export default function CartDialog({
                         <Typography>
                           {product.name} × {quantity}
                         </Typography>
-                        <Typography>{(product.price * quantity).toFixed(2)} ر.س</Typography>
+                        <Typography>
+                          {(product.price * quantity).toFixed(2)} ر.س
+                        </Typography>
                       </Box>
                     ))}
                   </Box>
 
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
                     <Typography>المجموع الفرعي:</Typography>
                     <Typography>{totalAmount.toFixed(2)} ر.س</Typography>
                   </Box>
 
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
                     <Typography>رسوم الشحن:</Typography>
                     <Typography>0.00 ر.س</Typography>
                   </Box>
@@ -525,7 +589,11 @@ export default function CartDialog({
                     }}
                   >
                     <Typography fontWeight="bold">الإجمالي النهائي:</Typography>
-                    <Typography fontWeight="bold" fontSize={18} color="primary">
+                    <Typography
+                      fontWeight="bold"
+                      fontSize={18}
+                      sx={{ color: "var(--brand)" }}
+                    >
                       {totalAmount.toFixed(2)} ر.س
                     </Typography>
                   </Box>
@@ -561,12 +629,14 @@ export default function CartDialog({
                   </Box>
                 </Box>
 
-                <Box sx={{ display: "flex", gap: 2, maxWidth: 600, mx: "auto" }}>
+                <Box
+                  sx={{ display: "flex", gap: 2, maxWidth: 600, mx: "auto" }}
+                >
                   <Button
                     variant="outlined"
                     fullWidth
                     size="large"
-                    sx={{ py: 1.5, borderRadius: 2, fontWeight: "bold" }}
+                    sx={{ py: 1.5, borderRadius: 2, fontWeight: "bold", background: "var(--brand)", color: "var(--on-brand)" }}
                     onClick={handlePrevStep}
                   >
                     رجوع
@@ -576,10 +646,23 @@ export default function CartDialog({
                     variant="contained"
                     fullWidth
                     size="large"
-                    sx={{ py: 1.5, borderRadius: 2, fontWeight: "bold" }}
+                    sx={{
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontWeight: "bold",
+                      background: "var(--brand)",
+                      color: "var(--on-brand)",
+                      "&:hover": { backgroundColor: "var(--brand-hover)" },
+                    }}
                     disabled={loading}
                     onClick={handleOrder}
-                    startIcon={loading ? <CircularProgress size={20} /> : <CheckCircleIcon />}
+                    startIcon={
+                      loading ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <CheckCircleIcon />
+                      )
+                    }
                   >
                     {loading ? "جاري إتمام الطلب..." : "تأكيد الطلب"}
                   </Button>

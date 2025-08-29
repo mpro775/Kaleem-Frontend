@@ -9,6 +9,7 @@ import {
   Button,
   Divider,
   Tooltip,
+  useTheme,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import TwitterIcon from "@mui/icons-material/Twitter";
@@ -18,6 +19,7 @@ import TelegramIcon from "@mui/icons-material/Telegram";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type FooterLink = { label: string; href: string; external?: boolean };
 
@@ -48,6 +50,9 @@ const FooterA = styled(MLink)(({ theme }) => ({
 }));
 
 export default function Footer({ brand = "كليم" }: { brand?: string }) {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
   const year = new Date().getFullYear();
 
   const primaryNav: FooterLink[] = [
@@ -58,7 +63,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
   ];
 
   const secondaryNav: FooterLink[] = [
-    { label: "التوثيق", href: "/docs" },
+    { label: "التوثيق", href: "/docs", external: false },
     { label: "الأسئلة الشائعة", href: "#faq" },
     { label: "عنّا", href: "/about" },
     { label: "اتصل بنا", href: "/contact" },
@@ -69,12 +74,33 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
     { label: "الشروط والأحكام", href: "/terms" },
   ];
 
+  const handleLink = (href: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (href.startsWith("#")) {
+      if (location.pathname !== "/") {
+        navigate("/" + href);
+        setTimeout(() => {
+          const id = href.replace("#", "");
+          document
+            .getElementById(id)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 0);
+      } else {
+        document
+          .getElementById(href.replace("#", ""))
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      return;
+    }
+    navigate(href);
+  };
+
   const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <FooterRoot dir="rtl">
       <Container maxWidth="lg" sx={{ px: 2 }}>
-        {/* شبكة عليا حديثة */}
+        {/* شبكة عليا */}
         <Box
           sx={{
             display: "grid",
@@ -151,12 +177,12 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           </Box>
 
           {/* روابط أساسية */}
-          <Box>
+          <Box component="nav" aria-label="روابط المنتج">
             <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
               المنتج
             </Typography>
             {primaryNav.map((l) => (
-              <FooterA key={l.label} href={l.href}>
+              <FooterA key={l.label} href={l.href} onClick={handleLink(l.href)}>
                 {l.label}
                 {!l.href.startsWith("#") && l.external && (
                   <LaunchRoundedIcon sx={{ fontSize: 14, opacity: 0.6 }} />
@@ -166,7 +192,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           </Box>
 
           {/* روابط ثانوية */}
-          <Box>
+          <Box component="nav" aria-label="مزيد من الروابط">
             <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
               المزيد
             </Typography>
@@ -174,6 +200,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
               <FooterA
                 key={l.label}
                 href={l.href}
+                onClick={handleLink(l.href)}
                 target={l.external ? "_blank" : undefined}
                 rel={l.external ? "noopener" : undefined}
               >
@@ -185,35 +212,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
             ))}
           </Box>
 
-          {/* النشرة البريدية */}
-          <Box>
-            <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
-              النشرة البريدية
-            </Typography>
-            <Typography color="text.secondary" sx={{ mb: 1.5 }}>
-              نصائح ومزايا جديدة — رسالة واحدة بالشهر.
-            </Typography>
-            <Box
-              component="form"
-              onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
-                e.preventDefault();
-                document
-                  .getElementById("cta")
-                  ?.scrollIntoView({ behavior: "smooth" });
-              }}
-              sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}
-            >
-              <TextField
-                size="small"
-                type="email"
-                placeholder="بريدك الإلكتروني"
-                sx={{ flex: "1 1 200px", minWidth: 220 }}
-              />
-              <Button variant="contained" type="submit">
-                اشترك
-              </Button>
-            </Box>
-          </Box>
+       
         </Box>
 
         <Divider sx={{ my: 2 }} />
@@ -238,7 +237,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
             }}
           >
             {legal.map((l) => (
-              <FooterA key={l.label} href={l.href}>
+              <FooterA key={l.label} href={l.href} onClick={handleLink(l.href)}>
                 {l.label}
               </FooterA>
             ))}

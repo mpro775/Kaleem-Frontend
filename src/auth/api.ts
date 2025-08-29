@@ -1,47 +1,45 @@
-import axios from "axios";
+// src/features/auth/api.ts
+import axiosInstance from "@/shared/api/axios";
 import { API_BASE } from "../context/config";
-import type { AuthResponse } from "./type";
+import type { User } from "@/context/AuthContext";
 
+export type AuthPayload = { accessToken: string; user: User };
 
-
-export const loginAPI = async (
-  email: string,
-  password: string
-): Promise<AuthResponse> => {
-  const res = await axios.post<AuthResponse>(`${API_BASE}/auth/login`, {
-    email,
-    password,
-  });
-  return res.data;
+export const loginAPI = async (email: string, password: string): Promise<AuthPayload> => {
+  const res = await axiosInstance.post(`${API_BASE}/auth/login`, { email, password });
+  // بفضل الـ normalizer: res.data = { accessToken, user }
+  return res.data as AuthPayload;
 };
-export async function ensureMerchant(token: string) {
-  const { data } = await axios.post(`${API_BASE}/auth/ensure-merchant`, {}, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return data; // { accessToken, user }
-}
+
 export const signUpAPI = async (
   name: string,
   email: string,
   password: string,
   confirmPassword: string
-): Promise<AuthResponse> => {
-  const res = await axios.post<AuthResponse>(`${API_BASE}/auth/register`, {
+): Promise<AuthPayload> => {
+  const res = await axiosInstance.post(`${API_BASE}/auth/register`, {
     name,
     email,
     password,
     confirmPassword,
   });
-  return res.data;
+  // نفس الشي: حمولة مباشرة
+  return res.data as AuthPayload;
 };
 
-export const verifyEmailAPI = async (
-  email: string,
-  code: string
-): Promise<void> => {
-  await axios.post(`${API_BASE}/auth/verify-email`, { email, code });
+export async function ensureMerchant(token: string): Promise<AuthPayload> {
+  const res = await axiosInstance.post(
+    `${API_BASE}/auth/ensure-merchant`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data as AuthPayload;
+}
+
+export const verifyEmailAPI = async (email: string, code: string): Promise<void> => {
+  await axiosInstance.post(`${API_BASE}/auth/verify-email`, { email, code });
 };
 
 export const resendVerificationAPI = async (email: string): Promise<void> => {
-  await axios.post(`${API_BASE}/auth/resend-verification`, { email });
+  await axiosInstance.post(`${API_BASE}/auth/resend-verification`, { email });
 };

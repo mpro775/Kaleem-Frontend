@@ -25,8 +25,10 @@ import {
   STORE_CATEGORIES,
 } from "@/features/onboarding/constants";
 import { ensureMerchant } from "@/auth/api";
+import { useErrorHandler } from '@/shared/errors';
 
 export default function OnboardingPage() {
+  const { handleError } = useErrorHandler();
   const navigate = useNavigate();
   const { user, token, setAuth } = useAuth(); // ← جديد
   const [businessType, setBusinessType] = useState("store");
@@ -84,7 +86,7 @@ export default function OnboardingPage() {
       mounted = false;
     };
     // ⚠️ اعتمد فقط على token و user?.merchantId (لا تعتمد على emailVerified هنا)
-  }, [token, user?.merchantId, setAuth]); // 👈 أزلنا user?.emailVerified
+  }, [token, user?.merchantId, setAuth, ensuring, handleError]); // 👈 أزلنا user?.emailVerified
   console.log('token', !!token, 'user', user)
   const handleContinue = async () => {
     try {

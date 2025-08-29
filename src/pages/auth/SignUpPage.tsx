@@ -14,7 +14,6 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { toast } from "react-toastify";
 import { TfiEye } from "react-icons/tfi";
 import { RiEyeCloseLine } from "react-icons/ri";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
@@ -22,7 +21,7 @@ import AuthLayout from "@/auth/AuthLayout";
 import GradientIcon from "@/shared/ui/GradientIcon";
 import { signUpAPI } from "@/auth/api";
 import { useAuth } from "@/context/AuthContext";
-import { getAxiosMessage } from "@/shared/lib/errors";
+import { useErrorHandler, applyServerFieldErrors } from "@/shared/errors";
 
 const SignUpSchema = z
   .object({
@@ -77,6 +76,7 @@ const fields: FieldConfig[] = [
 export default function SignUpPage() {
   const theme = useTheme();
   const { login } = useAuth();
+  const { handleError } = useErrorHandler();
   const [visible, setVisible] = React.useState<
     Record<Path<SignUpData>, boolean>
   >({
@@ -90,6 +90,7 @@ export default function SignUpPage() {
   const {
     control,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<SignUpData>({
     resolver: zodResolver(SignUpSchema),
@@ -110,9 +111,14 @@ export default function SignUpPage() {
         confirmPassword
       );
       login(user, accessToken);
-      toast.success("تم إنشاء الحساب بنجاح!");
-    } catch (err) {
-      toast.error(getAxiosMessage(err));
+    } catch (err: any) {
+      // إذا كان الخطأ يحتوي على أخطاء حقول، قم بتطبيقها
+      if (err.fields) {
+        applyServerFieldErrors(err.fields, setError);
+      } else {
+        // عرض رسالة خطأ عامة
+        handleError(err);
+      }
     } finally {
       setLoading(false);
     }

@@ -39,6 +39,7 @@ import OfferEditor, { type OfferForm } from "./OfferEditor";
 import AttributesEditor from "./AttributesEditor";
 import { toMessageString } from "@/shared/utils/text";
 import { ensureIdString } from "@/shared/utils/ids";
+import { useErrorHandler } from '@/shared/errors';
 
 interface AddProductDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ export default function AddProductDialog({
   merchantId,
   onProductAdded,
 }: AddProductDialogProps) {
+  const { handleError } = useErrorHandler();
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -253,14 +255,16 @@ const openSnack = (message: unknown, severity: 'success'|'info'|'warning'|'error
       // نظّف معاينات الصور
       revokeAll();
       setPreviews([]);
-    } catch (e: unknown) {
+    
+    } catch (error: any) {
+      handleError(error);
       stopKaleemSimulation();
       setLoading(false);
   
       // استخرج رسالة نصية آمنة
       const msg =
-        (e as any)?.response?.data?.message ??
-        (e as any)?.message ??
+        error?.response?.data?.message ??
+        error?.message ??
         "فشل في إضافة المنتج";
   
       // لو Array رجّعها كسطر واحد

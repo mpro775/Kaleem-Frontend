@@ -35,20 +35,11 @@ const testimonials = [
   {
     name: "متجر التقنية أولاً",
     role: "مدير العمليات",
-    comment:
-      "تكامل البوت مع WhatsApp سلس جدًا، وفريق الدعم رائع. أنصح فيه.",
+    comment: "تكامل البوت مع WhatsApp سلس جدًا، وفريق الدعم رائع. أنصح فيه.",
     rating: 5,
     date: "28 مايو 2023",
   },
-  {
-    name: "متجر التقنية أولاً",
-    role: "مدير العمليات",
-    comment:
-      "تكامل البوت مع WhatsApp سلس جدًا، وفريق الدعم رائع. أنصح فيه.",
-    rating: 5,
-    date: "28 مايو 2023",
-  },
-  // أضف مراجعات إضافية لو حاب يطول السلايدر...
+  // يمكنك إضافة المزيد هنا...
 ];
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -81,53 +72,79 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 export default function TestimonialsSection() {
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up("md")); // ≥ md -> 4
-  const isSmUp = useMediaQuery(theme.breakpoints.up("sm")); // ≥ sm -> 2, وإلا 1
+  const isSmUp = useMediaQuery(theme.breakpoints.up("sm")); // ≥ sm -> 2، غير ذلك 1
   const perView = isMdUp ? 4 : isSmUp ? 2 : 1;
 
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [page, setPage] = useState(0);
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(testimonials.length / perView)),
     [perView]
   );
 
-  // الحفاظ على الصفحة ضمن الحدود عند تغيّر المقاس
+  // احفظ الصفحة ضمن الحدود عند تغير المقاس
   useEffect(() => {
     setPage((p) => Math.min(p, totalPages - 1));
   }, [totalPages]);
 
-  // وظائف السحب للصفحات
+  // --- الانتقال إلى صفحة باستخدام offsetLeft لأول عنصر في الصفحة ---
   const scrollToPage = (p: number) => {
     const el = trackRef.current;
     if (!el) return;
-    const containerWidth = el.clientWidth;
-    el.scrollTo({ left: p * containerWidth, behavior: "smooth" });
-    setPage(p);
+
+    const newPage = Math.max(0, Math.min(p, totalPages - 1));
+    const firstIndex = newPage * perView;
+    const child = el.children.item(firstIndex) as HTMLElement | null;
+    const left = child ? child.offsetLeft : newPage * el.clientWidth;
+
+    el.scrollTo({ left, behavior: "smooth" });
+    setPage(newPage);
   };
+
   const next = () => scrollToPage((page + 1) % totalPages);
   const prev = () => scrollToPage(page === 0 ? totalPages - 1 : page - 1);
 
-  // مزامنة المؤشر عند السحب اليدوي
+  // --- مزامنة المؤشر عند السحب اليدوي (أقرب صفحة لأول عنصر) ---
   const onScroll = () => {
     const el = trackRef.current;
     if (!el) return;
-    const p = Math.round(el.scrollLeft / el.clientWidth);
-    if (p !== page) setPage(p);
+
+    // مواضع أول عنصر في كل صفحة
+    const firsts: number[] = [];
+    for (let p = 0; p < totalPages; p++) {
+      const idx = p * perView;
+      const child = el.children.item(idx) as HTMLElement | null;
+      firsts.push(child ? child.offsetLeft : p * el.clientWidth);
+    }
+
+    const x = el.scrollLeft;
+    let nearest = 0;
+    let best = Infinity;
+    for (let p = 0; p < firsts.length; p++) {
+      const d = Math.abs(firsts[p] - x);
+      if (d < best) {
+        best = d;
+        nearest = p;
+      }
+    }
+
+    if (nearest !== page) {
+      setPage(nearest);
+    }
   };
 
   // ===== Autoplay =====
   const startAuto = () => {
     stopAuto();
-    // كل 4 ثوانٍ انتقل للصفحة التالية
-    intervalRef.current = window.setInterval(() => {
+    intervalRef.current = setInterval(() => {
       next();
     }, 4000);
   };
   const stopAuto = () => {
     if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
+      clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
   };
@@ -136,7 +153,7 @@ export default function TestimonialsSection() {
     startAuto();
     return stopAuto;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalPages, page, perView]);
+  }, [totalPages, perView]);
 
   // إيقاف/استئناف عند تفاعل المستخدم
   const handleMouseEnter = () => stopAuto();
@@ -146,6 +163,7 @@ export default function TestimonialsSection() {
 
   return (
     <Box
+      id="testimonials"
       sx={{
         py: 12,
         px: { xs: 2, md: 3 },
@@ -155,7 +173,7 @@ export default function TestimonialsSection() {
       }}
       dir="rtl"
     >
-      {/* زخارف خفيفة */}
+      {/* زخارف */}
       <Box
         sx={{
           position: "absolute",
@@ -183,7 +201,7 @@ export default function TestimonialsSection() {
         }}
       />
 
-      {/* العنوان والوصف */}
+      {/* العنوان */}
       <Typography
         variant="h4"
         align="center"
@@ -233,7 +251,7 @@ export default function TestimonialsSection() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* المسار: LTR لسهولة الحساب، مع إبقاء النصوص RTL */}
+        {/* المسار: LTR لسهولة الحساب */}
         <Box
           ref={trackRef}
           onScroll={onScroll}
@@ -241,12 +259,15 @@ export default function TestimonialsSection() {
           sx={{
             display: "flex",
             overflowX: "auto",
-            scrollSnapType: "x mandatory",
+            // فعّل snap فقط عند perView = 1
+            scrollSnapType: perView === 1 ? "x mandatory" : "none",
             scrollBehavior: "smooth",
             scrollbarWidth: "none",
             "&::-webkit-scrollbar": { display: "none" },
-            gap: 16,
+            gap: { xs: 8, sm: 16 },
             px: { xs: 1, sm: 2 },
+            // يساعد snap على احترام البادينغ
+            scrollPaddingInline: { xs: 8, sm: 16 },
           }}
         >
           {testimonials.map((item, idx) => (
@@ -255,11 +276,12 @@ export default function TestimonialsSection() {
               sx={{
                 flex: "0 0 auto",
                 width: {
-                  xs: "100%",
-                  sm: `calc(50% - 8px)`,
-                  md: `calc(25% - 12px)`,
+                  xs: "100%", // perView = 1
+                  sm: "calc((100% - 16px) / 2)", // perView = 2, gap = 16
+                  md: "calc((100% - 3 * 16px) / 4)", // perView = 4, gap = 16
                 },
-                scrollSnapAlign: "start",
+                // snap فقط للجوال
+                scrollSnapAlign: perView === 1 ? "start" : "unset",
               }}
             >
               <StyledPaper
@@ -273,8 +295,7 @@ export default function TestimonialsSection() {
                   transition: "box-shadow .25s ease, transform .25s ease",
                   "&:hover": {
                     transform: "translateY(-6px)",
-                    boxShadow:
-                      "0 25px 50px -12px rgba(0,0,0,0.24)",
+                    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.24)",
                   },
                 }}
               >
@@ -352,7 +373,7 @@ export default function TestimonialsSection() {
           ))}
         </Box>
 
-        {/* أزرار التنقّل */}
+        {/* أزرار التنقل */}
         <IconButton
           aria-label="السابق"
           onClick={prev}

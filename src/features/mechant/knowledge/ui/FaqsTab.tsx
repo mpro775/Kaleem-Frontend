@@ -1,5 +1,5 @@
 // src/features/knowledge/ui/FaqsTab.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect,  useRef, useState } from "react";
 import {
   Box,
   Paper,
@@ -26,7 +26,6 @@ import SaveIcon from "@mui/icons-material/Save";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
-import PlaylistAddIcon from "@mui/icons-material/PlaylistAdd";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -57,7 +56,7 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
   const { enqueueSnackbar } = useSnackbar();
 
   // الهوك يفترض أنه يوفر هذه الدوال (حدّثه إن لزم):
-  const { faqs, loading, add, addBulk, remove, removeAll, update, refresh } = useFaqs(merchantId) as {
+  const { faqs, loading, add,  remove, removeAll, update, refresh } = useFaqs(merchantId) as {
     faqs: FaqItem[];
     loading: boolean;
     add: (q: string, a: string) => Promise<void>;
@@ -71,8 +70,6 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
   // إدخال فردي
   const [q, setQ] = useState("");
   const [a, setA] = useState("");
-  // إدخال متعدد
-  const [bulkText, setBulkText] = useState("");
   // حالة عامة
   const [submitting, setSubmitting] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -91,52 +88,23 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
   const [editA, setEditA] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // تحليل إدخال متعدد: صيغة مدعومة (سطرين لكل عنصر) أو JSON مبسّط
-  // أمثلة:
-  // Q: ما سياسة الإرجاع؟
-  // A: خلال 14 يومًا
-  //
-  // أو JSON:
-  // [{"question":"...","answer":"..."}, ...]
-  const parsedBulk = useMemo(() => {
-    const txt = bulkText.trim();
-    const items: { question: string; answer: string }[] = [];
-    let invalid = false;
 
-    if (!txt) return { items, invalid };
-
-    // حاول JSON
-    try {
-      const arr = JSON.parse(txt);
-      if (Array.isArray(arr)) {
-        arr.forEach((it) => {
-          if (it?.question && it?.answer) items.push({ question: String(it.question), answer: String(it.answer) });
-          else invalid = true;
-        });
-        return { items, invalid };
-      }
-    } catch {
-      // تجاهل إن لم يكن JSON
-    }
-
-    // صيغة نصية: كل عنصر يتكون من سطرين متتاليين Q: و A:
-    const blocks = txt.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
-    for (const block of blocks) {
-      const qMatch = block.match(/^\s*(?:Q:|س:)?\s*(.+)$/m);
-      const aMatch = block.match(/^\s*(?:A:|ج:)?\s*(.+)$/m);
-      if (qMatch && aMatch) items.push({ question: qMatch[1].trim(), answer: aMatch[1].trim() });
-      else invalid = true;
-    }
-    return { items, invalid };
-  }, [bulkText]);
 
   const anyPending = (status?.pending ?? 0) > 0;
+  
+  // إيقاف الـ polling إذا لم تعد هناك FAQs قيد المعالجة
+  useEffect(() => {
+    if (!anyPending && pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, [anyPending]);
   const progress =
     status && status.total > 0
       ? Math.round(((status.completed + status.failed + status.deleted) / status.total) * 100)
       : 0;
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       setStatusLoading(true);
       const { data } = await axios.get<StatusResp>(`/merchants/${merchantId}/faqs/status`);
@@ -146,27 +114,31 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
     } finally {
       setStatusLoading(false);
     }
-  };
+  }, [merchantId]);
 
   useEffect(() => {
     fetchStatus();
-  }, [merchantId]);
+  }, [fetchStatus]);
 
   useEffect(() => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
-    if (anyPending) {
+    // فقط إذا كان هناك FAQs قيد المعالجة، ابدأ الـ polling
+    if (anyPending && (status?.pending ?? 0) > 0) {
       pollingRef.current = setInterval(async () => {
         await fetchStatus();
         await refresh?.();
       }, 4000);
     }
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
     };
-  }, [anyPending]);
+  }, [anyPending, status?.pending, fetchStatus, refresh]);
 
   const statusChip = (s?: FaqItem["status"], error?: string) => {
     if (s === "completed") return <Chip size="small" label="مكتمل" color="success" />;
@@ -207,32 +179,7 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
     }
   };
 
-  const handleAddBulk = async () => {
-    if (!parsedBulk.items.length) {
-      enqueueSnackbar("لا توجد عناصر صالحة", { variant: "warning" });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      if (addBulk) {
-        await addBulk(parsedBulk.items);
-      } else {
-        for (const it of parsedBulk.items) {
-          // eslint-disable-next-line no-await-in-loop
-          await add(it.question, it.answer);
-        }
-      }
-      setBulkText("");
-      enqueueSnackbar(`تمت إضافة ${parsedBulk.items.length} سؤال${parsedBulk.invalid ? " (تخطّي عناصر غير صالحة)" : ""}`, {
-        variant: "success",
-      });
-      await Promise.all([fetchStatus(), refresh?.()]);
-    } catch (e: any) {
-      enqueueSnackbar(e?.message || "تعذر الإضافة المتعددة", { variant: "error" });
-    } finally {
-      setSubmitting(false);
-    }
-  };
+
 
   const askDeleteOne = (id: string, hard: boolean) => setConfirmDeleteOne({ id, hard });
 

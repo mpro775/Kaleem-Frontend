@@ -5,7 +5,7 @@ import {
   Link,
   IconButton,
   Divider,
-  useTheme,
+  // useTheme,
 } from "@mui/material";
 import {
   Facebook,
@@ -19,9 +19,8 @@ import {
 } from "@mui/icons-material";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 import type { Category } from "@/features/mechant/categories/type";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useParams } from "react-router-dom";
 
-// تعريف الأيقونات
 const socialIcons = {
   facebook: Facebook,
   twitter: Twitter,
@@ -37,9 +36,10 @@ export function Footer({
   merchant: MerchantInfo;
   categories: Category[];
 }) {
-  const theme = useTheme();
+  // const theme = useTheme();
+  const { slugOrId } = useParams<{ slugOrId: string }>();
+  const base = `/store/${slugOrId || merchant.publicSlug || merchant._id}`;
 
-  // ساعات الدوام كمصفوفة نصوص
   const workingHoursStr =
     merchant.workingHours?.length > 0
       ? merchant.workingHours
@@ -51,8 +51,8 @@ export function Footer({
     <Box
       component="footer"
       sx={{
-        backgroundColor: theme.palette.primary.dark,
-        color: "white",
+        backgroundColor: "var(--brand)",
+        color: "var(--on-brand)",
         py: 6,
         mt: "auto",
       }}
@@ -75,7 +75,11 @@ export function Footer({
                   src={merchant.logoUrl}
                   alt={merchant.name}
                   width={40}
-                  style={{ borderRadius: 20, marginRight: 10 }}
+                  style={{
+                    borderRadius: 20,
+                    marginRight: 10,
+                    border: "1px solid rgba(255,255,255,0.25)",
+                  }}
                 />
               )}
               <Typography variant="h4" sx={{ fontWeight: "bold" }}>
@@ -86,35 +90,30 @@ export function Footer({
               {merchant.businessDescription || "متجر إلكتروني متخصص"}
             </Typography>
 
-            {/* روابط السوشيال ميديا */}
+            {/* Social links */}
             <Box sx={{ display: "flex", gap: 1.5, mt: 3 }}>
               {merchant.socialLinks &&
-                Object.entries(merchant.socialLinks).map(
-                  ([platform, url]) =>
-                    url ? (
-                      <IconButton
-                        key={platform}
-                        component="a"
-                        href={url}
-                        target="_blank"
-                        rel="noopener"
-                        sx={{
-                          backgroundColor: "rgba(255,255,255,0.1)",
-                          color: "white",
-                          "&:hover": {
-                            backgroundColor: theme.palette.primary.light,
-                          },
-                        }}
-                      >
-                        {(() => {
-                          const Icon =
-                            socialIcons[
-                              platform as keyof typeof socialIcons
-                            ];
-                          return Icon ? <Icon /> : null;
-                        })()}
-                      </IconButton>
-                    ) : null
+                Object.entries(merchant.socialLinks).map(([platform, url]) =>
+                  url ? (
+                    <IconButton
+                      key={platform}
+                      component="a"
+                      href={url}
+                      target="_blank"
+                      rel="noopener"
+                      sx={{
+                        backgroundColor: "rgba(255,255,255,0.12)",
+                        color: "var(--on-brand)",
+                        "&:hover": { backgroundColor: "var(--brand-hover)" },
+                      }}
+                    >
+                      {(() => {
+                        const Icon =
+                          socialIcons[platform as keyof typeof socialIcons];
+                        return Icon ? <Icon /> : null;
+                      })()}
+                    </IconButton>
+                  ) : null
                 )}
             </Box>
           </Box>
@@ -130,7 +129,7 @@ export function Footer({
                 sx={{
                   width: "50px",
                   height: "3px",
-                  backgroundColor: theme.palette.primary.light,
+                  backgroundColor: "rgba(255,255,255,0.6)",
                   mt: 1,
                 }}
               />
@@ -138,7 +137,7 @@ export function Footer({
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
               <Link
                 component={RouterLink}
-                to="/"
+                to={base}
                 color="inherit"
                 sx={{
                   textDecoration: "none",
@@ -150,7 +149,7 @@ export function Footer({
               </Link>
               <Link
                 component={RouterLink}
-                to="/store"
+                to={`${base}`}
                 color="inherit"
                 sx={{
                   textDecoration: "none",
@@ -162,7 +161,7 @@ export function Footer({
               </Link>
               <Link
                 component={RouterLink}
-                to="/store/about"
+                to={`${base}/about`}
                 color="inherit"
                 sx={{
                   textDecoration: "none",
@@ -186,7 +185,7 @@ export function Footer({
                 sx={{
                   width: "50px",
                   height: "3px",
-                  backgroundColor: theme.palette.primary.light,
+                  backgroundColor: "rgba(255,255,255,0.6)",
                   mt: 1,
                 }}
               />
@@ -196,7 +195,7 @@ export function Footer({
                 <Link
                   key={cat._id}
                   component={RouterLink}
-                  to={`/store/category/${cat._id}`}
+                  to={`${base}?cat=${cat._id}`}
                   color="inherit"
                   sx={{
                     textDecoration: "none",
@@ -221,7 +220,7 @@ export function Footer({
                 sx={{
                   width: "50px",
                   height: "3px",
-                  backgroundColor: theme.palette.primary.light,
+                  backgroundColor: "rgba(255,255,255,0.6)",
                   mt: 1,
                 }}
               />
@@ -231,15 +230,15 @@ export function Footer({
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <LocationOn
                     sx={{
-                      color: theme.palette.primary.light,
+                      color: "var(--on-brand)",
+                      opacity: 0.85,
                       fontSize: "1.8rem",
                       mr: 2,
                     }}
                   />
                   <Typography variant="body1">
-                    {merchant.addresses[0].street},{" "}
-                    {merchant.addresses[0].city},{" "}
-                    {merchant.addresses[0].country}
+                    {merchant.addresses[0].street}, {merchant.addresses[0].city}
+                    , {merchant.addresses[0].country}
                   </Typography>
                 </Box>
               )}
@@ -247,7 +246,8 @@ export function Footer({
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Phone
                     sx={{
-                      color: theme.palette.primary.light,
+                      color: "var(--on-brand)",
+                      opacity: 0.85,
                       fontSize: "1.8rem",
                       mr: 2,
                     }}
@@ -259,7 +259,8 @@ export function Footer({
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <AccessTime
                     sx={{
-                      color: theme.palette.primary.light,
+                      color: "var(--on-brand)",
+                      opacity: 0.85,
                       fontSize: "1.8rem",
                       mr: 2,
                     }}
@@ -271,9 +272,9 @@ export function Footer({
           </Box>
         </Box>
 
-        <Divider sx={{ my: 5, backgroundColor: "rgba(255,255,255,0.2)" }} />
+        <Divider sx={{ my: 5, backgroundColor: "rgba(255,255,255,0.25)" }} />
 
-        {/* Footer Bottom Row */}
+        {/* Bottom Row */}
         <Box
           sx={{
             display: "flex",
@@ -284,7 +285,7 @@ export function Footer({
             gap: 2,
           }}
         >
-          <Typography variant="body2" sx={{ opacity: 0.7 }}>
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
             © {new Date().getFullYear()} {merchant.name}. جميع الحقوق محفوظة.
           </Typography>
         </Box>

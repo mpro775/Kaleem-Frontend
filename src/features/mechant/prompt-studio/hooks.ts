@@ -89,10 +89,12 @@ export function usePromptStudio({
             ? await promptApi.previewAdvanced(safeToken, safeMerchant, quickForPreview)
             : await promptApi.previewQuick(safeToken, safeMerchant, quickForPreview);
   
-        setPreviewContent(initialPreview || "");
+        console.log("Initial preview result:", initialPreview); // للتشخيص
+        setPreviewContent(initialPreview || "لا يوجد محتوى للعرض");
         setLastUpdated(new Date());
-      } catch {
-        // TODO: toast
+      } catch (error) {
+        console.error("Error loading prompt studio data:", error);
+        setPreviewContent("خطأ في تحميل البيانات");
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -126,10 +128,12 @@ export function usePromptStudio({
             safeMerchant,
             safeValues
           );
-          setPreviewContent(preview);
+          console.log("Live preview result:", preview); // للتشخيص
+          setPreviewContent(preview || "لا يوجد محتوى للعرض");
           setLastUpdated(new Date());
-        } catch {
-          // ignore
+        } catch (error) {
+          console.error("Error in live preview:", error);
+          setPreviewContent("خطأ في المعاينة الحية");
         }
       }, 500);
 

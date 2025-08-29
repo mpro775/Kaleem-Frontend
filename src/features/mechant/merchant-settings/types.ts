@@ -21,12 +21,15 @@ export interface SocialLinks {
     closeTime: string;  
   }
   
- export interface MerchantInfo {
+  export interface MerchantInfo {
     _id: string;
     name: string;
     logoUrl?: string;
     phone?: string;
-    slug?: string;
+  
+    // كان عندك slug اختياري؛ نستبدله/نكمله بـ publicSlug على مستوى التاجر
+    publicSlug?: string;              // ✅ السلاج الموحّد
+    publicSlugEnabled?: boolean;      // (اختياري) لإخفاء/تعطيل الروابط العامة
   
     storefrontUrl?: string;
     businessDescription?: string;
@@ -39,9 +42,7 @@ export interface SocialLinks {
     categories: string[];
     customCategory?: string;
     socialLinks?: SocialLinks;
-    // يمكنك إضافة أي حقل آخر تريده من السكيمة حسب الحاجة
   }
-  
 export type SectionComponentProps = {
   initialData: MerchantInfo;
   onSave: (sectionData: Partial<MerchantInfo>) => Promise<void>;

@@ -1,3 +1,4 @@
+// src/components/dashboard/Sidebar.tsx
 import {
   Box,
   List,
@@ -33,14 +34,14 @@ import { MdOutlineSettingsSuggest } from "react-icons/md";
 import { BiSupport } from "react-icons/bi";
 import { useStoreServicesFlag } from "@/shared/hooks/useStoreServicesFlag";
 
-// القائمة الرئيسية (كما هي)
 interface MenuItem {
   label: string;
-  icon?: JSX.Element; // ← كانت إلزامية، خلّيناها اختيارية
+  icon?: JSX.Element;
   path?: string;
   subItems?: MenuItem[];
   featureKey?: string;
 }
+
 const BASE_MENU: MenuItem[] = [
   { label: "الرئيسية", icon: <AiTwotoneHome />, path: "/dashboard" },
   {
@@ -89,13 +90,13 @@ const BASE_MENU: MenuItem[] = [
     icon: <TbMessageCircleCog />,
     path: "/dashboard/chatsetting",
   },
-  { label: "قنوات الربط", icon: <PiGraphLight />, path: "/dashboard/channel" },
+  { label: "قنوات الربط", icon: <PiGraphLight />, path: "/dashboard/channels" },
   {
     label: "الاحصائيات",
     icon: <SiGoogleanalytics />,
     path: "/dashboard/analytics",
   },
-  { label: "العملاء ", icon: <TiGroupOutline />, path: "/dashboard/leads" },
+  { label: "العملاء", icon: <TiGroupOutline />, path: "/dashboard/leads" }, // ← أزلت المسافة الزائدة
   {
     label: "الموارد الاضافية",
     icon: <HiOutlineDocumentMagnifyingGlass />,
@@ -116,17 +117,18 @@ const BASE_MENU: MenuItem[] = [
 ];
 
 interface SidebarProps {
-  open: boolean; // للهاتف فقط (temporary)
+  open: boolean;
   onClose: () => void;
   isMobile: boolean;
   onToggleCollapse?: () => void;
-  collapsed?: boolean; // المستخدم على الديسكتوب
+  collapsed?: boolean;
 }
 
-// ===== تجميع تلقائي بسيط دون العبث بـ BASE_MENU =====
 function buildGroupedMenu(base: MenuItem[]): MenuItem[] {
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim();
   const filterByLabels = (labels: string[]) =>
-    base.filter((i) => labels.includes(i.label));
+    base.filter((i) => labels.map(norm).includes(norm(i.label)));
+
   const used = new Set<string>();
 
   const group = (
@@ -137,7 +139,7 @@ function buildGroupedMenu(base: MenuItem[]): MenuItem[] {
   ): MenuItem | null => {
     items.forEach((i) => used.add(i.label));
     if (!items.length) return null;
-    if (items.length === 1) return items[0]; // 👈 افرد المجموعة إن كانت عنصرًا واحدًا
+    if (items.length === 1) return items[0];
     return { label, icon, subItems: items, featureKey };
   };
 
@@ -147,6 +149,7 @@ function buildGroupedMenu(base: MenuItem[]): MenuItem[] {
     undefined,
     <AiTwotoneHome />
   );
+
   const ai = group(
     "Kleem IQ",
     filterByLabels([
@@ -158,21 +161,24 @@ function buildGroupedMenu(base: MenuItem[]): MenuItem[] {
     undefined,
     <BsRobot />
   );
+
   const store = group(
     "متجر كليم",
     base.filter((i) => i.featureKey === "storeService"),
     "storeService",
     <LuStore />
   );
+
   const channels = group(
     "القنوات والربط",
     filterByLabels(["قنوات الربط", "ضبط واجهه الدردشة"]),
     undefined,
     <PiGraphLight />
   );
+
   const crm = group(
     "العملاء",
-    filterByLabels(["العملاء "]),
+    filterByLabels(["العملاء"]), // ← لن تتأثر لو كان في مسافات
     undefined,
     <TiGroupOutline />
   );
@@ -222,21 +228,21 @@ const Sidebar = ({
       .filter(Boolean) as MenuItem[];
   }, [full, showStoreServices]);
 
-  // 4) لا تعيد تعيين expandedItems كليًا؛ دمج فقط "التوسعة الافتراضية" بناءً على المسار الحالي
+  // توسيع المجموعة التي تحتوي المسار الحالي دون مسح اختيارات المستخدم
   useEffect(() => {
     const currentPath = location.pathname;
     setExpandedItems((prev) => {
       const next = { ...prev };
       menu.forEach((item) => {
         if (item.subItems?.some((s) => s.path === currentPath)) {
-          next[item.label] = true; // أضف التوسعة للمجموعة الموافقة للمسار
+          next[item.label] = true;
         }
       });
-      return next; // لا تمسح اختيارات المستخدم السابقة
+      return next;
     });
-    // مهم: لا تضع `menu` كمُعتمَد هنا حتى لا يُعاد ضبط الحالة
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
+
   const toggleSubMenu = (label: string) =>
     setExpandedItems((prev) => ({ ...prev, [label]: !prev[label] }));
 
@@ -244,7 +250,6 @@ const Sidebar = ({
     if (isMobile) onClose();
   };
 
-  // عنصر واحد (قسم أو عنصر مفرد)
   const renderMenuItem = (item: MenuItem) => {
     const isActive = item.path === location.pathname;
     const isSubItemActive = item.subItems?.some(
@@ -287,14 +292,18 @@ const Sidebar = ({
                     theme.palette.mode === "dark"
                       ? `${theme.palette.primary.dark}33`
                       : `linear-gradient(90deg, ${
-                          theme.palette.primary.light
+                          theme.palette.primary.light || "#ede7f6"
                         } 0%, ${
                           theme.palette.primary.light || "#ede7f6"
                         } 100%) !important`,
                 },
               }),
               ...(isSubItemActive && {
-                background: `linear-gradient(90deg, ${theme.palette.background.paper} 0%, ${theme.palette.primary.light} 100%) !important`,
+                background: `linear-gradient(90deg, ${
+                  theme.palette.background.paper
+                } 0%, ${
+                  theme.palette.primary.light || "#ede7f6"
+                } 100%) !important`,
                 color: theme.palette.primary.main,
               }),
               transition: "all 0.3s ease",
@@ -340,7 +349,6 @@ const Sidebar = ({
           </ListItemButton>
         </ListItem>
 
-        {/* القوائم الفرعية */}
         {item.subItems && (
           <Collapse in={expandedItems[item.label]} timeout="auto" unmountOnExit>
             <List component="div" disablePadding sx={{ pl: 2 }}>
@@ -401,7 +409,6 @@ const Sidebar = ({
     );
   };
 
-  // الشريط الجانبي
   const drawerWidth = isMobile ? 280 : collapsed ? 72 : 240;
 
   return (
@@ -431,7 +438,6 @@ const Sidebar = ({
       <Box
         sx={{ display: "flex", flexDirection: "column", height: "100%", py: 2 }}
       >
-        {/* رأس الشريط */}
         <Typography
           variant="caption"
           color="text.secondary"
@@ -450,13 +456,15 @@ const Sidebar = ({
               mb: 2,
             }}
           >
-            <IconButton onClick={onToggleCollapse}>
+            <IconButton
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? "توسيع" : "طي"}
+            >
               {collapsed ? <ChevronRight /> : <ChevronLeft />}
             </IconButton>
           </Box>
         )}
 
-        {/* القائمة */}
         <List sx={{ flex: 1, px: 1 }}>
           {menu.map((item) => (
             <Box key={item.label} onClick={handleItemClick}>
@@ -465,7 +473,6 @@ const Sidebar = ({
           ))}
         </List>
 
-        {/* تذييل */}
         <Box
           sx={{
             px: 2,
@@ -476,25 +483,9 @@ const Sidebar = ({
             textAlign: "center",
           }}
         >
-          {!collapsed ? (
-            <Typography variant="caption" color="text.secondary">
-              كليم
-            </Typography>
-          ) : (
-            <Tooltip title="MusaidBot v2.0" placement="right">
-              <Avatar
-                sx={{
-                  width: 32,
-                  height: 32,
-                  mx: "auto",
-                  bgcolor: theme.palette.primary.main,
-                  fontSize: 12,
-                }}
-              >
-                MB
-              </Avatar>
-            </Tooltip>
-          )}
+          <Typography variant="caption" color="text.secondary">
+            كليم
+          </Typography>
         </Box>
       </Box>
     </Drawer>

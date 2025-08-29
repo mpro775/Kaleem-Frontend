@@ -2,7 +2,10 @@
 import type { EmbedMode } from "./types";
 
 export function sanitizeForAttr(json: string) {
-  return json.replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
+  return json
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
 }
 
 export function buildEmbedScript(opts: {
@@ -15,6 +18,7 @@ export function buildEmbedScript(opts: {
   headerBgColor?: string;
   bodyBgColor?: string;
   widgetSlug?: string;
+  publicSlug?: string;
   widgetHost: string;
 }) {
   const config = {
@@ -26,11 +30,15 @@ export function buildEmbedScript(opts: {
     fontFamily: opts.fontFamily,
     headerBgColor: opts.headerBgColor,
     bodyBgColor: opts.bodyBgColor,
-    widgetSlug: opts.widgetSlug,
+    widgetSlug: opts.publicSlug || opts.widgetSlug, // ✅ نعطي الأولوية لـ publicSlug
+    publicSlug: opts.publicSlug || opts.widgetSlug, // للمتوافقية
   };
   const dataConfig = sanitizeForAttr(JSON.stringify(config));
-  const src = `${opts.widgetHost}/widget.js?mode=${encodeURIComponent(opts.mode)}`;
-  return `<script id="kleem-chat" data-config='${dataConfig}' src="${src}" async></script>`;
+  const src = `${opts.widgetHost.replace(
+    /\/+$/,
+    ""
+  )}/public/widget.js?v=${Date.now()}`;
+  return `<script id="kleem-chat" data-config='${dataConfig}' src="${src}" defer></script>`;
 }
 
 export function buildChatLink(origin: string, slug?: string) {

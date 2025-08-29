@@ -22,6 +22,7 @@ import { updateProduct, uploadProductImages } from "../api";
 import OfferEditor, { type OfferForm } from "./OfferEditor";
 import AttributesEditor from "./AttributesEditor";
 import { ensureIdString } from "@/shared/utils/ids";
+import { useErrorHandler } from '@/shared/errors';
 
 interface Props {
   open: boolean;
@@ -38,6 +39,7 @@ export default function EditProductDialog({
   product,
   onUpdated,
 }: Props) {
+  const { handleError } = useErrorHandler();
   const [form, setForm] = useState<UpdateProductDto>({});
   const [currency, setCurrency] = useState<Currency>("SAR");
   const [offer, setOffer] = useState<OfferForm>({ enabled: false });
@@ -100,8 +102,10 @@ export default function EditProductDialog({
       await updateProduct(product._id, payload);
       onUpdated?.();
       onClose();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "فشل التحديث";
+    
+    } catch (error: any) {
+      handleError(error);
+      const msg = error?.response?.data?.message || error?.message || "فشل التحديث";
       setError(Array.isArray(msg) ? msg.join(" · ") : String(msg));
     } finally {
       setLoading(false);

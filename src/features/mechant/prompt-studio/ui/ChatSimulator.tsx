@@ -45,45 +45,50 @@ export function ChatSimulator({
   const send = async () => {
     const userText = input.trim();
     if (!userText || loading) return;
-
+  
     const sessionId = `dash-${Date.now()}`;
-    const channel = "dashboard-test";
-
+    const channel = "dashboard-test"; // خليك متسق معه في الباك
+  
     setMessages((m) => [...m, { from: "user", text: userText }]);
     setInput("");
     setLoading(true);
-
+  
     try {
-      // 1) اطلب ردّ الذكاء من مسار التستنج (يرجع { botReply })
-      const res = await fetch(promptTestUrl, {
+      // (A) أرسل رسالة "العميل" لمسار الوِبهـوك الحقيقي
+      await fetch(`${testBotReplyBase}/incoming/${merchantId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          merchantId,
-          text: userText,
+          // حقول دنيا يُمرّرها normalizeIncomingMessage
+          merchantId,               // احتياطًا
           sessionId,
-          channel,
+          channel,                  // لازم يتطابق مع اللي تستخدمه بالرَّاوتِنج
+          text: userText,
+          from: { id: "dashboard-sim", name: "Dashboard Tester" }, // اختياري
+          // message: { text: userText } // لو حاب تدعم فورمات قنوات ثانية
+          metadata: { source: "dashboard-simulator" },
         }),
+      });
+  
+      // (B) جيب ردّ الذكاء من مسار التستنج (اختياري للمحاكاة)
+      const res = await fetch(promptTestUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ merchantId, text: userText, sessionId, channel }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: { botReply?: string } = await res.json();
       const reply = data.botReply ?? "—";
-
-      // 2) اعرض الرد فورًا
+  
+      // (C) اعرض الرد محليًا
       setMessages((m) => [...m, { from: "bot", text: reply }]);
-
-      // 3) (اختياري) خزّنه وادفعه عبر الـ WebSocket في الباك-إند
-      //     POST /api/webhooks/:merchantId/test-bot-reply
-      //     body: { sessionId, text, channel: 'dashboard-test' }
-      try {
-        await fetch(`${testBotReplyBase}/${merchantId}/test-bot-reply`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, text: reply, channel }),
-        });
-      } catch {
-        // غير حرِج — فقط تسجيل داخلي
-      }
+  
+      // (D) (اختياري) بلّغ الباك إند برد تجريبي (عشان يخزن ويبث WS)
+      await fetch(`${testBotReplyBase}/${merchantId}/test-bot-reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, text: reply, channel }),
+      });
     } catch (e) {
       setMessages((m) => [
         ...m,

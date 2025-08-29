@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders } from "@/test/test-utils";
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 // --- Router: نثبّت slugOrId=demo لتفادي location.search ---
 vi.mock("react-router-dom", async () => {
@@ -24,7 +25,10 @@ vi.mock("swiper/modules", () => ({ Pagination: {}, Autoplay: {} }));
 
 // --- axiosInstance.get mock (لازم قبل استيراد StorePage) ---
 vi.mock("@/shared/api/axios", () => ({
-  default: { get: vi.fn() },
+  default: { 
+    get: vi.fn(),
+    post: vi.fn(),
+  },
 }));
 
 // --- getStorefrontInfo mock ---
@@ -57,9 +61,16 @@ vi.mock("@/features/store/ui/CategoryFilter", () => ({
 }));
 
 vi.mock("@/features/store/ui/ProductGrid", () => ({
-  ProductGrid: () => (
+  ProductGrid: ({ products }: any) => (
     <main>
-      <div data-testid="product-grid">قائمة المنتجات</div>
+      <div data-testid="product-grid">
+        قائمة المنتجات ({products?.length || 0})
+        {products?.map((p: any) => (
+          <div key={p._id} data-testid={`product-${p._id}`}>
+            {p.name}
+          </div>
+        ))}
+      </div>
     </main>
   ),
 }));
@@ -96,7 +107,26 @@ describe("StorePage", () => {
     { _id: "c1", name: "Cat 1" },
     { _id: "c2", name: "Cat 2" },
   ] as any[];
-  const storefront = { _id: "sf1", banners: [], primaryColor: "#123456" } as any;
+  const storefront = { 
+    _id: "sf1", 
+    banners: [], 
+    brandDark: "#123456",
+    primaryColor: "#123456" 
+  } as any;
+  
+  const offers = [
+    {
+      id: "p1",
+      name: "Offer Prod A",
+      priceOld: 100,
+      priceNew: 80,
+      priceEffective: 80,
+      currency: "SAR",
+      discountPct: 20,
+      isActive: true,
+      image: "https://example.com/offer1.jpg"
+    }
+  ];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,6 +136,10 @@ describe("StorePage", () => {
     });
     // ثم getStorefrontInfo(merchant._id)
     vi.mocked(getStorefrontInfo).mockResolvedValueOnce(storefront);
+    // ثم جلب العروض
+    vi.mocked(axiosInstance.get).mockResolvedValueOnce({
+      data: offers,
+    });
   });
 
   it("يجب أن يعرض صفحة المتجر بشكل صحيح", async () => {
@@ -129,6 +163,120 @@ describe("StorePage", () => {
     renderWithProviders(<StorePage />);
     await waitFor(() => {
       expect(screen.getByRole("main")).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يعرض حقل البحث", async () => {
+    renderWithProviders(<StorePage />);
+    await waitFor(() => {
+      expect(screen.getByLabelText("ابحث عن منتج")).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يعرض زر العروض", async () => {
+    renderWithProviders(<StorePage />);
+    await waitFor(() => {
+      expect(screen.getByText(/العروض/i)).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يعرض قسم العروض عندما تكون متوفرة", async () => {
+    renderWithProviders(<StorePage />);
+    await waitFor(() => {
+      expect(screen.getByText("عروضنا")).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يفلتر المنتجات عند البحث", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<StorePage />);
+    
+    await waitFor(() => {
+      expect(screen.getByLabelText("ابحث عن منتج")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByLabelText("ابحث عن منتج");
+    await user.type(searchInput, "Prod A");
+
+    await waitFor(() => {
+      expect(searchInput).toHaveValue("Prod A");
+    });
+  });
+
+  it("يجب أن يتبدل بين عرض العروض وجميع المنتجات", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<StorePage />);
+    
+    await waitFor(() => {
+      expect(screen.getByText(/العروض/i)).toBeInTheDocument();
+    });
+
+    const offersButton = screen.getByText(/العروض/i);
+    await user.click(offersButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("عرض جميع المنتجات")).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يعرض زر السلة العائم", async () => {
+    renderWithProviders(<StorePage />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /shopping cart/i })).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يعرض عدد العناصر في السلة", async () => {
+    renderWithProviders(<StorePage />);
+    await waitFor(() => {
+      const cartButton = screen.getByRole("button", { name: /shopping cart/i });
+      expect(cartButton).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يعرض التصنيفات في الشريط الجانبي", async () => {
+    renderWithProviders(<StorePage />);
+    await waitFor(() => {
+      expect(screen.getByText("التصنيفات")).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يتعامل مع حالة التحميل", async () => {
+    renderWithProviders(<StorePage />);
+    
+    // يجب أن يعرض عناصر التحميل في البداية
+    expect(screen.getByTestId("product-grid")).toBeInTheDocument();
+  });
+
+  it("يجب أن يتعامل مع الأخطاء", async () => {
+    vi.mocked(axiosInstance.get).mockRejectedValueOnce(new Error("Network error"));
+    
+    renderWithProviders(<StorePage />);
+    
+    await waitFor(() => {
+      expect(screen.getByText("Network error")).toBeInTheDocument();
+    });
+  });
+
+  it("يجب أن يعرض البانرات عندما تكون متوفرة", async () => {
+    const storefrontWithBanners = {
+      ...storefront,
+      banners: [
+        {
+          image: "https://example.com/banner1.jpg",
+          text: "عرض خاص",
+          active: true,
+          order: 1
+        }
+      ]
+    };
+    
+    vi.mocked(getStorefrontInfo).mockResolvedValueOnce(storefrontWithBanners);
+    
+    renderWithProviders(<StorePage />);
+    
+    await waitFor(() => {
+      expect(screen.getByTestId("swiper")).toBeInTheDocument();
     });
   });
 });

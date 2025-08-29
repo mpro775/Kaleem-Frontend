@@ -276,8 +276,8 @@ test.describe('🛍️ المنتجات', () => {
         const lastPrice = await prices.last().textContent();
         
         // استخراج الأرقام من النص
-        const firstPriceNum = parseFloat(firstPrice.replace(/[^\d.]/g, ''));
-        const lastPriceNum = parseFloat(lastPrice.replace(/[^\d.]/g, ''));
+        const firstPriceNum = parseFloat((firstPrice || '').replace(/[^\d.]/g, ''));
+        const lastPriceNum = parseFloat((lastPrice || '').replace(/[^\d.]/g, ''));
         
         // التحقق من أن السعر الأول أقل من الأخير
         expect(firstPriceNum).toBeLessThanOrEqual(lastPriceNum);

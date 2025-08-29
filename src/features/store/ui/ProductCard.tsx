@@ -1,4 +1,3 @@
-// components/store/ProductCard.tsx
 import {
   Card,
   CardMedia,
@@ -27,12 +26,19 @@ type Props = {
   viewMode: "grid" | "list";
 };
 
+function getDiscountPct(p: ProductResponse): number {
+  const oldP = p.offer?.oldPrice;
+  const newP = p.offer?.newPrice;
+  const enabled = (p.offer as any)?.enabled ?? true; // إن وُجد علم التفعيل
+  if (!enabled || !oldP || !newP || newP >= oldP) return 0;
+  return Math.round((1 - newP / oldP) * 100);
+}
+
 export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
   const theme = useTheme();
   const [isHovered, setIsHovered] = useState(false);
-  const rating = 4.5; // يمكن استبدالها بتقييم حقيقي من بيانات المنتج
+  const rating = 4.5;
 
-  // تحديد حالة المنتج
   const statusColor =
     product.status === "out_of_stock"
       ? "error"
@@ -47,11 +53,12 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
       ? "غير متوفر"
       : "متوفر";
 
-  // خصومات أو عروض خاصة
-  const discount =
-    product.offer && product.offer.newPrice
-      ? product.offer.newPrice
-      : 0;
+  const pct = getDiscountPct(product);
+  const showOffer = pct > 0;
+  const sellPrice = showOffer
+    ? (product.offer!.newPrice as number)
+    : product.price ?? 0;
+  const oldPrice = showOffer ? (product.offer!.oldPrice as number) : undefined;
 
   return (
     <Card
@@ -71,12 +78,13 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
           : "0 2px 10px rgba(0,0,0,0.05)",
         transform: isHovered ? "translateY(-5px)" : "none",
         border: `1px solid ${theme.palette.divider}`,
+        backgroundColor: "#fff",
       }}
     >
-      {/* شارة الخصم */}
-      {discount > 0 && (
+      {/* شارة الخصم (٪) */}
+      {showOffer && (
         <Chip
-          label={`خصم ${discount}%`}
+          label={`خصم ${pct}%`}
           color="error"
           size="small"
           sx={{
@@ -98,7 +106,7 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
           icon={<FlashOnIcon fontSize="small" />}
           sx={{
             position: "absolute",
-            top: discount > 0 ? 50 : 12,
+            top: showOffer ? 50 : 12,
             left: 12,
             zIndex: 2,
             fontWeight: "bold",
@@ -123,9 +131,20 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
             image={product.images[0]}
             alt={product.name}
             sx={{
-              objectFit: "cover",
+              objectFit: "contain",
+              objectPosition: "center",
+              backgroundColor: "#f8f9fa",
+              width: "100%",
+              height: "100%",
               transition: "transform 0.5s ease",
               transform: isHovered ? "scale(1.05)" : "scale(1)",
+              // ضمان ظهور الصورة كاملة
+              maxWidth: "100%",
+              maxHeight: "100%",
+              // تحسين جودة الصورة
+              imageRendering: "auto",
+              // إضافة ظل خفيف للصورة
+              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
             }}
           />
         ) : (
@@ -137,9 +156,12 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: theme.palette.grey[100],
+              borderRadius: 1,
             }}
           >
-            <Typography color="text.secondary">لا توجد صورة</Typography>
+            <Typography color="text.secondary" variant="body2">
+              لا توجد صورة
+            </Typography>
           </Box>
         )}
 
@@ -159,12 +181,12 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
         >
           <IconButton
             sx={{
-              backgroundColor: "white",
+              backgroundColor: "#fff",
               color: theme.palette.text.primary,
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               "&:hover": {
-                backgroundColor: theme.palette.primary.main,
-                color: "white",
+                backgroundColor: "var(--brand)",
+                color: "var(--on-brand)",
               },
             }}
             onClick={(e) => {
@@ -177,12 +199,12 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
 
           <IconButton
             sx={{
-              backgroundColor: "white",
+              backgroundColor: "#fff",
               color: theme.palette.text.primary,
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               "&:hover": {
-                backgroundColor: theme.palette.primary.main,
-                color: "white",
+                backgroundColor: "var(--brand)",
+                color: "var(--on-brand)",
               },
             }}
             onClick={(e) => {
@@ -195,12 +217,12 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
 
           <IconButton
             sx={{
-              backgroundColor: "white",
+              backgroundColor: "#fff",
               color: theme.palette.text.primary,
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               "&:hover": {
-                backgroundColor: theme.palette.primary.main,
-                color: "white",
+                backgroundColor: "var(--brand)",
+                color: "var(--on-brand)",
               },
             }}
             onClick={(e) => {
@@ -319,18 +341,18 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
             <Typography
               variant={viewMode === "grid" ? "h6" : "h5"}
               fontWeight="bold"
-              color="primary"
+              sx={{ color: "var(--brand)" }}
             >
-              {product.price?.toFixed(2)} ر.س
+              {sellPrice.toFixed(2)} ر.س
             </Typography>
 
-            {discount > 0 && (
+            {oldPrice !== undefined && (
               <Typography
                 variant="body2"
                 color="text.secondary"
                 sx={{ textDecoration: "line-through" }}
               >
-                {(product.price / (1 - discount / 100)).toFixed(2)} ر.س
+                {oldPrice.toFixed(2)} ر.س
               </Typography>
             )}
           </Box>
@@ -367,11 +389,14 @@ export function ProductCard({ product, onAddToCart, onOpen, viewMode }: Props) {
               borderRadius: 2,
               py: 1,
               boxShadow: "none",
+              background: "var(--brand)",
+              color: "var(--on-brand)",
               "&:hover": {
-                boxShadow: `0 4px 10px ${theme.palette.primary.main}40`,
+                backgroundColor: "var(--brand-hover)",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
                 transform: "translateY(-2px)",
               },
-              transition: "all 0.3s ease",
+              transition: "all 0.25s ease",
             }}
           >
             أضف إلى السلة

@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -34,7 +33,7 @@ const isExternal = (s: IntegrationsStatus): s is ExternalStatus =>
   s.productSource === "salla" || s.productSource === "zid";
 
 export default function SourceSelectPage() {
-  const theme = useTheme();
+
   const navigate = useNavigate();
   const { user, token } = useAuth();
 

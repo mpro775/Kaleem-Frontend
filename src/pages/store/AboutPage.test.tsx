@@ -10,7 +10,7 @@ vi.mock("@/shared/api/axios", () => ({
 }));
 vi.mock("react-router-dom", async (orig) => {
   const actual = await orig();
-  return { ...actual, useParams: () => ({ slugOrId: "s1" }), useNavigate: () => vi.fn() };
+  return { ...(actual as object), useParams: () => ({ slugOrId: "s1" }), useNavigate: () => vi.fn() };
 });
 
 test("loads merchant info", async () => {

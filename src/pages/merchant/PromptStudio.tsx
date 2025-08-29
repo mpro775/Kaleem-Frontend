@@ -147,7 +147,10 @@ export default function PromptStudioPage() {
             </Box>
 
             <Box sx={{ minWidth: 0, height: "100%" }}>
-              <ChatSimulator  />
+              <ChatSimulator 
+                merchantId={merchantId || ""}
+                promptTestUrl={`${import.meta.env.VITE_PUBLIC_WEB_ORIGIN || window.location.origin}/api/merchants/${merchantId}/prompt/test`}
+              />
             </Box>
           </>
         )}

@@ -4,7 +4,6 @@ import {
   Button,
   Typography,
   CircularProgress,
-  Paper,
   Link,
 } from "@mui/material";
 import { useState, useEffect } from "react";

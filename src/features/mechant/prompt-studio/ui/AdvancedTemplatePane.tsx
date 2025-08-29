@@ -1,6 +1,6 @@
 // src/components/prompet/AdvancedTemplatePane.tsx
 
-import { Paper, Box, Typography, IconButton, Button } from "@mui/material";
+import { Paper, Box, Typography, IconButton } from "@mui/material";
 import { styled } from "@mui/system";
 import { useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
@@ -31,7 +31,7 @@ const EditorWrapper = styled(Box)({
 export function AdvancedTemplatePane({
   template,
   onChange,
-  onGenerateAI,
+  // onGenerateAI,
 }: {
   template: string;
   onChange: (v: string) => void;

@@ -18,7 +18,7 @@ export default function PreviewPane({ embedTag }: { embedTag: string }) {
       ref={iframeRef}
       title="Chat Preview"
       style={{ width: "100%", height: 500, border: "1px solid #e0e0e0", borderRadius: 8 }}
-      sandbox="allow-scripts allow-same-origin"
-    />
+      sandbox="allow-scripts allow-same-origin" 
+      />
   );
 }

@@ -14,7 +14,17 @@ export async function getMissingResponses(params: {
   to?: string;
 }) {
   const { data } = await axios.get('/analytics/missing-responses', { params });
-  return data as { items: MissingResponse[]; total: number; page: number; limit: number };
+  
+  // Handle different response structures
+  if (data && Array.isArray(data.items) && typeof data.total === 'number') {
+    return data as { items: MissingResponse[]; total: number; page: number; limit: number };
+  } else if (Array.isArray(data)) {
+    // Handle case where API returns array directly
+    return { items: data, total: data.length, page: 1, limit: data.length };
+  } else {
+    console.warn('Unexpected API response structure:', data);
+    return { items: [], total: 0, page: 1, limit: 20 };
+  }
 }
 
 export async function resolveMissingResponse(id: string) {

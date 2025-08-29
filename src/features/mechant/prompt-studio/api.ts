@@ -12,11 +12,11 @@ export async function getAdvancedTemplate(
   token: string,
   merchantId: string
 ): Promise<string> {
-  const res = await axios.get<{ advancedTemplate: string }>(
+  const res = await axios.get<{ template: string; note?: string }>(
     `${API_BASE}/merchants/${merchantId}/prompt/advanced-template`,
     authHeader(token)
   );
-  return res.data.advancedTemplate;
+  return res.data?.template ?? "";
 }
 
 // حفظ الـAdvancedTemplate
@@ -28,7 +28,7 @@ export async function saveAdvancedTemplate(
 ): Promise<void> {
   await axios.post(
     `${API_BASE}/merchants/${merchantId}/prompt/advanced-template`,
-    { advancedTemplate: template, note },
+    { template, note }, // ← تصحيح
     authHeader(token)
   );
 }
@@ -55,21 +55,33 @@ export async function previewPrompt(
           dialect: dto.quickConfig?.dialect || "خليجي",
           tone: dto.quickConfig?.tone || "ودّي",
           customInstructions: dto.quickConfig?.customInstructions || [],
-        
           includeClosingPhrase: dto.quickConfig?.includeClosingPhrase ?? true,
           closingText: dto.quickConfig?.closingText || "هل أقدر أساعدك بشي ثاني؟ 😊",
+          customerServicePhone: dto.quickConfig?.customerServicePhone?.trim(),
+          customerServiceWhatsapp: dto.quickConfig?.customerServiceWhatsapp?.trim(),
         },
-        useAdvanced: dto.useAdvanced,
-        testVars: dto.testVars,
+        useAdvanced: !!dto.useAdvanced, // ← ضمان Boolean
+        testVars:
+          dto.testVars && Object.keys(dto.testVars).length
+            ? dto.testVars
+            : { productName: "هاتف ذكي", customerName: "أحمد محمد" }, // ← افتراضي يمنع 400
       },
-      authHeader(token)
+      {
+        ...authHeader(token),
+        headers: {
+          ...authHeader(token).headers,
+          "Content-Type": "application/json", // ← تأكيد JSON
+        },
+      }
     );
-    return res.data.preview;
+    console.log("API response:", res.data); // للتشخيص
+    return typeof res.data === 'string' ? res.data : (res.data.preview || "");
   } catch (error) {
     console.error("Error in previewPrompt:", error);
     throw error;
   }
 }
+
 
 // src/api/merchantsApi.ts
 export async function getFinalPrompt(

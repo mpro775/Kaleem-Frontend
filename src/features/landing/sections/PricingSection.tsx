@@ -166,6 +166,7 @@ export default function PricingSection() {
 
   return (
     <Box
+      id="pricing"
       sx={{
         py: 10,
         px: 3,

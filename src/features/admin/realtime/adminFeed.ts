@@ -2,14 +2,11 @@
 import { io, Socket } from "socket.io-client";
 
 export function connectAdminFeed(token?: string) {
-  const socket: Socket = io(
-    `${import.meta.env.VITE_API_BASE_URL}/api/kleem/ws`,
-    {
-      transports: ["websocket"],
-      query: { role: "admin" },
-      auth: token ? { token } : undefined,
-      withCredentials: true,
-    }
-  );
-  return socket; // استمع للحدث 'admin_new_message'
+  const socket: Socket = io("https://api.kaleem-ai.com", {
+    path: "/api/kleem/ws",
+    transports: ["websocket", "polling"], // اسمح بالـ polling كباك أب
+    auth: token ? { token } : undefined,
+    withCredentials: true,
+  });
+  return socket;
 }

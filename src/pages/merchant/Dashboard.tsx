@@ -1,5 +1,5 @@
 // src/pages/dashboard/Dashboard.tsx
-import { useState, useMemo, type JSX } from "react";
+import  { useState, useMemo, useEffect, type JSX } from "react";
 import {
   Box,
   Paper,
@@ -19,7 +19,6 @@ import {
 import Grid from "@mui/material/Grid";
 import InsightsIcon from "@mui/icons-material/Insights";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import type { ChecklistGroup } from "@/features/mechant/dashboard/type";
 import ChecklistPanel from "@/features/mechant/dashboard/ui/ChecklistPanel";
 import DashboardAdvice from "@/features/mechant/dashboard/ui/DashboardAdvice";
 import ProductsChart from "@/features/mechant/dashboard/ui/ProductsChart";
@@ -34,9 +33,9 @@ import {
   useProductsCount,
   useSkipChecklist,
 } from "@/features/mechant/analytics/model";
-import type { AxiosError } from "axios";
 import { useStoreServicesFlag } from "@/shared/hooks/useStoreServicesFlag";
 import { useNavigate } from "react-router-dom";
+import { useErrorHandler } from "@/shared/errors";
 
 type Period = "week" | "month" | "quarter";
 
@@ -97,6 +96,7 @@ export default function Dashboard() {
   const merchantId = user?.merchantId;
   const hasStore = useStoreServicesFlag();
   const navigate = useNavigate();
+  const { handleError } = useErrorHandler();
 
   // Queries
   const {
@@ -107,10 +107,25 @@ export default function Dashboard() {
   } = useOverview(timeRange);
 
   const {
-    data: checklist,
+    data: checklistResponse,
     isLoading: loadingChecklist,
     error: errorChecklist,
   } = useChecklist(merchantId ?? undefined);
+
+  // استخراج البيانات من response
+  const checklist = checklistResponse || [];
+
+  // إضافة debugging للـ checklist
+  console.log('Dashboard Checklist Debug:', {
+    checklistResponse,
+    checklist,
+    checklistType: typeof checklist,
+    checklistIsArray: Array.isArray(checklist),
+    loadingChecklist,
+    errorChecklist,
+    merchantId,
+    checklistLength: Array.isArray(checklist) ? checklist.length : 0
+  });
 
   const { data: timeline, isLoading: loadingTimeline } = useMessagesTimeline(
     timeRange,
@@ -118,16 +133,22 @@ export default function Dashboard() {
   );
 
   const { data: productsCountFallback } = useProductsCount();
-  const { mutateAsync: skipItem, isPending: skipping } = useSkipChecklist(
+  const { mutateAsync: skipItem } = useSkipChecklist(
     merchantId ?? undefined
   );
 
   // حالات عامة
   const loading = loadingOverview || loadingChecklist || loadingTimeline;
-  const error =
-    (errorOverview as AxiosError)?.message ||
-    (errorChecklist as AxiosError)?.message ||
-    null;
+  
+  // معالجة الأخطاء
+  useEffect(() => {
+    if (errorOverview) {
+      handleError(errorOverview);
+    }
+    if (errorChecklist) {
+      handleError(errorChecklist);
+    }
+  }, [errorOverview, errorChecklist, handleError]);
 
   // اشتقاقات نظيفة
   const sessionsCount = overview?.sessions?.count ?? 0;
@@ -273,13 +294,13 @@ export default function Dashboard() {
         </Box>
       )}
 
-      {error && (
+      {errorOverview && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {String(error) || "حدث خطأ أثناء جلب البيانات."}
+          {String(errorOverview) || "حدث خطأ أثناء جلب البيانات."}
         </Alert>
       )}
 
-      {!loading && !error && (
+      {!loading && !errorOverview  && (
         <>
           {/* رأس بسيط بدل DashboardHeader (أخف على الموبايل) */}
           <Paper
@@ -368,11 +389,19 @@ export default function Dashboard() {
             }}
           >
             <ChecklistPanel
-              checklist={(checklist as ChecklistGroup[]) ?? []}
+              checklist={Array.isArray(checklist) ? checklist : []}
               onSkip={handleSkip}
-              loading={skipping}
+              loading={loadingChecklist}
               // إن كان لديك prop لتصغير العرض في الموبايل يمكن تمريره هنا
             />
+            {/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
+              <div style={{ fontSize: '12px', color: 'gray', marginTop: '8px' }}>
+                Debug: Checklist length = {Array.isArray(checklist) ? checklist.length : 0} | 
+                Loading = {loadingChecklist ? 'true' : 'false'} |
+                Response = {JSON.stringify(checklistResponse?.length || 0)}
+              </div>
+            )}
           </Paper>
 
           {/* KPI GRID — ريسبونсив */}
@@ -403,7 +432,7 @@ export default function Dashboard() {
               نشاط الرسائل
             </Typography>
             <Box sx={{ height: chartH, minWidth: 0 }}>
-              <MessagesTimelineChart data={timeline ?? []} />
+              <MessagesTimelineChart data={timeline as any[]} />
             </Box>{" "}
           </Paper>
 

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// src/features/mechant/channels/ui/WhatsappQrConnect.tsx
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -7,94 +8,117 @@ import {
   Typography,
   Button,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import axios from "@/shared/api/axios";
 
-interface WhatsappChannelInfo {
-  status: string;
-  owner?: string;
-  profileName?: string;
-  profilePictureUrl?: string | null;
-  sessionId?: string;
-  webhookUrl?: string;
-}
-
-interface WhatsappQrConnectProps {
+type Props = {
   open: boolean;
   onClose: () => void;
   merchantId: string;
+  channelId?: string;
   onSuccess: () => void;
-}
+};
 
 export default function WhatsappQrConnect({
   open,
   onClose,
-  merchantId,
+  channelId,
   onSuccess,
-}: WhatsappQrConnectProps) {
+}: Props) {
   const [qr, setQr] = useState<string>("");
-  const [sessionStatus, setSessionStatus] = useState<string>("");
+  const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [started, setStarted] = useState(false);
-  const [channelInfo, setChannelInfo] = useState<WhatsappChannelInfo | null>(
-    null
-  );
+  const [hint, setHint] = useState<string>("");
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const firedSuccessRef = useRef(false);
 
-  const handleStartSession = async () => {
+  const startPolling = () => {
+    if (!pollingRef.current)
+      pollingRef.current = setInterval(fetchStatus, 4000);
+  };
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  const normalizeQr = (data: any): string | null => {
+    // يدعم جميع الأشكال: {qr} أو {qrcode:{base64}} أو {qrcode:"data:image/..."}
+    if (data?.qr)
+      return data.qr.startsWith("data:image/")
+        ? data.qr
+        : `data:image/png;base64,${data.qr}`;
+    if (data?.qrcode?.base64) return data.qrcode.base64;
+    if (
+      typeof data?.qrcode === "string" &&
+      data.qrcode.startsWith("data:image/")
+    )
+      return data.qrcode;
+    return null;
+  };
+
+  const handleStart = async () => {
+    if (!channelId) return;
     setLoading(true);
     setQr("");
-    setSessionStatus("");
-    setStarted(true);
-
+    setStatus("");
+    setHint("");
+    firedSuccessRef.current = false;
     try {
-      const res = await axios.post(
-        `/merchants/${merchantId}/whatsapp/start-session`,
+      const { data } = await axios.post(
+        `/channels/${channelId}/actions/connect`,
         {}
       );
-      const data = res.data;
-      if (data.qr) {
-        setQr(
-          data.qr.startsWith("data:image/")
-            ? data.qr
-            : `data:image/png;base64,${data.qr}`
-        );
+      const q = normalizeQr(data);
+      if (q) {
+        setQr(q);
+        startPolling();
       } else {
-        setQr("");
+        setHint(
+          "لم نستلم صورة QR من الخادم. أعد المحاولة أو تحقق من سجل الخادم."
+        );
       }
-    } catch {
-      setStarted(false);
-      // يمكن استبدالها بـ Snackbar في المستقبل
+    } catch (e: any) {
+      setHint("تعذر بدء الجلسة. تحقق من الاتصال بالخادم.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!merchantId || !started) return;
-    let interval: NodeJS.Timeout | null = null;
-    const fetchStatus = async () => {
-      try {
-        const res = await axios.get(`/merchants/${merchantId}/whatsapp/status`);
-        const data = res.data as WhatsappChannelInfo;
-        setSessionStatus(data.status);
-        setChannelInfo(data);
-        if (["open", "CONNECTED", "authenticated"].includes(data.status)) {
-          onSuccess();
-        }
-      } catch {
-        setSessionStatus("");
-        setChannelInfo(null);
-      }
-    };
-    fetchStatus();
-    interval = setInterval(fetchStatus, 5000);
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [merchantId, started, onSuccess]);
+  const fetchStatus = async () => {
+    if (!channelId) return;
+    try {
+      const { data } = await axios.get(`/channels/${channelId}/status`);
+      const raw = String(
+        data?.status || data?.details?.status || ""
+      ).toUpperCase();
+      setStatus(raw);
 
-  const isConnected = ["open", "CONNECTED", "authenticated"].includes(
-    sessionStatus
+      const ok = ["CONNECTED", "OPEN", "AUTHENTICATED"].includes(raw);
+      if (ok && !firedSuccessRef.current) {
+        firedSuccessRef.current = true;
+        stopPolling();
+        onSuccess();
+      }
+    } catch {
+      // تجاهل نبضة فاشلة
+    }
+  };
+
+  useEffect(() => {
+    if (!open) {
+      stopPolling();
+      setQr("");
+      setStatus("");
+      setHint("");
+      firedSuccessRef.current = false;
+    }
+  }, [open]);
+
+  const connected = ["CONNECTED", "OPEN", "AUTHENTICATED"].includes(
+    String(status).toUpperCase()
   );
 
   return (
@@ -105,30 +129,35 @@ export default function WhatsappQrConnect({
           <Button
             variant="contained"
             color="success"
-            onClick={handleStartSession}
-            disabled={loading || isConnected}
-            sx={{ minWidth: 150 }}
+            onClick={handleStart}
+            disabled={loading || connected || !channelId}
           >
             {loading ? (
               <CircularProgress size={22} />
-            ) : isConnected ? (
+            ) : connected ? (
               "مرتبط ✅"
             ) : (
-              "ربط واتساب"
+              "بدء الربط"
             )}
           </Button>
 
-          {qr && !isConnected && (
+          {hint && (
+            <Alert severity="warning" sx={{ width: "100%" }}>
+              {hint}
+            </Alert>
+          )}
+
+          {qr && !connected && (
             <Box mt={2} textAlign="center">
               <Typography variant="body2" color="text.secondary" mb={1}>
-                امسح الكود التالي عبر تطبيق واتساب
+                امسح الكود عبر تطبيق واتساب
               </Typography>
               <img
                 src={qr}
                 alt="QR"
                 style={{
-                  width: 200,
-                  height: 200,
+                  width: 220,
+                  height: 220,
                   borderRadius: 12,
                   border: "1px solid #eee",
                 }}
@@ -136,71 +165,18 @@ export default function WhatsappQrConnect({
             </Box>
           )}
 
-          {sessionStatus && (
+          {status && (
             <Box mt={2} textAlign="center" sx={{ width: "100%" }}>
-              {isConnected ? (
-                <Box>
-                  <Typography
-                    sx={{ color: "success.main", fontWeight: "bold" }}
-                  >
-                    ✅ تم الربط بنجاح!
-                  </Typography>
-                  {channelInfo && (
-                    <Box mt={2}>
-                      {channelInfo.owner && (
-                        <Typography>الرقم: {channelInfo.owner}</Typography>
-                      )}
-                      {channelInfo.profileName && (
-                        <Typography>
-                          الاسم: {channelInfo.profileName}
-                        </Typography>
-                      )}
-                      {channelInfo.profilePictureUrl && (
-                        <img
-                          src={channelInfo.profilePictureUrl}
-                          alt="حساب واتساب"
-                          style={{ width: 70, borderRadius: 35, marginTop: 8 }}
-                        />
-                      )}
-                      {channelInfo.sessionId && (
-                        <Typography
-                          variant="caption"
-                          sx={{ color: "text.secondary" }}
-                        >
-                          Session ID: {channelInfo.sessionId}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                </Box>
-              ) : sessionStatus === "pending" || sessionStatus === "QRCODE" ? (
-                <Typography sx={{ color: "warning.main" }}>
-                  في انتظار ربط الجهاز ومسح الباركود...
+              {connected ? (
+                <Typography sx={{ color: "success.main", fontWeight: "bold" }}>
+                  ✅ تم الربط بنجاح!
                 </Typography>
               ) : (
-                <Box>
-                  <Typography sx={{ color: "error.main" }}>
-                    الحالة: {sessionStatus}
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={handleStartSession}
-                    disabled={loading}
-                    sx={{ mt: 2 }}
-                  >
-                    {loading ? <CircularProgress size={22} /> : "إعادة الربط"}
-                  </Button>
-                </Box>
+                <Typography sx={{ color: "warning.main" }}>
+                  الحالة: {status}
+                </Typography>
               )}
             </Box>
-          )}
-
-          {started && !isConnected && (
-            <Typography variant="caption" sx={{ color: "warning.main", mt: 1 }}>
-              إذا لم يظهر QR أو لم يتم الربط خلال دقيقة، أعد المحاولة أو تأكد من
-              اتصال الخادم.
-            </Typography>
           )}
         </Box>
       </DialogContent>

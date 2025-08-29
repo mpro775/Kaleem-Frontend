@@ -1,3 +1,5 @@
+// src/features/mechant/Conversations/ui/ChatWindow.tsx
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Box,
   Paper,
@@ -5,12 +7,14 @@ import {
   CircularProgress,
   Tooltip,
   IconButton,
+  Fab,
 } from "@mui/material";
-import type { ChatMessage } from "@/features/mechant/Conversations/type";
-import type { FC } from "react";
-import emptyChat from "@/assets/empty-chat.png";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import ThumbUpIcon from "@mui/icons-material/ThumbUpAlt";
 import ThumbDownIcon from "@mui/icons-material/ThumbDownAlt";
+import type { ChatMessage } from "@/features/mechant/Conversations/type";
+import emptyChat from "@/assets/empty-chat.png";
+import { linkify, copyToClipboard } from "./utils";
 
 interface Props {
   messages: ChatMessage[];
@@ -18,7 +22,31 @@ interface Props {
   onRate?: (msg: ChatMessage, rating: number) => void;
 }
 
-const ChatWindow: FC<Props> = ({ messages, loading, onRate }) => {
+const ChatWindow = ({ messages, loading, onRate }: Props) => {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [atBottom, setAtBottom] = useState(true);
+
+  useEffect(() => {
+    if (atBottom && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, atBottom]);
+
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const threshold = 80; // px
+    const isBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    setAtBottom(isBottom);
+  };
+
+  const jumpToBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  };
+
   if (loading) return <CircularProgress sx={{ m: 3 }} />;
   if (!messages.length)
     return (
@@ -29,10 +57,22 @@ const ChatWindow: FC<Props> = ({ messages, loading, onRate }) => {
         </Typography>
       </Box>
     );
+
   return (
-    <Box sx={{ p: 2, height: "100%", overflowY: "auto" }}>
+    <Box
+      sx={{
+        p: { xs: 1.25, md: 2 },
+        height: "100%",
+        overflowY: "auto",
+        position: "relative",
+      }}
+      ref={scrollRef}
+      onScroll={onScroll}
+    >
       {messages.map((msg, idx) => {
-        // --- بيانات الميديا ---
+        const mine = msg.role === "customer";
+        const bg = mine ? "#805ad5" : "#f2f2f2";
+        const color = mine ? "#fff" : "#222";
         const mediaUrl = msg.metadata?.mediaUrl;
         const mediaType = msg.metadata?.mediaType;
 
@@ -40,20 +80,35 @@ const ChatWindow: FC<Props> = ({ messages, loading, onRate }) => {
           <Box
             key={msg._id || idx}
             display="flex"
-            justifyContent={msg.role === "customer" ? "flex-end" : "flex-start"}
+            justifyContent={mine ? "flex-end" : "flex-start"}
           >
             <Paper
               sx={{
                 p: 1.2,
                 mb: 1,
-                background: msg.role === "customer" ? "#805ad5" : "#f2f2f2",
-                color: msg.role === "customer" ? "#fff" : "#222",
+                background: bg,
+                color,
                 borderRadius: 3,
-                maxWidth: 350,
+                maxWidth: { xs: "82vw", sm: 380, md: 420 },
                 boxShadow: 1,
                 position: "relative",
+                cursor: "default",
+                userSelect: "text",
+              }}
+              onDoubleClick={() => copyToClipboard(msg.text)}
+              onTouchStart={(e) => {
+                // لمس مطوّل للنسخ
+                let timeout = setTimeout(() => copyToClipboard(msg.text), 500);
+                const cancel = () => {
+                  clearTimeout(timeout);
+                  e.currentTarget.removeEventListener("touchend", cancel);
+                  e.currentTarget.removeEventListener("touchmove", cancel);
+                };
+                e.currentTarget.addEventListener("touchend", cancel);
+                e.currentTarget.addEventListener("touchmove", cancel);
               }}
             >
+              {/* وسائط */}
               {typeof mediaUrl === "string" &&
                 mediaUrl &&
                 (() => {
@@ -67,15 +122,11 @@ const ChatWindow: FC<Props> = ({ messages, loading, onRate }) => {
                       >
                         <img
                           src={mediaUrl}
-                          alt={
-                            typeof msg.metadata?.fileName === "string"
-                              ? msg.metadata.fileName
-                              : "صورة"
-                          }
+                          alt="صورة"
                           style={{
-                            maxWidth: 220,
-                            maxHeight: 220,
-                            borderRadius: 8,
+                            maxWidth: "70vw",
+                            maxHeight: 280,
+                            borderRadius: 10,
                             marginBottom: 8,
                             display: "block",
                           }}
@@ -84,14 +135,10 @@ const ChatWindow: FC<Props> = ({ messages, loading, onRate }) => {
                     );
                   } else if (mediaType === "audio") {
                     return (
-                      <audio controls style={{ width: 200, marginBottom: 8 }}>
+                      <audio controls style={{ width: 220, marginBottom: 8 }}>
                         <source
                           src={mediaUrl}
-                          type={
-                            typeof msg.metadata?.mimeType === "string"
-                              ? msg.metadata.mimeType
-                              : "audio/mpeg"
-                          }
+                          type={msg.metadata?.mimeType as string || "audio/mpeg"}
                         />
                         المتصفح لا يدعم تشغيل الصوت.
                       </audio>
@@ -112,36 +159,37 @@ const ChatWindow: FC<Props> = ({ messages, loading, onRate }) => {
                         📄 تحميل الملف (PDF)
                       </a>
                     );
-                  } else {
-                    return (
-                      <a
-                        href={mediaUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: "#4a90e2",
-                          marginBottom: 8,
-                          display: "block",
-                          fontWeight: 600,
-                        }}
-                      >
-                        📎 تحميل الملف
-                      </a>
-                    );
                   }
+                  return (
+                    <a
+                      href={mediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: "#4a90e2",
+                        marginBottom: 8,
+                        display: "block",
+                        fontWeight: 600,
+                      }}
+                    >
+                      📎 تحميل الملف
+                    </a>
+                  );
                 })()}
-              {/* --- النص --- */}
-              <Typography sx={{ wordBreak: "break-word" }}>
-                {msg.text}
-              </Typography>
+
+              {/* النص مع Linkify */}
+              <Typography
+                sx={{ wordBreak: "break-word" }}
+                dangerouslySetInnerHTML={{ __html: linkify(msg.text || "") }}
+              />
               <Typography
                 variant="caption"
-                color="gray"
-                sx={{ float: "left", fontSize: 11 }}
+                sx={{ float: "left", fontSize: 11, opacity: 0.8 }}
               >
                 {new Date(msg.timestamp).toLocaleTimeString()}
               </Typography>
-              {/* أزرار التقييم لردود البوت فقط */}
+
+              {/* تقييم لردود البوت */}
               {msg.role === "bot" && (
                 <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
                   <Tooltip title="تقييم إيجابي">
@@ -174,6 +222,18 @@ const ChatWindow: FC<Props> = ({ messages, loading, onRate }) => {
           </Box>
         );
       })}
+
+      {/* زر القفز للأسفل */}
+      {!atBottom && (
+        <Fab
+          size="small"
+          color="primary"
+          onClick={jumpToBottom}
+          sx={{ position: "sticky", left: "calc(100% - 56px)", bottom: 8 }}
+        >
+          <KeyboardArrowDownRoundedIcon />
+        </Fab>
+      )}
     </Box>
   );
 };

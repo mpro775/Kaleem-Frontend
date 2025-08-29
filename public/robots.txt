@@ -1,3 +1,11 @@
 User-agent: *
 Allow: /
-Sitemap: https://your-domain.com/sitemap.xml
+# لا تمنع JS/CSS/JSON إطلاقًا
+# احجب فقط مناطق البانل والواجهات الخاصة
+Disallow: /merchant/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /api/
+
+# Sitemap الصحيح على نفس الدومين
+Sitemap: https://kaleem-ai.com/sitemap.xml

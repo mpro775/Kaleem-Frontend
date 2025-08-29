@@ -1,5 +1,5 @@
 import { screen } from "@testing-library/react";
-import SupportPage from "./SupportPage";
+import SupportPage from "./SupportCenterPage";
 import { renderWithProviders } from "@/test/test-utils";
 
 test("renders heading", () => {

@@ -1,56 +1,91 @@
+// src/features/mechant/merchant-settings/api.ts
 import type { MerchantInfo } from "./types";
-import axios from "@/shared/api/axios"; // أو حسب مكان ملف axios الخاص بك
+import axios from "@/shared/api/axios";
 
+// ✅ 1) جلب بيانات التاجر
 export const getMerchantInfo = async (
   merchantId: string
 ): Promise<MerchantInfo> => {
-  const { data } = await axios.get(`/merchants/${merchantId}`);
-  return data;
+  const res = await axios.get<MerchantInfo>(`/merchants/${merchantId}`);
+  return res.data; // interceptor عندنا يطبع مباشرة
 };
 
+// ✅ 2) تحديث بيانات التاجر
 export const updateMerchantInfo = async (
   merchantId: string,
-  info: Partial<MerchantInfo> // نستعمل Partial ليكون تحديث جزئي أو كامل
+  info: Partial<MerchantInfo>
 ): Promise<void> => {
-  await axios.put(`/merchants/${merchantId}`, info);
+  // مسموح فقط بالمفاتيح التالية
+  const KEYS = [
+    "name",
+    "logoUrl",
+    "phone",
+    "businessDescription",
+    "addresses",
+    "workingHours",
+    "returnPolicy",
+    "exchangePolicy",
+    "shippingPolicy",
+    "socialLinks",
+    "publicSlug",
+    "publicSlugEnabled",
+  ] as const;
+
+  const body: Record<string, unknown> = {};
+  for (const k of KEYS) {
+    const v = (info as any)[k];
+    if (v !== undefined) body[k] = v;
+  }
+
+  console.log("updateMerchantInfo OUTGOING body =", body);
+  await axios.put(`/merchants/${merchantId}`, body);
 };
+
+// ✅ 3) رفع شعار التاجر
 export async function uploadMerchantLogo(
   merchantId: string,
   file: File
 ): Promise<{ url: string }> {
   const fd = new FormData();
   fd.append("file", file);
-  // اختر المسار الذي ستدعمه في الباك ايند:
-  // مثال مقترح: POST /merchants/:id/logo  =>  { url: "https://..." }
-  const { data } = await axios.post<{ url: string }>(
-    `/merchants/${merchantId}/logo`,
-    fd,
-    {
-      headers: { "Content-Type": "multipart/form-data" },
-    }
-  );
-  return data;
+
+  const res = await axios.post(`/merchants/${merchantId}/logo`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  // يدعم الحالتين: { url } أو { success, data: { url } }
+  const url =
+    (res.data as any)?.url ??
+    (res.data as any)?.data?.url ??
+    (res as any)._raw?.url; // interceptor يحفظ الخام في _raw
+
+  if (!url) throw new Error("لم يتم استلام رابط الشعار من الخادم");
+  return { url };
 }
 
-// 2) التحقق من توفر الـ slug
-export async function checkSlugAvailability(
+// ✅ 4) التحقق من توفر slug
+export async function checkPublicSlugAvailability(
   slug: string
 ): Promise<{ available: boolean }> {
-  // مثال مقترح: GET /storefronts/slug/check?slug=xxx => { available: true/false }
-  const { data } = await axios.get<{ available: boolean }>(
-    `/storefronts/slug/check`,
-    {
-      params: { slug },
-    }
-  );
-  return data;
+  const res = await axios.get("/merchants/check-public-slug", {
+    params: { slug },
+  });
+
+  // يدعم الشكلين
+  const available = res?.data?.data?.available ?? res?.data?.available ?? false;
+
+  return { available: Boolean(available) };
 }
 
-// 3) تحديث slug للمتجر (حسب merchantId)
-export async function updateStorefrontSlug(merchantId: string, slug: string) {
-  // مثال مقترح: PATCH /storefronts/by-merchant/:id => { slug: "..." }
-  const { data } = await axios.patch(`/storefronts/by-merchant/${merchantId}`, {
+// ✅ 5) تحديث slug الخاص بالـ storefront (لو عندك كيان منفصل)
+export async function updateStorefrontSlug(
+  merchantId: string,
+  slug: string
+): Promise<{ slug: string }> {
+  const res = await axios.patch(`/storefronts/by-merchant/${merchantId}`, {
     slug,
   });
-  return data;
+  // قد يرجع { slug } أو { data: { slug } }
+  const s = (res.data as any)?.slug ?? (res.data as any)?.data?.slug;
+  return { slug: s };
 }

@@ -1,5 +1,5 @@
-// pages/StorePage.tsx
-import React, { useEffect, useState } from "react";
+// src/pages/StorePage.tsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -11,6 +11,9 @@ import {
   useTheme,
   Container,
   Skeleton,
+  Chip,
+  Button,
+  Stack,
 } from "@mui/material";
 import { useCart, CartProvider } from "../../context/CartContext";
 import axiosInstance from "@/shared/api/axios";
@@ -32,69 +35,247 @@ import CartDialog from "@/features/store/ui/CartDialog";
 import "swiper/css";
 import "swiper/css/pagination";
 import { Swiper, SwiperSlide } from "swiper/react";
-
 import { Pagination, Autoplay } from "swiper/modules";
 import { getStorefrontInfo } from "@/features/mechant/storefront-theme/api";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
+import { getMerchantInfo } from "@/features/mechant/merchant-settings/api";
 import { getSessionId } from "@/shared/utils/session";
 import { getLocalCustomer } from "@/shared/utils/customer";
 import LiteIdentityCard from "@/features/store/ui/LiteIdentityCard";
 import type { CustomerInfo } from "@/features/store/type";
+import { useErrorHandler } from "@/shared/errors";
 
-async function fetchStore(slug: string) {
-  const res = await axiosInstance.get<{
-    merchant: MerchantInfo;
-    products: ProductResponse[];
-    categories: Category[];
-  }>(`/storefront/${slug}`);
-  return res.data;
+// يطبّق متغيّرات اللون الداكن
+import { setBrandVars } from "@/features/shared/brandCss";
+import { API_BASE } from "@/context/config";
+
+async function fetchStore(slugOrId: string) {
+  const res = await axiosInstance.get(`/storefront/${slugOrId}`);
+  return res.data; // التطبيع يضمن الحمولة مباشرة
 }
+
 function resolveTargetSlug(slugOrId: string | undefined, isDemo: boolean) {
   const DEMO = import.meta.env.VITE_DEMO_MERCHANT_SLUG_OR_ID;
-  if (isDemo && DEMO) return DEMO; // slug/ID ثابت للديمو إن وُجد
+  if (isDemo && DEMO) return DEMO;
   return slugOrId ?? "demo";
 }
+
+// محاولة استخراج merchantId من أشكال متعددة
+function extractMerchantId(data: any): string | null {
+  if (!data) return null;
+  // الشكل الكامل
+  if (data?.merchant?._id) return String(data.merchant._id);
+  // أحيانًا يرجع merchantId صريح
+  if (data?.merchantId) return String(data.merchantId);
+  // وثيقة storefront تحوي merchant كـ ObjectId
+  if (typeof data?.merchant === "string") return data.merchant;
+  if (typeof data?.merchant === "object" && data?.merchant?._id)
+    return String(data.merchant._id);
+  // أحيانًا يلفّها تحت store أو storefront
+  const sf = data?.store || data?.storefront;
+  if (sf?.merchant?._id) return String(sf.merchant._id);
+  if (typeof sf?.merchant === "string") return sf.merchant;
+  return null;
+}
+
+type OfferItem = {
+  id: string; // product id
+  name: string;
+  slug?: string;
+  priceOld?: number | null;
+  priceNew?: number | null;
+  priceEffective?: number | null;
+  currency?: string;
+  discountPct?: number | null;
+  url?: string;
+  isActive: boolean;
+  period?: { startAt?: string | null; endAt?: string | null };
+  image?: string;
+};
+
 const StoreContent: React.FC = () => {
   const navigate = useNavigate();
-  const { slugOrId } = useParams<{ slugOrId: string }>();
+  const { slug } = useParams<{ slug: string }>();
+
   const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
   const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [storefront, setStorefront] = useState<Storefront | null>(null);
+
   const [error, setError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+
   const { items, addItem } = useCart();
   const [search, setSearch] = useState("");
-  const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [openCart, setOpenCart] = useState(false);
-  const [storefront, setStorefront] = useState<Storefront | null>(null);
   const [sessionId] = useState<string>(() => getSessionId());
   const localCustomer = getLocalCustomer() as CustomerInfo;
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
   const cartCount = items.reduce((total, item) => total + item.quantity, 0);
 
+  const [offers, setOffers] = useState<OfferItem[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
+  const [showOffersOnly, setShowOffersOnly] = useState(false);
+  const { handleError } = useErrorHandler();
+
   const isDemo =
-    slugOrId === "demo" || new URLSearchParams(location.search).has("demo");
+    slug === "demo" || new URLSearchParams(location.search).has("demo");
 
   useEffect(() => {
-    // ⬅️ نوجّه طلب الجلب إلى هدف الديمو إن لزم
-    setIsLoading(true);
-    const target = resolveTargetSlug(slugOrId, isDemo);
-    fetchStore(target)
-      .then(async (data) => {
-        setMerchant(data.merchant);
-        setProducts(data.products);
-        setCategories(data.categories);
-        const sf = await getStorefrontInfo(data.merchant._id);
-        setStorefront(sf);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setIsLoading(false));
-  }, [slugOrId, isDemo]);
+    let mounted = true;
 
-  // ⬅️ NEW: منع الأرشفة وتعديل العنوان عند الديمو
+    (async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const target = resolveTargetSlug(slug, isDemo);
+        const data = await fetchStore(target);
+
+        // 1) استخرج merchantId بشكل مرن
+        let mid = extractMerchantId(data);
+
+        // 2) إن لم نجد mid من /storefront/:slugOrId، جرّب public resolver
+        if (!mid) {
+          try {
+            const pub = await axiosInstance.get(`/public/${target}`);
+            mid =
+              pub.data?.merchant?.id ||
+              pub.data?.merchant?._id ||
+              pub.data?.merchantId ||
+              null;
+          } catch {
+            // نتجاهل هنا، سنرمي خطأ أو نُظهر رسالة لاحقًا
+          }
+        }
+
+        if (!mid) {
+          throw new Error("تعذر تحديد هوية التاجر من هذا السلاج.");
+        }
+
+        // 3) جهّز merchant + storefront (مرة واحدة فقط)
+        const [miRes, sfRes] = await Promise.all([
+          getMerchantInfo(mid),
+          getStorefrontInfo(mid),
+        ]);
+
+        if (!mounted) return;
+
+        const merchantObj = miRes; // getMerchantInfo يُرجِّع MerchantInfo مباشرة
+        setMerchant(merchantObj);
+
+        const sf = {
+          ...sfRes,
+          banners: Array.isArray(sfRes?.banners) ? sfRes.banners : [],
+        };
+        setStorefront(sf);
+
+        setBrandVars((sf as any)?.brandDark || "#111827");
+
+        // 4) المنتجات/التصنيفات: إن لم تُرجع من الاندبوينت الأول، اجلبها صراحة
+        if (Array.isArray(data?.products) && Array.isArray(data?.categories)) {
+          setProducts(data.products);
+          setCategories(data.categories);
+        } else {
+          const [prods, cats] = await Promise.all([
+            axiosInstance
+              .get<ProductResponse[]>("/products", {
+                params: { merchantId: mid, limit: 200 },
+              })
+              .then((r) => r.data)
+              .catch(() => []),
+            axiosInstance
+              .get<Category[]>("/categories", {
+                params: { merchantId: mid },
+              })
+              .then((r) => r.data)
+              .catch(() => []),
+          ]);
+          if (!mounted) return;
+          setProducts(prods || []);
+          setCategories(cats || []);
+        }
+
+        // 5) العروض
+        try {
+          setOffersLoading(true);
+          const { data: off } = await axiosInstance.get<OfferItem[]>(
+            "/offers",
+            {
+              params: { merchantId: mid, limit: 100 },
+            }
+          );
+          if (!mounted) return;
+          setOffers(off || []);
+        } catch (err) {
+          handleError(err);
+          console.warn("offers fetch failed");
+        } finally {
+          if (mounted) setOffersLoading(false);
+        }
+      } catch (err: any) {
+        const msg = err?.message || "فشل تحميل بيانات المتجر";
+        setError(msg);
+        handleError(err);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [slug, isDemo, handleError]);
+
+  // زرع/تحديث سكربت الودجت
+  useEffect(() => {
+    if (!merchant || !storefront) return;
+
+    const existing = document.getElementById(
+      "kleem-chat"
+    ) as HTMLScriptElement | null;
+
+    const cfg = {
+      merchantId: merchant._id,
+      apiBaseUrl: API_BASE,
+      mode: "bubble",
+      brandColor: storefront.brandDark,
+      headerBgColor: storefront.brandDark,
+      bodyBgColor: "#FFFFFF",
+      fontFamily: "Tajawal",
+      publicSlug: (merchant as any)?.publicSlug,
+      // openOnLoad: true, autoOpenDelay: 1200,
+    };
+
+    if (!existing) {
+      const script = document.createElement("script");
+      script.id = "kleem-chat";
+      script.async = true;
+      script.src = `${(
+        import.meta?.env?.VITE_PUBLIC_WIDGET_HOST || "https://kaleem-ai.com"
+      ).replace(/\/+$/, "")}/public/widget.js`;
+      script.setAttribute("data-config", JSON.stringify(cfg));
+      document.body.appendChild(script);
+    } else {
+      try {
+        const current = JSON.parse(
+          existing.getAttribute("data-config") || "{}"
+        );
+        existing.setAttribute(
+          "data-config",
+          JSON.stringify({ ...current, ...cfg })
+        );
+      } catch {
+        existing.setAttribute("data-config", JSON.stringify(cfg));
+      }
+    }
+  }, [merchant, storefront]);
+
+  // منع الأرشفة عند الديمو
   useEffect(() => {
     if (!isDemo) return;
     document.title = "متجر تجريبي — Kleem";
@@ -107,6 +288,42 @@ const StoreContent: React.FC = () => {
     };
   }, [isDemo]);
 
+  // خريطة منتجات حسب ID
+  const productById = useMemo(() => {
+    const m = new Map<string, ProductResponse>();
+    if (Array.isArray(products)) {
+      for (const p of products) m.set(p._id, p);
+    }
+    return m;
+  }, [products]);
+
+  // تحويل العروض إلى شكل ProductGrid
+  const offerAsProducts: ProductResponse[] = useMemo(() => {
+    if (!Array.isArray(offers)) return [];
+    return offers.map((o) => {
+      const base = productById.get(o.id);
+      const price = o.priceEffective ?? o.priceNew ?? (base as any)?.price ?? 0;
+
+      return {
+        ...(base ?? ({} as any)),
+        _id: o.id,
+        name: o.name ?? base?.name ?? "",
+        images: o.image ? [o.image] : base?.images ?? [],
+        price,
+        currency: (o.currency as any) ?? (base as any)?.currency ?? "SAR",
+        hasActiveOffer: o.isActive as any,
+        priceEffective: o.priceEffective ?? undefined,
+        offer: {
+          enabled: true,
+          oldPrice: o.priceOld ?? (base as any)?.offer?.oldPrice,
+          newPrice: o.priceNew ?? (base as any)?.offer?.newPrice,
+          startAt: o.period?.startAt,
+          endAt: o.period?.endAt,
+        } as any,
+      } as ProductResponse;
+    });
+  }, [offers, productById]);
+
   if (error)
     return (
       <Box
@@ -115,8 +332,7 @@ const StoreContent: React.FC = () => {
           justifyContent: "center",
           alignItems: "center",
           height: "100vh",
-          // خلفية تعتمد على storefront.primaryColor أو fallback
-          background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+          background: "#fff",
         }}
       >
         <Typography
@@ -128,10 +344,19 @@ const StoreContent: React.FC = () => {
         </Typography>
       </Box>
     );
-  if (!merchant || !storefront) return <Typography>جارٍ التحميل…</Typography>;
 
-  // تصفية المنتجات
-  const filteredProducts = products.filter(
+  if (!merchant || !storefront)
+    return <Typography sx={{ p: 3 }}>جارٍ التحميل…</Typography>;
+
+  // اختيار المصدر الظاهر
+  const sourceList: ProductResponse[] = showOffersOnly
+    ? offerAsProducts
+    : Array.isArray(products)
+    ? products
+    : [];
+
+  // فلترة
+  const filteredProducts = (Array.isArray(sourceList) ? sourceList : []).filter(
     (p) =>
       (!activeCategory || p.category === activeCategory) &&
       (p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -139,16 +364,10 @@ const StoreContent: React.FC = () => {
   );
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)",
-        pb: 8,
-      }}
-    >
+    <Box sx={{ minHeight: "100vh", background: "#fff", pb: 8 }}>
       <StoreNavbar merchant={merchant} storefront={storefront} />
 
-      {/* Floating cart button */}
+      {/* زر السلة العائم */}
       <IconButton
         sx={{
           position: "fixed",
@@ -157,11 +376,11 @@ const StoreContent: React.FC = () => {
           zIndex: 1000,
           width: 60,
           height: 60,
-          backgroundColor: theme.palette.primary.main,
-          color: "white",
+          backgroundColor: "var(--brand)",
+          color: "var(--on-brand)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
           "&:hover": {
-            backgroundColor: theme.palette.primary.dark,
+            backgroundColor: "var(--brand-hover)",
             transform: "scale(1.1)",
           },
           transition: "all 0.3s ease",
@@ -203,83 +422,83 @@ const StoreContent: React.FC = () => {
             <StoreHeader merchant={merchant} storefront={storefront} />
           </>
         )}
-        {storefront.banners &&
-          storefront.banners.filter((b) => b.active).length > 0 && (
-            <Box mb={3}>
-              <Swiper
-                slidesPerView={1}
-                loop={storefront.banners.filter((b) => b.active).length > 1}
-                autoplay={{
-                  delay: 4000,
-                  disableOnInteraction: false,
-                }}
-                pagination={{ clickable: true }}
-                modules={[Pagination, Autoplay]}
-                style={{ borderRadius: 18 }}
-                dir="rtl" // دعم اللغة العربية
-              >
-                {storefront.banners
-                  .filter((b) => b.active)
-                  .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                  .map((banner, idx) => (
-                    <SwiperSlide key={idx}>
-                      {banner.image ? (
-                        <Box
-                          sx={{
-                            width: "100%",
-                            textAlign: "center",
-                            cursor: banner.url ? "pointer" : "default",
-                            borderRadius: 3,
-                            overflow: "hidden",
-                          }}
-                          onClick={() =>
-                            banner.url && window.open(banner.url, "_blank")
-                          }
-                        >
-                          <img
-                            src={banner.image}
-                            alt={banner.text}
-                            style={{
-                              width: "100%",
-                              maxHeight: 180,
-                              objectFit: "cover",
-                              borderRadius: 18,
-                              display: "block",
-                              margin: "0 auto",
-                            }}
-                          />
-                        </Box>
-                      ) : (
-                        <Box
-                          sx={{
-                            width: "100%",
-                            bgcolor: banner.color || "#f57c00",
-                            color: "#fff",
-                            textAlign: "center",
-                            py: 2,
-                            px: 1,
-                            borderRadius: 3,
-                            fontWeight: "bold",
-                            fontSize: 18,
-                            cursor: banner.url ? "pointer" : "default",
-                            minHeight: 80,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                          onClick={() =>
-                            banner.url && window.open(banner.url, "_blank")
-                          }
-                        >
-                          {banner.text}
-                        </Box>
-                      )}
-                    </SwiperSlide>
-                  ))}
-              </Swiper>
-            </Box>
-          )}
 
+        {/* سلايدر البانرات */}
+        {(storefront?.banners?.filter((b) => b?.active !== false).length ?? 0) >
+          0 && (
+          <Box mb={3}>
+            <Swiper
+              slidesPerView={1}
+              loop={storefront.banners.filter((b) => b.active).length > 1}
+              autoplay={{ delay: 4000, disableOnInteraction: false }}
+              pagination={{ clickable: true }}
+              modules={[Pagination, Autoplay]}
+              style={{ borderRadius: 18 }}
+              dir="rtl"
+            >
+              {storefront.banners
+                .filter((b) => b.active)
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                .map((banner, idx) => (
+                  <SwiperSlide key={idx}>
+                    {banner.image ? (
+                      <Box
+                        sx={{
+                          width: "100%",
+                          textAlign: "center",
+                          cursor: banner.url ? "pointer" : "default",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        }}
+                        onClick={() =>
+                          banner.url && window.open(banner.url, "_blank")
+                        }
+                      >
+                        <img
+                          src={banner.image}
+                          alt={banner.text}
+                          style={{
+                            width: "100%",
+                            maxHeight: 600,
+                            objectFit: "contain",
+                            borderRadius: 18,
+                            display: "block",
+                            margin: "0 auto",
+                          }}
+                        />
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          width: "100%",
+                          bgcolor: banner.color || "var(--brand)",
+                          color: "var(--on-brand)",
+                          textAlign: "center",
+                          py: 2,
+                          px: 1,
+                          borderRadius: 3,
+                          fontWeight: "bold",
+                          fontSize: 18,
+                          cursor: banner.url ? "pointer" : "default",
+                          minHeight: 80,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        onClick={() =>
+                          banner.url && window.open(banner.url, "_blank")
+                        }
+                      >
+                        {banner.text}
+                      </Box>
+                    )}
+                  </SwiperSlide>
+                ))}
+            </Swiper>
+          </Box>
+        )}
+
+        {/* شريط التحكم: بحث + زر عروض */}
         <Box
           sx={{
             display: "flex",
@@ -313,24 +532,89 @@ const StoreContent: React.FC = () => {
             }}
           />
 
-          {isMobile && (
-            <IconButton
-              sx={{
-                backgroundColor: theme.palette.primary.main,
-                color: "white",
-                borderRadius: 2,
-                p: 1.5,
-                boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-              }}
-              onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-            >
-              <FilterListIcon />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                التصنيفات
-              </Typography>
-            </IconButton>
-          )}
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip
+              icon={<LocalOfferIcon />}
+              color={showOffersOnly ? "primary" : "default"}
+              label={
+                showOffersOnly
+                  ? "عرض جميع المنتجات"
+                  : `العروض ${
+                      offersLoading
+                        ? "…"
+                        : offers.length
+                        ? `(${offers.length})`
+                        : ""
+                    }`
+              }
+              onClick={() => setShowOffersOnly((v) => !v)}
+              sx={{ fontWeight: 700, borderRadius: 2 }}
+            />
+
+            {isMobile && (
+              <IconButton
+                sx={{
+                  backgroundColor: "var(--brand)",
+                  color: "var(--on-brand)",
+                  borderRadius: 2,
+                  p: 1.5,
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                  "&:hover": { backgroundColor: "var(--brand-hover)" },
+                }}
+                onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+              >
+                <FilterListIcon />
+                <Typography variant="body2" sx={{ ml: 1 }}>
+                  التصنيفات
+                </Typography>
+              </IconButton>
+            )}
+          </Stack>
         </Box>
+
+        {/* قسم العروض المختصر */}
+        {offers.length > 0 && !showOffersOnly && (
+          <Box
+            sx={{
+              backgroundColor: "#fff",
+              borderRadius: 3,
+              boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
+              p: 2,
+              mb: 4,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                mb: 2,
+                justifyContent: "space-between",
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  fontWeight: "bold",
+                  color: "var(--brand)",
+                }}
+              >
+                <LocalOfferIcon sx={{ mr: 1 }} />
+                عروضنا
+              </Typography>
+              <Button variant="text" onClick={() => setShowOffersOnly(true)}>
+                عرض كل العروض
+              </Button>
+            </Box>
+
+            <ProductGrid
+              products={offerAsProducts.slice(0, 8)}
+              onAddToCart={addItem}
+              onOpen={(p) => navigate(`/store/${slug}/product/${p._id}`)}
+            />
+          </Box>
+        )}
 
         <Box sx={{ display: "flex", gap: 4 }}>
           {!isMobile && (
@@ -354,7 +638,7 @@ const StoreContent: React.FC = () => {
                   display: "flex",
                   alignItems: "center",
                   fontWeight: "bold",
-                  color: theme.palette.primary.main,
+                  color: "var(--brand)",
                 }}
               >
                 <StorefrontIcon sx={{ mr: 1 }} />
@@ -393,8 +677,8 @@ const StoreContent: React.FC = () => {
                   display: "flex",
                   alignItems: "center",
                   mb: 3,
-                  backgroundColor: theme.palette.primary.light,
-                  color: theme.palette.primary.contrastText,
+                  backgroundColor: "var(--brand)",
+                  color: "var(--on-brand)",
                   borderRadius: 3,
                   p: 1.5,
                   width: "fit-content",
@@ -407,8 +691,9 @@ const StoreContent: React.FC = () => {
                 <IconButton
                   size="small"
                   sx={{
-                    color: theme.palette.primary.contrastText,
+                    color: "var(--on-brand)",
                     ml: 1,
+                    "&:hover": { opacity: 0.85 },
                   }}
                   onClick={() => setActiveCategory(null)}
                 >
@@ -452,22 +737,22 @@ const StoreContent: React.FC = () => {
               <ProductGrid
                 products={filteredProducts}
                 onAddToCart={addItem}
-                onOpen={(p) => navigate(`/store/${slugOrId}/product/${p._id}`)}
+                onOpen={(p) => navigate(`/store/${slug}/product/${p._id}`)}
               />
             )}
           </Box>
         </Box>
+
         <CartDialog
-    open={openCart}
-    onClose={() => setOpenCart(false)}
-    merchantId={merchant._id}
-    sessionId={sessionId}                 // ⬅️ جديد
-    defaultCustomer={localCustomer}       // ⬅️ كي تُملأ تلقائيًا في نافذة الطلب
-    onOrderSuccess={(orderId) => {
-      // بعد النجاح يمكنك تحديث localCustomer من قيم cartdialog أيضًا إن رغبت
-      navigate(`/store/${slugOrId}/order/${orderId}`);
-    }}
-  />
+          open={openCart}
+          onClose={() => setOpenCart(false)}
+          merchantId={merchant._id}
+          sessionId={sessionId}
+          defaultCustomer={localCustomer}
+          onOrderSuccess={(orderId) => {
+            navigate(`/store/${slug}/order/${orderId}`);
+          }}
+        />
       </Container>
 
       <Footer merchant={merchant} categories={categories} />

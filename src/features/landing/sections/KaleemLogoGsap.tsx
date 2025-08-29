@@ -1,5 +1,5 @@
 // KaleemLogoGsapProSafe.tsx
-import React, { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { ReactSVG } from "react-svg";
 import gsap from "gsap";
 
@@ -39,7 +39,7 @@ export default function KaleemLogoGsapProSafe({
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const purple = new Set(["#502E91", "#6C3EF2", "#7C4DFF", "#5A31A5", "#7038D1"]);
+  // const purple = new Set(["#502E91", "#6C3EF2", "#7C4DFF", "#5A31A5", "#7038D1"]);
   const bb = (el: Element) => {
     try { return (el as SVGGraphicsElement).getBBox(); } catch { return null; }
   };

@@ -9,7 +9,7 @@ vi.mock("@/context/AuthContext", () => ({
 }));
 vi.mock("react-router-dom", async (orig) => {
   const actual = await orig();
-  return { ...actual, useNavigate: () => vi.fn() };
+  return { ...(actual as object), useNavigate: () => vi.fn() };
 });
 vi.mock("@/features/integtarions/api/integrationsApi", () => ({
   getIntegrationsStatus: vi.fn().mockResolvedValue({}),

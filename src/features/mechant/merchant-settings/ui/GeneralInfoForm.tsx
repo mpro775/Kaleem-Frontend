@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   TextField,
@@ -9,21 +9,36 @@ import {
   Stack,
   Snackbar,
   Alert,
-
+  Tooltip,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
 
 import axios from "@/shared/api/axios";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
-
-
-
-
-
+import { checkPublicSlugAvailability } from "../api";
+import { ContentCopyRounded } from "@mui/icons-material";
 
 interface GeneralInfoFormProps {
   initialData: MerchantInfo;
   onSave: (data: Partial<MerchantInfo>) => Promise<void>;
   loading?: boolean;
+}
+function isValidSlug(s: string) {
+  return /^[a-z](?:[a-z0-9-]{1,48}[a-z0-9])$/.test(s);
+}
+
+function normalizeSlug(v: string) {
+  const cleaned = v
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+
+  return /^[a-z]/.test(cleaned) ? cleaned : cleaned ? `s${cleaned}` : "";
 }
 
 export default function GeneralInfoForm({
@@ -31,28 +46,30 @@ export default function GeneralInfoForm({
   onSave,
   loading,
 }: GeneralInfoFormProps) {
-  const [form, setForm] = useState<MerchantInfo>({
-    ...initialData,
-  });
-
+  const [form, setForm] = useState<MerchantInfo>({ ...initialData });
   const [logoUploading, setLogoUploading] = useState(false);
-
- 
-
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [slugInput, setSlugInput] = useState<string>(
+    initialData.publicSlug ?? ""
+  );
+  const [slugStatus, setSlugStatus] = useState<
+    "idle" | "checking" | "ok" | "taken" | "invalid"
+  >("idle");
+  const debounceRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleChange = (key: keyof MerchantInfo, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  // رفع الشعار
+  // ✅ رفع الشعار
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const inputEl = e.currentTarget; // snapshot قبل await
+    const file = inputEl.files?.[0];
     if (!file) return;
 
     const ACCEPT = ["image/png", "image/jpeg", "image/webp"];
     const MAX_SIZE_MB = 2;
-
     if (!ACCEPT.includes(file.type)) {
       setError("الملف يجب أن يكون PNG أو JPG أو WEBP");
       return;
@@ -67,28 +84,72 @@ export default function GeneralInfoForm({
       const fd = new FormData();
       fd.append("file", file, file.name);
 
-      // ✅ لا تضبط Content-Type هنا
-      const { data } = await axios.post<{ url: string }>(
-        `/merchants/${initialData._id}/logo`,
-        fd
-      );
+      const res = await axios.post(`/merchants/${initialData._id}/logo`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      handleChange("logoUrl", data.url);
+      // الرد ممكن يكون { url } أو { data: { url } }
+      const url =
+        (res.data as any)?.url ??
+        (res.data as any)?.data?.url ??
+        (res as any)._raw?.data?.url;
+
+      if (!url) throw new Error("لم يتم استلام رابط الشعار");
+      handleChange("logoUrl", url);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "فشل رفع الشعار");
     } finally {
       setLogoUploading(false);
-      e.currentTarget.value = "";
+      inputEl.value = ""; // آمن لأنه snapshot قبل await
     }
   };
 
-  // التحقق الفوري من الـ slug
+  // ✅ فحص الـ slug
+  useEffect(() => {
+    const orig = initialData.publicSlug || "";
+    const normalized = normalizeSlug(slugInput || "");
 
- 
+    if (normalized === orig) {
+      setSlugStatus("idle");
+      return;
+    }
+
+    if (!normalized || !isValidSlug(normalized)) {
+      setSlugStatus(slugInput ? "invalid" : "idle");
+      return;
+    }
+
+    setSlugStatus("checking");
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      try {
+        const { available } = await checkPublicSlugAvailability(normalized);
+        setSlugStatus(available ? "ok" : "taken");
+      } catch {
+        setSlugStatus("idle");
+      }
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [slugInput, initialData.publicSlug]);
+
+  const origin =
+    import.meta.env.VITE_PUBLIC_WEB_ORIGIN ||
+    window.location.origin.replace(/\/+$/, "");
+  const chatPreview = slugInput ? `${origin}/${slugInput}/chat` : "—";
+  const storePreview = slugInput ? `${origin}/${slugInput}/store` : "—";
+
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setSuccess(true);
+    } catch {}
+  };
+
   const handleSave = async () => {
     try {
-     
-
       const payload: Partial<MerchantInfo> = {};
       if (form.name !== initialData.name) payload.name = form.name;
       if ((form.phone || "") !== (initialData.phone || ""))
@@ -101,18 +162,35 @@ export default function GeneralInfoForm({
       if ((form.logoUrl || "") !== (initialData.logoUrl || ""))
         payload.logoUrl = form.logoUrl;
 
-      if (Object.keys(payload).length > 0) {
-        await onSave(payload);
+      const normalized = normalizeSlug(slugInput || "");
+      if (normalized) {
+        payload.publicSlug = normalized;
+      }
+      if (normalized && normalized !== initialData.publicSlug) {
+        if (!isValidSlug(normalized)) {
+          setError(
+            "سلاج غير صالح. يجب أن يبدأ بحرف إنجليزي، وطوله 3–50، وبدون شرطة في النهاية."
+          );
+          return;
+        }
+        payload.publicSlug = normalized;
+      } else if (slugStatus === "taken") {
+        setError("هذا السلاج محجوز");
+        return;
       }
 
-      setSuccess(true);
+      if (Object.keys(payload).length > 0) {
+        await onSave(payload);
+        if (payload.publicSlug) {
+          setSlugInput(payload.publicSlug);
+          setForm((f) => ({ ...f, publicSlug: payload.publicSlug }));
+          setSlugStatus("ok");
+        }
+      }
     } catch (e: unknown) {
-      let msg = "حدث خطأ أثناء الحفظ";
-      if (e instanceof Error) msg = e.message;
-      setError(msg);
+      setError(e instanceof Error ? e.message : "حدث خطأ أثناء الحفظ");
     }
   };
-
 
   return (
     <Box component="form" noValidate dir="rtl">
@@ -137,6 +215,7 @@ export default function GeneralInfoForm({
         <Button variant="outlined" component="label" disabled={logoUploading}>
           {logoUploading ? <CircularProgress size={20} /> : "تغيير الشعار"}
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg,image/webp"
             hidden
@@ -148,7 +227,7 @@ export default function GeneralInfoForm({
         </Typography>
       </Stack>
 
-      {/* الاسم والهاتف */}
+      {/* باقي الحقول */}
       <TextField
         label="اسم المتجر"
         value={form.name}
@@ -164,10 +243,47 @@ export default function GeneralInfoForm({
         fullWidth
         margin="normal"
       />
-
-     
-
-      {/* وصف المتجر */}
+      <TextField
+        label="السلاج الموحّد (رابط عام)"
+        value={slugInput}
+        onChange={(e) => setSlugInput(normalizeSlug(e.target.value))}
+        fullWidth
+        margin="normal"
+        placeholder="مثال: acme-store"
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              {origin.replace(/^https?:\/\//, "")}/
+            </InputAdornment>
+          ),
+          endAdornment: slugInput ? (
+            <InputAdornment position="end">
+              <Tooltip title="نسخ رابط الدردشة">
+                <IconButton size="small" onClick={() => copy(chatPreview)}>
+                  <ContentCopyRounded fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="نسخ رابط المتجر">
+                <IconButton size="small" onClick={() => copy(storePreview)}>
+                  <ContentCopyRounded fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </InputAdornment>
+          ) : undefined,
+        }}
+        helperText={
+          slugStatus === "checking"
+            ? "جاري التحقق من التوفر..."
+            : slugStatus === "ok"
+            ? `متاح ✓ — روابطك: ${chatPreview} ، ${storePreview}`
+            : slugStatus === "taken"
+            ? "السلاج محجوز. جرّب اسمًا آخر."
+            : slugStatus === "invalid"
+            ? "السلاج غير صالح: يجب أن يبدأ بحرف إنجليزي، ويحتوي على حروف/أرقام/شرطة فقط، وطوله 3–50، وبدون شرطة في النهاية."
+            : "اكتب سلاج مثل: acme-store (3–50 حرفًا)."
+        }
+        error={slugStatus === "taken" || slugStatus === "invalid"}
+      />
       <TextField
         label="وصف المتجر"
         value={form.businessDescription ?? ""}
@@ -178,7 +294,6 @@ export default function GeneralInfoForm({
         rows={3}
       />
 
-      {/* حفظ */}
       <Button
         variant="contained"
         color="primary"
@@ -188,7 +303,6 @@ export default function GeneralInfoForm({
         {loading ? <CircularProgress size={22} /> : "حفظ التعديلات"}
       </Button>
 
-      {/* Snackbar */}
       <Snackbar
         open={success}
         autoHideDuration={3000}
