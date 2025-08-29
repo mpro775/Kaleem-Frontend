@@ -221,9 +221,11 @@ const scrollToPage = (p: number) => {
       <Box
         sx={{
           position: "relative",
-          mx: { xs: -2, sm: "auto" },
-          maxWidth: 1400,
+          mx: "auto",
+          maxWidth: { xs: "100%", sm: 1400 },
+          width: "100%",
           px: { xs: 0, sm: 2 },
+          overflowX: "hidden",
           // حواف تدرج شفافة
           "&::before, &::after": {
             content: '""',
@@ -260,10 +262,12 @@ const scrollToPage = (p: number) => {
     scrollBehavior: "smooth",
     scrollbarWidth: "none",
     "&::-webkit-scrollbar": { display: "none" },
-    gap: { xs: 8, sm: 16 },
-    px: { xs: 2, sm: 2 },          // إبقِ الـ padding هنا، وليس على العنصر
-    scrollPaddingInline: { xs: 8, sm: 16 }, // مهم مع snap
+    gap: { xs: 2, sm: 8, md: 16 },
+    px: { xs: 2, sm: 2 },
+    scrollPaddingInline: { xs: 16, sm: 16 },
     justifyContent: { xs: "center", sm: "flex-start" },
+    maxWidth: "100%",
+    width: "100%",
   }}
 >
 
@@ -274,10 +278,12 @@ const scrollToPage = (p: number) => {
            sx={{
              flex: "0 0 auto",
              width: {
-               xs: "calc(100% - 0px)",              // perView=1
-               sm: "calc((100% - 16px) / 2)",       // perView=2, gap=16
+               xs: "calc(100vw - 32px)",              // perView=1, مع padding
+               sm: "calc((100% - 8px) / 2)",       // perView=2, gap=8
                md: "calc((100% - 3 * 16px) / 4)",   // perView=4, gap=16
              },
+             minWidth: { xs: 280, sm: 200, md: 250 },
+             maxWidth: { xs: "calc(100vw - 32px)", sm: "none" },
              // لا margins جانبية هنا
              my: 1,
              scrollSnapAlign: { xs: "start", sm: "unset" }, // snap فقط عند 1-perView

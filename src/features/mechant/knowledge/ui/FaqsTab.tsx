@@ -357,20 +357,7 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
         <Typography variant="h6" fontWeight={800}>الأسئلة الشائعة</Typography>
         <Stack direction="row" spacing={1}>
-          <Tooltip title="Soft Delete — أرشفة جميع الأسئلة">
-            <span>
-              <LoadingButton
-                color="warning"
-                startIcon={<ClearAllIcon />}
-                variant="text"
-                onClick={() => setConfirmDeleteAll({ hard: false })}
-                disabled={!faqs?.length}
-                loading={submitting && !!confirmDeleteAll && !confirmDeleteAll.hard}
-              >
-                حذف الكل (Soft)
-              </LoadingButton>
-            </span>
-          </Tooltip>
+      
           <Tooltip title="Hard Delete — حذف نهائي + تنظيف Qdrant">
             <span>
               <LoadingButton
@@ -381,7 +368,7 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
                 disabled={!faqs?.length}
                 loading={submitting && !!confirmDeleteAll && !!confirmDeleteAll.hard}
               >
-                حذف الكل (Hard)
+                حذف الكل 
               </LoadingButton>
             </span>
           </Tooltip>
@@ -493,23 +480,10 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
                               </IconButton>
                             </Tooltip>
 
-                            {/* Soft delete */}
-                            <Tooltip title="حذف (Soft)">
-                              <span>
-                                <LoadingButton
-                                  loading={deletingId === f._id && (!confirmDeleteOne || !confirmDeleteOne.hard)}
-                                  color="warning"
-                                  onClick={() => askDeleteOne(f._id, false)}
-                                  variant="text"
-                                  sx={{ minWidth: 0, p: 0.5 }}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </LoadingButton>
-                              </span>
-                            </Tooltip>
+                           
 
                             {/* Hard delete */}
-                            <Tooltip title="حذف نهائي (Hard) + تنظيف Qdrant">
+                            <Tooltip title="حذف نهائي ">
                               <span>
                                 <LoadingButton
                                   loading={deletingId === f._id && !!confirmDeleteOne?.hard}
@@ -541,7 +515,7 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
         <DialogContent>
           <Typography>
             {confirmDeleteOne?.hard
-              ? "سيتم حذف السؤال نهائيًا وإزالة متجهاته من Qdrant."
+              ? "سيتم حذف السؤال نهائيًا وإزالة متجهاته من  قاعده المعرفة لدى كليم."
               : "سيتم أرشفة السؤال (Soft Delete) مع إمكانية استعادته لاحقًا."}
           </Typography>
         </DialogContent>
@@ -559,7 +533,7 @@ export default function FaqsTab({ merchantId }: { merchantId: string }) {
         <DialogContent>
           <Typography>
             {confirmDeleteAll?.hard
-              ? "سيتم حذف جميع الأسئلة نهائيًا مع إزالة كل المتجهات من Qdrant."
+              ? "سيتم حذف جميع الأسئلة نهائيًا مع إزالة كل المعرفة من قاعده المعرفة لدى كليم."
               : "سيتم أرشفة جميع الأسئلة (Soft Delete)."}
           </Typography>
         </DialogContent>

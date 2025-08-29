@@ -111,11 +111,25 @@ export default function InstructionsPage() {
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
         <Typography variant="h5" fontWeight={700}>التوجيهات (Instructions)</Typography>
-        <Stack direction="row" spacing={1}>
-          <Button startIcon={<BoltIcon />} variant="outlined" onClick={openSuggest}>اقتراحات تلقائية</Button>
-          <Button startIcon={<AddIcon />} variant="contained" onClick={openNew}>إضافة توجيه</Button>
+        <Stack direction="row" spacing={1} flexWrap="wrap">
+          <Button 
+            startIcon={<BoltIcon />} 
+            variant="outlined" 
+            onClick={openSuggest}
+            size={isMobile ? "small" : "medium"}
+          >
+            {isMobile ? "" : "اقتراحات تلقائية"}
+          </Button>
+          <Button 
+            startIcon={<AddIcon />} 
+            variant="contained" 
+            onClick={openNew}
+            size={isMobile ? "small" : "medium"}
+          >
+            {isMobile ? "" : "إضافة توجيه"}
+          </Button>
         </Stack>
       </Stack>
 

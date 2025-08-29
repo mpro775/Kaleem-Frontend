@@ -5,27 +5,19 @@ import {
   Stack,
   Box,
   Chip,
-  Tooltip,
-  IconButton,
   CircularProgress,
   useTheme,
   Button,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   useMediaQuery,
 } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import SkipNextIcon from "@mui/icons-material/SkipNext";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import type { ChecklistGroup } from "@/features/mechant/dashboard/type";
-import { useState } from "react";
 
 export default function ChecklistPanel({
   checklist = [],
@@ -47,7 +39,7 @@ export default function ChecklistPanel({
   const total = allItems.length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+
 
   if (loading) return null;
   if (total === 0) {
@@ -104,39 +96,95 @@ export default function ChecklistPanel({
         </Box>
 
         {isMobile ? (
-          // 📱 نسخة الهاتف — فقط قائمة صغيرة
+          // 📱 نسخة الهاتف — Accordion مبسط
           <Stack spacing={1}>
-            {allItems.map((item) => {
-              const isComplete = item?.isComplete || item?.isSkipped;
-              return (
-                <Paper
-                  key={item?.key}
+            {safeChecklist.map((group, groupIdx) => (
+              <Accordion 
+                key={group.key || groupIdx} 
+                defaultExpanded={groupIdx === 0}
+                sx={{
+                  '& .MuiAccordionSummary-root': {
+                    minHeight: 48,
+                    padding: '0 8px',
+                  },
+                  '& .MuiAccordionSummary-content': {
+                    margin: '8px 0',
+                  },
+                  '& .MuiAccordionDetails-root': {
+                    padding: '8px 16px 16px',
+                  },
+                }}
+              >
+                <AccordionSummary 
+                  expandIcon={<ExpandMoreIcon />}
                   sx={{
-                    p: 1.5,
-                    borderRadius: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    opacity: isComplete ? 0.6 : 1,
-                    cursor: isComplete ? "default" : "pointer",
+                    '& .MuiAccordionSummary-expandIconWrapper': {
+                      fontSize: '1.2rem',
+                    },
                   }}
-                  onClick={() => !isComplete && setSelectedItem(item)}
                 >
-                  <Typography
-                    fontWeight={isComplete ? 400 : 700}
-                    fontSize={14}
-                    noWrap
+                  <Typography 
+                    variant="subtitle2" 
+                    fontWeight={700}
+                    sx={{ fontSize: '0.9rem' }}
                   >
-                    {item?.title}
+                    {group.title}
                   </Typography>
-                  {isComplete ? (
-                    <CheckCircleIcon color="success" fontSize="small" />
-                  ) : (
-                    <ExpandMoreIcon fontSize="small" />
-                  )}
-                </Paper>
-              );
-            })}
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Stack spacing={1}>
+                    {group.items?.map((item) => {
+                      const isComplete = item?.isComplete || item?.isSkipped;
+                      return (
+                        <Box
+                          key={item.key}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1.5,
+                            p: 1,
+                            borderRadius: 1,
+                            backgroundColor: isComplete ? 'action.hover' : 'transparent',
+                            opacity: isComplete ? 0.7 : 1,
+                          }}
+                        >
+                          {isComplete ? (
+                            <CheckCircleIcon color="success" sx={{ fontSize: '1.2rem' }} />
+                          ) : (
+                            <RadioButtonUncheckedIcon color="warning" sx={{ fontSize: '1.2rem' }} />
+                          )}
+                          <Typography 
+                            flex={1}
+                            sx={{ 
+                              fontSize: '0.85rem',
+                              fontWeight: isComplete ? 400 : 500,
+                            }}
+                          >
+                            {item.title}
+                          </Typography>
+                          {!isComplete && item?.skippable && (
+                            <Button
+                              onClick={() => onSkip?.(item.key)}
+                              size="small"
+                              color="info"
+                              startIcon={<SkipNextIcon />}
+                              sx={{
+                                fontSize: '0.75rem',
+                                px: 1,
+                                py: 0.5,
+                                minWidth: 'auto',
+                              }}
+                            >
+                              تخطي
+                            </Button>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </AccordionDetails>
+              </Accordion>
+            ))}
           </Stack>
         ) : (
           // 💻 نسخة الديسكتوب — Accordion كامل
@@ -186,50 +234,7 @@ export default function ChecklistPanel({
         )}
       </Paper>
 
-      {/* 📱 BottomSheet للموبايل */}
-      {selectedItem && (
-        <Dialog
-          open={!!selectedItem}
-          onClose={() => setSelectedItem(null)}
-          fullWidth
-          PaperProps={{
-            sx: {
-              borderRadius: "16px 16px 0 0",
-              bottom: 0,
-              position: "absolute",
-            },
-          }}
-        >
-          <DialogTitle>{selectedItem.title}</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary">
-              {selectedItem.message || "أكمل هذه الخطوة لتفعيل متجرك"}
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            {selectedItem.skippable && (
-              <Button
-                color="info"
-                onClick={() => {
-                  onSkip?.(selectedItem.key);
-                  setSelectedItem(null);
-                }}
-              >
-                تخطي
-              </Button>
-            )}
-            {selectedItem.actionPath && (
-              <Button
-                color="primary"
-                variant="contained"
-                href={selectedItem.actionPath}
-              >
-                إكمال
-              </Button>
-            )}
-          </DialogActions>
-        </Dialog>
-      )}
+
     </>
   );
 }

@@ -6,7 +6,9 @@ import AddProductDialog from "@/features/mechant/products/ui/AddProductDialog";
 import EditProductDialog from "@/features/mechant/products/ui/EditProductDialog";
 import { useAuth } from "@/context/AuthContext";
 import type { ProductResponse } from "@/features/mechant/products/type";
-
+import { Fab } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import { useTheme, useMediaQuery } from "@mui/material";
 export default function ProductsPage() {
   const { user } = useAuth();
   const merchantId = user?.merchantId ?? "";
@@ -15,6 +17,8 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<ProductResponse | null>(null);
   const [refresh, setRefresh] = useState(0);
 
+  const theme = useTheme();
+  const isSm = useMediaQuery(theme.breakpoints.down("sm"));
   return (
     <Box
       position="relative"
@@ -34,7 +38,7 @@ export default function ProductsPage() {
         <Typography variant="h5" fontWeight={800}>
           إدارة المنتجات
         </Typography>
-        <Stack direction="row" spacing={1.5} flexWrap="wrap">
+        <Stack direction="row" spacing={1.5} flexWrap="wrap" sx={{ display: { xs: "none", sm: "flex" } }}>
           <ProductsActions onAddProduct={() => setOpenAddDialog(true)} />
         </Stack>
       </Box>
@@ -59,7 +63,21 @@ export default function ProductsPage() {
           />
         </Box>
       </Paper>
-
+      {isSm && (
+        <Fab
+          color="primary"
+          aria-label="add"
+          onClick={() => setOpenAddDialog(true)}
+          sx={{
+            position: "fixed",
+            bottom: 16,
+            insetInlineEnd: 16, // يناسب RTL
+            zIndex: (t) => t.zIndex.tooltip + 1,
+          }}
+        >
+          <AddIcon />
+        </Fab>
+      )}
       {/* Dialogs */}
       <AddProductDialog
         open={openAddDialog}

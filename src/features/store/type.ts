@@ -7,12 +7,15 @@ export interface Banner {
     order?: number;
   }
   import type { ProductResponse } from "@/features/mechant/products/type";
+  type CustomerAddress =
+  | string
+  | { line1?: string; line2?: string; city?: string; state?: string; postalCode?: string; country?: string };
 
 export interface CustomerInfo {
   name: string;
   phone: string;
-  address: string;
-  [key: string]: string; // دعم أي بيانات مستقبلية
+  address?: CustomerAddress;
+  [key: string]: string | CustomerAddress | undefined; // دعم أي بيانات مستقبلية
 }
 export interface OrderProduct {
   productId: string;

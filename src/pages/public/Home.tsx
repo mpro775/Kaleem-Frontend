@@ -70,19 +70,7 @@ const Home = () => {
 
       <Navbar />
 
-      {/* H1 نصي واضح يساعد الظهور باسم العلامة */}
-      <Container sx={{ pt: 6, pb: 1 }}>
-        <Typography
-          variant="h1"
-          sx={{ fontSize: { xs: 28, md: 36 }, fontWeight: 800, mb: 1 }}
-        >
-          كليم — مساعد متاجر ذكي بالعربية
-        </Typography>
-        <Typography color="text.secondary">
-          شغّل بوت التجارة الإلكترونية بالعربي، يرد ويبيع 24/7 ويتكامل مع منصاتك
-          المفضلة.
-        </Typography>
-      </Container>
+      
 
       <SectionReveal>
         <HeroSection />

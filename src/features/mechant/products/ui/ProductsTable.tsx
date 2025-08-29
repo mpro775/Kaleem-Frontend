@@ -2,6 +2,8 @@ import { useEffect,  useState } from "react";
 import {
   Paper, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, Avatar, CircularProgress, Box, IconButton, Stack, Tooltip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -11,6 +13,7 @@ import type { ProductResponse } from "../type";
 import { formatMoney } from "@/shared/utils/money";
 import { toDisplayString } from "@/shared/utils/render";
 import { useErrorHandler } from '@/shared/errors';
+import MobileProductsView from "./MobileProductsView"; // عدّل المسار لو لزم
 
 interface ProductsTableProps {
   merchantId: string;
@@ -23,7 +26,8 @@ export default function ProductsTable({ merchantId, onEdit, onRefresh }: Product
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
-  
+  const theme = useTheme();
+  const isSm = useMediaQuery(theme.breakpoints.down("sm")); 
   console.log('ProductsTable rendered with merchantId:', merchantId);
 
   const load = () => {
@@ -87,7 +91,18 @@ export default function ProductsTable({ merchantId, onEdit, onRefresh }: Product
 
   console.log('Rendering products table with', products?.length, 'products:', products);
   console.log('TableBody will render with products:', products);
-  
+  if (isSm) {
+    return (
+      <MobileProductsView
+        products={products}
+        onEdit={onEdit}
+        onDelete={async (id) => {
+          await handleDelete(id);
+          onRefresh?.();
+        }}
+      />
+    );
+  }
   return (
     <TableContainer component={Paper} sx={{ p: 0, overflowX: "auto" }}>
       <Table size="small" stickyHeader>

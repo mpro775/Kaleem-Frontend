@@ -18,7 +18,7 @@ import {
   type ContactConfig,
 } from "@/features/landing/contact";
 import { Navbar, Footer } from "@/features/landing";
-import SEOHead from "@/components/landing/SEOHead"; // لو المسار مختلف عدّله
+import SEOHead from "@/features/landing/seo/SEOHead"; // لو المسار مختلف عدّله
 
 const GradientHero = styled(Box)(({ theme }) => ({
   background: `radial-gradient(1200px 400px at 90% -10%, ${theme.palette.primary.main}22, transparent 60%), linear-gradient(135deg, ${theme.palette.primary.main}22, transparent)`,

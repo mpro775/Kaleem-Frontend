@@ -74,6 +74,8 @@ const Section = styled(Box)(({ theme }) => ({
       : theme.palette.grey[50],
   position: "relative",
   overflow: "hidden",
+  maxWidth: "100vw",
+  width: "100%",
 }));
 
 const IntegrationCard = styled(Paper)(({ theme }) => ({
@@ -103,6 +105,7 @@ const BRAND_BOX = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  overflow: "hidden",
 } as const;
 
 function BrandVisual({ item }: { item: Item }) {
@@ -292,9 +295,11 @@ const scrollToPage = (p: number) => {
       <Box
         sx={{
           position: "relative",
-          mx: { xs: -2, sm: "auto" },
-          maxWidth: 1400,
+          mx: "auto",
+          maxWidth: { xs: "100%", sm: 1400 },
+          width: "100%",
           px: { xs: 0, sm: 2, md: 0 },
+          overflowX: "hidden",
           // حواف تدرج شفافة
           "&::before, &::after": {
             content: '""',
@@ -330,9 +335,12 @@ const scrollToPage = (p: number) => {
             scrollBehavior: "smooth",
             scrollbarWidth: "none",
             "&::-webkit-scrollbar": { display: "none" },
-            gap: { xs: 8, sm: 16 },
-            px: { xs: 2, sm: "48px", md: "48px" },
+            gap: { xs: 4, sm: 8, md: 16 },
+            px: { xs: 1, sm: 3, md: 3 },
+            scrollPaddingInline: { xs: 8, sm: 24, md: 24 },
             justifyContent: { xs: "center", sm: "flex-start" },
+            maxWidth: "100%",
+            width: "100%",
           }}
         >
           {/* العنصر (الكارت) */}
@@ -343,10 +351,11 @@ const scrollToPage = (p: number) => {
                 flex: "0 0 auto",
                 // عرض الكارت بحسب perView مع هوامش
                 width: {
-                  xs: "100%",
-                  sm: "calc((100% - 16px) / 2)",
+                  xs: "calc(100% - 8px)",
+                  sm: "calc((100% - 8px) / 2)",
                   md: "calc((100% - 3 * 16px) / 4)",
                 },
+                minWidth: { xs: 280, sm: 200, md: 250 },
                 mx: 0,
                 my: 1,
                 scrollSnapAlign: { xs: "start", md: "unset" },

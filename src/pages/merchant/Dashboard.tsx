@@ -1,5 +1,5 @@
 // src/pages/dashboard/Dashboard.tsx
-import  { useState, useMemo, useEffect, type JSX } from "react";
+import { useState, useMemo, useEffect, type JSX } from "react";
 import {
   Box,
   Paper,
@@ -116,7 +116,7 @@ export default function Dashboard() {
   const checklist = checklistResponse || [];
 
   // إضافة debugging للـ checklist
-  console.log('Dashboard Checklist Debug:', {
+  console.log("Dashboard Checklist Debug:", {
     checklistResponse,
     checklist,
     checklistType: typeof checklist,
@@ -124,7 +124,7 @@ export default function Dashboard() {
     loadingChecklist,
     errorChecklist,
     merchantId,
-    checklistLength: Array.isArray(checklist) ? checklist.length : 0
+    checklistLength: Array.isArray(checklist) ? checklist.length : 0,
   });
 
   const { data: timeline, isLoading: loadingTimeline } = useMessagesTimeline(
@@ -132,14 +132,45 @@ export default function Dashboard() {
     "day"
   );
 
+  // معالجة بيانات الخط الزمني
+  const processedTimeline = useMemo(() => {
+    if (!timeline || !Array.isArray(timeline)) return [];
+
+    return timeline
+      .filter((item): item is { _id: unknown; count: unknown } =>
+        Boolean(
+          item && typeof item === "object" && "_id" in item && "count" in item
+        )
+      )
+      .map((item) => ({
+        _id: String(item._id || ""),
+        count: Number(item.count || 0),
+      }))
+      .sort((a, b) => {
+        // محاولة ترتيب حسب التاريخ إذا كان _id يحتوي على تاريخ
+        const dateA = new Date(a._id);
+        const dateB = new Date(b._id);
+        if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+          return dateA.getTime() - dateB.getTime();
+        }
+        return 0;
+      });
+  }, [timeline]);
+
+  // Debug للخط الزمني
+  console.log("Dashboard Timeline Debug:", {
+    originalTimeline: timeline,
+    processedTimeline,
+    timelineLength: timeline?.length,
+    processedLength: processedTimeline.length,
+  });
+
   const { data: productsCountFallback } = useProductsCount();
-  const { mutateAsync: skipItem } = useSkipChecklist(
-    merchantId ?? undefined
-  );
+  const { mutateAsync: skipItem } = useSkipChecklist(merchantId ?? undefined);
 
   // حالات عامة
   const loading = loadingOverview || loadingChecklist || loadingTimeline;
-  
+
   // معالجة الأخطاء
   useEffect(() => {
     if (errorOverview) {
@@ -300,7 +331,7 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      {!loading && !errorOverview  && (
+      {!loading && !errorOverview && (
         <>
           {/* رأس بسيط بدل DashboardHeader (أخف على الموبايل) */}
           <Paper
@@ -356,6 +387,7 @@ export default function Dashboard() {
                   ".MuiTabs-flexContainer": { gap: 0.5 },
                   minHeight: 36,
                   "& .MuiTab-root": { minHeight: 36 },
+                  marginBottom: isSm ? 1 : 2,
                 }}
               >
                 <Tab label="أسبوع" />
@@ -371,6 +403,10 @@ export default function Dashboard() {
                 size={isSm ? "small" : "medium"}
                 fullWidth={isSm}
                 startIcon={isSm ? undefined : <InsightsIcon />}
+                sx={{
+                  marginBottom: isSm ? 0 : 2,
+                  marginTop: isSm ? 0 : 2,
+                }}
               >
                 {isSm ? "الإحصائيات" : "عرض الإحصائيات المتقدمة"}
               </Button>
@@ -395,11 +431,14 @@ export default function Dashboard() {
               // إن كان لديك prop لتصغير العرض في الموبايل يمكن تمريره هنا
             />
             {/* Debug info */}
-            {process.env.NODE_ENV === 'development' && (
-              <div style={{ fontSize: '12px', color: 'gray', marginTop: '8px' }}>
-                Debug: Checklist length = {Array.isArray(checklist) ? checklist.length : 0} | 
-                Loading = {loadingChecklist ? 'true' : 'false'} |
-                Response = {JSON.stringify(checklistResponse?.length || 0)}
+            {process.env.NODE_ENV === "development" && (
+              <div
+                style={{ fontSize: "12px", color: "gray", marginTop: "8px" }}
+              >
+                Debug: Checklist length ={" "}
+                {Array.isArray(checklist) ? checklist.length : 0} | Loading ={" "}
+                {loadingChecklist ? "true" : "false"} | Response ={" "}
+                {JSON.stringify(checklistResponse?.length || 0)}
               </div>
             )}
           </Paper>
@@ -418,23 +457,9 @@ export default function Dashboard() {
           </Grid>
 
           {/* الخط الزمني للرسائل */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              mb: 2,
-              borderRadius: 2,
-              border: "1px solid",
-              borderColor: "divider",
-            }}
-          >
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
-              نشاط الرسائل
-            </Typography>
-            <Box sx={{ height: chartH, minWidth: 0 }}>
-              <MessagesTimelineChart data={timeline as any[]} />
-            </Box>{" "}
-          </Paper>
+          <Box sx={{ mb: 3 }}>
+            <MessagesTimelineChart data={processedTimeline} />
+          </Box>
 
           {/* تبويبات التحليلات السريعة */}
           <Paper
@@ -444,6 +469,7 @@ export default function Dashboard() {
               borderRadius: 2,
               border: "1px solid",
               borderColor: "divider",
+              overflow: "hidden", // منع خروج المحتوى
             }}
           >
             <Tabs
@@ -451,7 +477,17 @@ export default function Dashboard() {
               onChange={(_e, v) => setActiveTab(v)}
               variant={isSm ? "scrollable" : "standard"}
               scrollButtons={isSm ? "auto" : false}
-              sx={{ mb: 2 }}
+              sx={{
+                mb: 2,
+                "& .MuiTabs-flexContainer": {
+                  gap: isSm ? 0.5 : 1,
+                },
+                "& .MuiTab-root": {
+                  minWidth: isSm ? "auto" : 120,
+                  fontSize: isSm ? "0.75rem" : "0.875rem",
+                  padding: isSm ? "6px 8px" : "12px 16px",
+                },
+              }}
             >
               <Tab label="المنتجات" />
               <Tab label="الكلمات المفتاحية" />
@@ -461,7 +497,12 @@ export default function Dashboard() {
             <Button
               size="small"
               variant="text"
-              sx={{ mt: 1 }}
+              sx={{
+                mt: 1,
+                mb: 2,
+                fontSize: isSm ? "0.75rem" : "0.875rem",
+                padding: isSm ? "4px 8px" : "8px 16px",
+              }}
               onClick={() =>
                 navigate(
                   `/dashboard/analytics?tab=${
@@ -473,23 +514,30 @@ export default function Dashboard() {
               فتح في صفحة الإحصائيات ↗
             </Button>
 
-            {activeTab === 0 && (
-              <Box sx={{ height: chartH, minWidth: 0 }}>
-                <ProductsChart products={topProducts} />
-              </Box>
-            )}
-            {activeTab === 1 && (
-              <Box sx={{ height: chartH, minWidth: 0 }}>
-                {" "}
-                <KeywordsChart keywords={keywords} />
-              </Box>
-            )}
-            {activeTab === 2 && (
-              <Box sx={{ height: chartH, minWidth: 0 }}>
-                {" "}
-                <ChannelsPieChart channelUsage={channelUsage} />
-              </Box>
-            )}
+            <Box
+              sx={{
+                height: chartH,
+                minWidth: 0,
+                overflow: "auto", // أفضل من auto هنا
+                position: "relative",
+              }}
+            >
+              {activeTab === 2 && (
+               <Box sx={{ height: '100%', p: 1 }}>
+                  <ChannelsPieChart channelUsage={channelUsage} />
+                </Box>
+              )}
+              {activeTab === 0 && (
+                <Box sx={{ height: '100%', p: 1 }}>
+                  <ProductsChart products={topProducts} />
+                </Box>
+              )}
+              {activeTab === 1 && (
+               <Box sx={{ height: '100%', p: 1 }}>
+                  <KeywordsChart keywords={keywords} />
+                </Box>
+              )}
+            </Box>
           </Paper>
 
           <Divider sx={{ my: 3 }} />

@@ -9,7 +9,7 @@ export async function getTopProducts(period: Period, limit = 8) {
   const res = await axios.get<
     { productId: string; name: string; count: number }[]
   >("/analytics/top-products", { params: { period, limit } });
-  const arr = ensureArray(res.data);
+  const arr = ensureArray<{ productId: string; name: string; count: number }>(res.data);
   return arr.map((p) => ({ name: p.name, value: p.count }));
 }
 
@@ -18,7 +18,7 @@ export async function getTopKeywords(period: Period, limit = 10) {
     "/analytics/top-keywords",
     { params: { period, limit } }
   );
-  const arr = ensureArray(res.data);
+  const arr = ensureArray<{ keyword: string; count: number }>(res.data);
   return arr.map((k) => ({ keyword: k.keyword, count: k.count }));
 }
 

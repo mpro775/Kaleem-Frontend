@@ -264,10 +264,12 @@ export default function TestimonialsSection() {
             scrollBehavior: "smooth",
             scrollbarWidth: "none",
             "&::-webkit-scrollbar": { display: "none" },
-            gap: { xs: 8, sm: 16 },
+            gap: { xs: 4, sm: 8, md: 16 },
             px: { xs: 1, sm: 2 },
             // يساعد snap على احترام البادينغ
             scrollPaddingInline: { xs: 8, sm: 16 },
+            maxWidth: "100%",
+            width: "100%",
           }}
         >
           {testimonials.map((item, idx) => (
@@ -276,10 +278,11 @@ export default function TestimonialsSection() {
               sx={{
                 flex: "0 0 auto",
                 width: {
-                  xs: "100%", // perView = 1
-                  sm: "calc((100% - 16px) / 2)", // perView = 2, gap = 16
+                  xs: "calc(100% - 8px)", // perView = 1
+                  sm: "calc((100% - 8px) / 2)", // perView = 2, gap = 8
                   md: "calc((100% - 3 * 16px) / 4)", // perView = 4, gap = 16
                 },
+                minWidth: { xs: 280, sm: 200, md: 250 },
                 // snap فقط للجوال
                 scrollSnapAlign: perView === 1 ? "start" : "unset",
               }}

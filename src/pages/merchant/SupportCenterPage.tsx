@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import {  useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -27,7 +27,6 @@ import timezone from "dayjs/plugin/timezone";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-// ⚠️ غيّر المسار حسب مشروعك
 import axios from "@/shared/api/axios";
 import { useAuth } from "@/context/AuthContext";
 import { useErrorHandler } from "@/shared/errors";
@@ -44,7 +43,6 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 // إعداد التوقيت
 dayjs.extend(utc);
 dayjs.extend(timezone);
-const DEFAULT_TZ = "Asia/Aden";
 const MAX_FILES = 5;
 const MAX_MB = 5;
 
@@ -292,86 +290,12 @@ export default function MerchantSupportCenterPage() {
     { value: "high", label: "عالي" },
   ];
 
-  const openHoursLabel = useMemo(() => {
-    const now = dayjs().tz(DEFAULT_TZ);
-    const from = now.hour(9).minute(0);
-    const to = now.hour(18).minute(0);
-    const isOpen = now.isAfter(from) && now.isBefore(to);
-    return isOpen
-      ? `مفتوح الآن · يغلق ${to.format("hh:mm A")}`
-      : `مغلق الآن · يفتح ${from.format("hh:mm A")}`;
-  }, []);
 
   return (
     <Box dir="rtl">
       <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
         <Grid container spacing={4}>
-          // استبدل Grid المخصّص بالمرفقات:
-          <Grid size={{ xs: 12 }}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={1}
-              alignItems={{ xs: "stretch", sm: "center" }}
-            >
-              <Button
-                component="label"
-                variant="outlined"
-                sx={{ borderRadius: 2 }}
-              >
-                إرفاق ملفات (اختياري)
-                <input
-                  hidden
-                  type="file"
-                  multiple
-                  accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
-                  onChange={(e) => {
-                    const list = e.target.files;
-                    if (!list) return;
-                    const chk = withinLimits(list);
-                    if (!chk.ok) {
-                      setSnack({
-                        open: true,
-                        msg: `تعذر الإرفاق: ${chk.reason}`,
-                      });
-                      return;
-                    }
-                    setFiles(list);
-                  }}
-                />
-              </Button>
-
-              {/* عرض مختصر للمرفقات + إزالة */}
-              {files && (
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {Array.from(files).map((f, i) => (
-                    <Chip
-                      key={i}
-                      size="small"
-                      label={
-                        f.name.length > 24 ? f.name.slice(0, 24) + "…" : f.name
-                      }
-                      onDelete={() => {
-                        const arr = Array.from(files);
-                        arr.splice(i, 1);
-                        // إعادة بناء FileList ليس مباشر — فنجعلها null عندما نحذف آخر عنصر
-                        setFiles(
-                          arr.length
-                            ? (Object.assign(new DataTransfer(), {
-                                items: arr,
-                              }) as any)
-                            : null
-                        );
-                      }}
-                      deleteIcon={<DeleteOutlineIcon />}
-                    />
-                  ))}
-                </Stack>
-              )}
-            </Stack>
-            <Typography variant="caption" color="text.secondary">
-              الحد: حتى {MAX_FILES} ملفات × {MAX_MB}MB
-            </Typography>
-          </Grid>
+    
           {/* النموذج */}
           <Grid size={{ xs: 12, md: 8 }}>
             <Paper
@@ -573,39 +497,70 @@ export default function MerchantSupportCenterPage() {
 
                   {/* المرفقات */}
                   <Grid size={{ xs: 12 }}>
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      spacing={1}
-                      alignItems={{ xs: "stretch", sm: "center" }}
-                    >
-                      <Button
-                        component="label"
-                        variant="outlined"
-                        sx={{ borderRadius: 2 }}
-                      >
-                        إرفاق ملفات (اختياري)
-                        <input
-                          hidden
-                          type="file"
-                          multiple
-                          accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
-                          onChange={(e) => setFiles(e.target.files)}
-                        />
-                      </Button>
-                      {files && (
-                        <Typography variant="body2" color="text.secondary">
-                          {Array.from(files)
-                            .map((f) => f.name)
-                            .slice(0, 3)
-                            .join("، ")}
-                          {files.length > 3 ? ` (+${files.length - 3})` : ""}
-                        </Typography>
-                      )}
-                    </Stack>
-                    <Typography variant="caption" color="text.secondary">
-                      الحد: حتى 5 ملفات × 5MB
-                    </Typography>
-                  </Grid>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems={{ xs: "stretch", sm: "center" }}
+            >
+              <Button
+                component="label"
+                variant="outlined"
+                sx={{ borderRadius: 2 }}
+              >
+                إرفاق ملفات (اختياري)
+                <input
+                  hidden
+                  type="file"
+                  multiple
+                  accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const list = e.target.files;
+                    if (!list) return;
+                    const chk = withinLimits(list);
+                    if (!chk.ok) {
+                      setSnack({
+                        open: true,
+                        msg: `تعذر الإرفاق: ${chk.reason}`,
+                      });
+                      return;
+                    }
+                    setFiles(list);
+                  }}
+                />
+              </Button>
+
+              {/* عرض مختصر للمرفقات + إزالة */}
+              {files && (
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {Array.from(files).map((f, i) => (
+                    <Chip
+                      key={i}
+                      size="small"
+                      label={
+                        f.name.length > 24 ? f.name.slice(0, 24) + "…" : f.name
+                      }
+                      onDelete={() => {
+                        const arr = Array.from(files);
+                        arr.splice(i, 1);
+                        // إعادة بناء FileList ليس مباشر — فنجعلها null عندما نحذف آخر عنصر
+                        setFiles(
+                          arr.length
+                            ? (Object.assign(new DataTransfer(), {
+                                items: arr,
+                              }) as any)
+                            : null
+                        );
+                      }}
+                      deleteIcon={<DeleteOutlineIcon />}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              الحد: حتى {MAX_FILES} ملفات × {MAX_MB}MB
+            </Typography>
+          </Grid>
 
                   <Grid size={{ xs: 12 }}>
                     <Stack direction="row" alignItems="center" spacing={2}>
@@ -704,7 +659,6 @@ export default function MerchantSupportCenterPage() {
           </Grid>
         </Grid>
       </Container>
-      // استبدل السناكبار في آخر الصفحة بهذا (يوحّد الموضع والرسالة):
       <Snackbar
         open={snack.open}
         autoHideDuration={3000}

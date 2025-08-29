@@ -7,9 +7,9 @@ import {
   ListItemIcon,
   ListItemButton,
   Drawer,
-  Tooltip,
+ 
   IconButton,
-  Avatar,
+
   Typography,
   Collapse,
   useTheme,
@@ -265,9 +265,16 @@ const Sidebar = ({
         <ListItem disablePadding>
           <ListItemButton
             {...buttonProps}
-            onClick={() => {
-              if (item.subItems) toggleSubMenu(item.label);
-              handleItemClick();
+            onClick={(e) => {
+              if (item.subItems) {
+                // عنصر أب: فقط توسعة/طي
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSubMenu(item.label);
+                return;
+              }
+              // عنصر ورقة: اغلق على الموبايل بعد التنقل
+              if (isMobile) onClose();
             }}
             sx={{
               borderRadius: 2,
@@ -467,8 +474,7 @@ const Sidebar = ({
 
         <List sx={{ flex: 1, px: 1 }}>
           {menu.map((item) => (
-            <Box key={item.label} onClick={handleItemClick}>
-              {renderMenuItem(item)}
+    <Box key={item.label}>              {renderMenuItem(item)}
             </Box>
           ))}
         </List>

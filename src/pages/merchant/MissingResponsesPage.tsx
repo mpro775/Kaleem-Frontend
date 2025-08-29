@@ -46,7 +46,7 @@ export default function MissingResponsesPage() {
   const [rows, setRows] = useState<MissingResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(6);
 
   const [resolved, setResolved] = useState<"all" | "true" | "false">("all");
   const [channel, setChannel] = useState<
@@ -156,25 +156,29 @@ export default function MissingResponsesPage() {
         justifyContent="space-between"
         alignItems="center"
         mb={2}
+        flexWrap="wrap"
+        gap={1}
       >
         <Typography variant="h5" fontWeight={800}>
           الرسائل المنسيّة / غير المفهومة
         </Typography>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} flexWrap="wrap">
           <Button
             variant="outlined"
             startIcon={<RestartAltIcon />}
             onClick={resetFilters}
+            size={isMobile ? "small" : "medium"}
           >
-            تصفير الفلاتر
+            {isMobile ? "" : "تصفير الفلاتر"}
           </Button>
           <Button
             variant="contained"
             startIcon={<DoneAllIcon />}
             onClick={handleResolveBulk}
             disabled={selected.size === 0}
+            size={isMobile ? "small" : "medium"}
           >
-            تحديد الكل كمُعالج
+            {isMobile ? "" : "تحديد الكل كمُعالج"}
           </Button>
         </Stack>
       </Stack>
@@ -326,53 +330,82 @@ export default function MissingResponsesPage() {
               setLimit(parseInt(e.target.value, 10));
               setPage(0);
             }}
-            rowsPerPageOptions={[10, 20, 50]}
+            rowsPerPageOptions={[6, 12, 24]}
+            labelRowsPerPage="عدد العناصر في الصفحة:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} من ${count !== -1 ? count : `أكثر من ${to}`}`
+            }
           />
         </Paper>
       ) : (
         // Mobile Cards
-        <Stack spacing={1.5}>
-          {rows.map((r) => (
-            <Card key={r._id} variant="outlined">
-              <CardContent>
-                <Typography fontWeight={700}>{r.question}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {dayjs(r.createdAt).format("DD/MM HH:mm")} • {r.channel}
-                </Typography>
-                <Divider sx={{ my: 1 }} />
-                <Typography variant="body2" color="text.secondary">
-                  {r.botReply || "—"}
-                </Typography>
-                <Stack direction="row" spacing={1} mt={1}>
-                  <Chip
-                    label={r.resolved ? "مُعالج" : "غير مُعالج"}
-                    color={r.resolved ? "success" : "warning"}
-                    size="small"
-                  />
-                  <Chip label={r.type} size="small" variant="outlined" />
-                </Stack>
-                {!r.resolved && (
+        <>
+          <Stack spacing={1.5}>
+            {rows.map((r) => (
+              <Card key={r._id} variant="outlined">
+                <CardContent>
+                  <Typography fontWeight={700}>{r.question}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {dayjs(r.createdAt).format("DD/MM HH:mm")} • {r.channel}
+                  </Typography>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    {r.botReply || "—"}
+                  </Typography>
                   <Stack direction="row" spacing={1} mt={1}>
-                    <Button
+                    <Chip
+                      label={r.resolved ? "مُعالج" : "غير مُعالج"}
+                      color={r.resolved ? "success" : "warning"}
                       size="small"
-                      onClick={() => openKnowledge(r)}
-                      startIcon={<LibraryAddIcon />}
-                    >
-                      للمعرفة
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => handleResolveOne(r._id)}
-                      startIcon={<CheckIcon />}
-                    >
-                      مُعالج
-                    </Button>
+                    />
+                    <Chip label={r.type} size="small" variant="outlined" />
                   </Stack>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
+                  {!r.resolved && (
+                    <Stack direction="row" spacing={1} mt={1}>
+                      <Button
+                        size="small"
+                        onClick={() => openKnowledge(r)}
+                        startIcon={<LibraryAddIcon />}
+                      >
+                        للمعرفة
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleResolveOne(r._id)}
+                        startIcon={<CheckIcon />}
+                      >
+                        مُعالج
+                      </Button>
+                    </Stack>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </Stack>
+          
+          {/* Mobile Pagination */}
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                size="small"
+                disabled={page === 0}
+                onClick={() => setPage(page - 1)}
+              >
+                السابق
+              </Button>
+              <Typography variant="body2">
+                {page + 1} من {Math.ceil(total / limit)}
+              </Typography>
+              <Button
+                size="small"
+                disabled={page >= Math.ceil(total / limit) - 1}
+                onClick={() => setPage(page + 1)}
+              >
+                التالي
+              </Button>
+            </Stack>
+          </Box>
+        </>
       )}
 
       <AddToKnowledgeDialog

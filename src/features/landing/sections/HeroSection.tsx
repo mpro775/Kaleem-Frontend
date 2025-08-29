@@ -22,6 +22,8 @@ const HeroSection: React.FC = () => {
 				py: { xs: 4, sm: 6, md: 12 },
 				overflow: "hidden",
 				minHeight: { xs: "auto", md: "100vh" },
+				maxWidth: "100vw",
+				width: "100%",
 			}}
 		>
 			{/* زخارف الخلفية */}

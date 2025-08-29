@@ -37,12 +37,10 @@ const DashboardLayout = () => {
         <Box
           component="main"
           sx={{
-            pt: { xs: 7, sm: 8 },
-            px: { xs: 1, sm: 4 },
-            pb: { xs: 9, sm: 0 },
+    
             flex: 1,
             minHeight: 0,
-            bgcolor: "#f9fbfc",
+            bgcolor: "#ffffff",
           }}
         >
           <Outlet />

@@ -1,5 +1,5 @@
 // src/widgets/chat/ChatWorkspace.tsx
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {  useEffect, useMemo, useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -43,6 +43,7 @@ import SessionsList from "@/features/mechant/Conversations/ui/ConversationsList"
 import ChatWindow from "@/features/mechant/Conversations/ui/ChatWindow";
 import ChatInput from "@/features/mechant/Conversations/ui/ChatInput";
 import FeedbackDialog from "@/features/mechant/Conversations/ui/FeedbackDialog";
+import { alpha } from "@mui/material/styles";
 
 type MobileView = "list" | "chat";
 
@@ -219,7 +220,7 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
             <ArrowBackIosNewRoundedIcon />
           </IconButton>
         ) : (
-          <Box sx={{ width: 40 }} /> // placeholder
+          <Box sx={{ width: 40 }} />
         )}
         <Typography variant="h6" sx={{ fontWeight: 800 }} noWrap>
           {mobileView === "chat"
@@ -257,18 +258,26 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
             height: "100svh",
             display: "flex",
             flexDirection: "column",
+            m: 0,
+            p: 0,
             bgcolor: theme.palette.background.default,
           }}
         >
-          {MobileAppBar}
-
           {/* Tabs القنوات */}
           <Tabs
             value={selectedChannel}
             onChange={(_, v) => setChannel(v)}
             variant="scrollable"
             scrollButtons="auto"
-            sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}
+            sx={{
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              m: 0,
+              p: 0,
+              position: "sticky",
+              top: 0,
+              zIndex: 10,
+              bgcolor: theme.palette.background.paper,
+            }}
           >
             <Tab value="" label="الكل" />
             <Tab value="whatsapp" label="واتساب" />
@@ -276,7 +285,8 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
             <Tab value="webchat" label="ويب شات" />
           </Tabs>
 
-          <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          {/* قائمة الجلسات (هي التي تسكرول) */}
+          <Box sx={{ flex: 1, minHeight: 0 }}>
             <SessionsList
               sessions={sessions ?? []}
               loading={loadingSessions}
@@ -285,7 +295,7 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
                 setSelectedSession(id);
                 setMobileView("chat");
               }}
-              enableSearch // 👈 جديد
+              enableSearch
             />
           </Box>
         </Box>
@@ -302,12 +312,33 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
           bgcolor: theme.palette.background.default,
         }}
       >
-        {MobileAppBar}
+        {/* الهيدر ثابت */}
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1200,
+            bgcolor: "background.paper",
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            backdropFilter: "blur(20px)",
+            background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          }}
+        >
+          <Header
+            selectedSession={selectedSession}
+            handover={handover}
+            onToggleHandover={(v) => toggleHandover(v)}
+            onBack={() => setMobileView("list")}
+          />
+        </Box>
 
+        {/* 👇 هذا القسم هو الذي يتسكroll فقط */}
         {loading ? (
           <Box
             sx={{
               flex: 1,
+              minHeight: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -316,17 +347,15 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
             <CircularProgress />
           </Box>
         ) : (
-          <>
-            <Header
-              selectedSession={selectedSession}
-              handover={handover}
-              onToggleHandover={(v) => toggleHandover(v)}
-              onBack={() => setMobileView("list")}
-            />
-
-            <Box
-              sx={{ flex: 1, minHeight: 0, overflowY: "auto", bgcolor: "#fff" }}
-            >
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box sx={{ flex: 1, minHeight: 0 }}>
               <ChatWindow
                 messages={messages}
                 loading={loadingMessages}
@@ -334,20 +363,25 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
               />
             </Box>
 
+            {/* ChatInput ثابت أسفل الشاشة + safe-area */}
             {!!selectedSession && (
               <Box
                 sx={{
                   position: "sticky",
                   bottom: 0,
-                  bgcolor: theme.palette.background.paper,
+                  zIndex: 1200,
+                  bgcolor: "background.paper",
                   borderTop: `1px solid ${theme.palette.divider}`,
+                  backdropFilter: "blur(20px)",
+                  background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+                  boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
                   pb: "env(safe-area-inset-bottom)",
                 }}
               >
                 <ChatInput onSend={handleSend} />
               </Box>
             )}
-          </>
+          </Box>
         )}
 
         <FeedbackDialog
@@ -364,19 +398,29 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
   return (
     <Box
       display="flex"
-      sx={{ height: "100svh", bgcolor: theme.palette.background.default }}
+      sx={{
+        height: "100svh",
+        bgcolor:
+          theme.palette.mode === "dark"
+            ? `linear-gradient(180deg, ${alpha("#0b0b0f", 0.9)}, ${alpha(
+                "#0a0a0c",
+                0.9
+              )})`
+            : theme.palette.background.default,
+      }}
     >
+      {/* الشريط الجانبي */}
       <Box
         sx={{
           width: 320,
-          borderRight: "1px solid #eee",
+          borderInlineEnd: `1px solid ${theme.palette.divider}`,
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
         }}
       >
         <Sidebar selectedChannel={selectedChannel} setChannel={setChannel} />
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <Box sx={{ flex: 1, minHeight: 0 }}>
           <SessionsList
             sessions={sessions ?? []}
             loading={loadingSessions}
@@ -387,16 +431,34 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
         </Box>
       </Box>
 
+      {/* مساحة المحادثة */}
       <Box display="flex" flexDirection="column" flex={1} minWidth={0}>
-        <Header
-          selectedSession={selectedSession}
-          handover={handover}
-          onToggleHandover={(v) => toggleHandover(v)}
-        />
+        {/* الهيدر ثابت */}
+        <Box
+          sx={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1200,
+            bgcolor: "background.paper",
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            backdropFilter: "blur(20px)",
+            background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          }}
+        >
+          <Header
+            selectedSession={selectedSession}
+            handover={handover}
+            onToggleHandover={(v) => toggleHandover(v)}
+          />
+        </Box>
+
+        {/* 👇 الحاوية التي تتسكroll فقط هي ChatWindow */}
         {loading ? (
           <Box
             sx={{
               flex: 1,
+              minHeight: 0,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -405,20 +467,40 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
             <CircularProgress />
           </Box>
         ) : (
-          <>
-            <Box
-              flex={1}
-              minHeight={0}
-              sx={{ overflowY: "auto", bgcolor: "#fff" }}
-            >
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box sx={{ flex: 1, minHeight: 0 }}>
               <ChatWindow
                 messages={messages}
                 loading={loadingMessages}
                 onRate={handleRate}
               />
             </Box>
-            {selectedSession && <ChatInput onSend={handleSend} />}
-          </>
+
+            {/* ChatInput ثابت أسفل مساحة المحادثة */}
+            {selectedSession && (
+              <Box
+                sx={{
+                  position: "sticky",
+                  bottom: 0,
+                  zIndex: 1200,
+                  bgcolor: "background.paper",
+                  borderTop: `1px solid ${theme.palette.divider}`,
+                  backdropFilter: "blur(20px)",
+                  background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+                  boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+                }}
+              >
+                <ChatInput onSend={handleSend} />
+              </Box>
+            )}
+          </Box>
         )}
       </Box>
 

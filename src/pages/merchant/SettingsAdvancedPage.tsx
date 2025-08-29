@@ -264,6 +264,7 @@ export default function SettingsAdvancedPage() {
                   onChange={(e) => setPhone(e.target.value)}
                   fullWidth
                   placeholder="+9665xxxxxxxx"
+                  helperText="رقم الهاتف الشخصي (غير رقم الهاتف الخاص بالمتجر)"
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>

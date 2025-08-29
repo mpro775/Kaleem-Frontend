@@ -1,6 +1,7 @@
 // src/app/App.tsx
 import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Box } from "@mui/material";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
 import GlobalGradients from "./GlobalGradients";
@@ -97,10 +98,11 @@ const KleemRatingsPage = lazy(
 
 export default function App() {
   return (
-<Suspense fallback={<div style={{padding:16}}>جارِ التحميل…</div>}>
-<GlobalGradients />
+    <Box sx={{ overflowX: "hidden", maxWidth: "100vw", width: "100%" }}>
+      <Suspense fallback={<div style={{padding:16}}>جارِ التحميل…</div>}>
+        <GlobalGradients />
 
-      <Routes>
+        <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
@@ -210,6 +212,7 @@ export default function App() {
           element={<Navigate to="/admin/kleem" replace />}
         />
       </Routes>
-    </Suspense>
+      </Suspense>
+    </Box>
   );
 }
