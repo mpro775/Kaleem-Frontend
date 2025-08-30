@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import {
   Box,
   Typography,
@@ -13,94 +13,8 @@ import {
 import { styled } from "@mui/material/styles";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import theme from "@/theme/theme";
-interface Plan {
-  title: string;
-  price: number;
-  description: string;
-  features: string[];
-  popular?: boolean; // خاصية اختيارية
-}
-// بيانات الخطط (شهرية وسنوية)
-const pricingData: { monthly: Plan[]; yearly: Plan[] } = {
-  monthly: [
-    {
-      title: "البداية",
-      price: 99,
-      description: "ابدأ رحلتك مع الذكاء الاصطناعي",
-      features: [
-        "ردود آلية غير محدودة",
-        "دعم 3 منصات متاجر",
-        "إحصائيات أساسية",
-        "دعم فني عبر البريد الإلكتروني"
-      ],
-    },
-    {
-      title: "المحترف",
-      price: 199,
-      description: "أدوات متقدمة لنمو متجرك",
-      features: [
-        "جميع ميزة البداية",
-        "دعم 10 منصات متاجر",
-        "إحصائيات متقدمة",
-        "دعم فني على مدار الساعة",
-        "تكامل مع أنظمة الدفع",
-      ],
-      popular: true,
-    },
-    {
-      title: "الشركات",
-      price: 399,
-      description: "حلول مخصصة للشركات الكبرى",
-      features: [
-        "جميع ميزات المحترف",
-        "دعم غير محدود للمتاجر",
-        "تقارير مخصصة",
-        "مدير مخصص",
-        "أولوية في الدعم الفني",
-        "حلول مخصصة"
-      ],
-    },
-  ],
-  yearly: [
-    {
-      title: "البداية",
-      price: 79,
-      description: "ابدأ رحلتك مع الذكاء الاصطناعي",
-      features: [
-        "ردود آلية غير محدودة",
-        "دعم 3 منصات متاجر",
-        "إحصائيات أساسية",
-        "دعم فني عبر البريد الإلكتروني"
-      ],
-    },
-    {
-      title: "المحترف",
-      price: 159,
-      description: "أدوات متقدمة لنمو متجرك",
-      features: [
-        "جميع ميزة البداية",
-        "دعم 10 منصات متاجر",
-        "إحصائيات متقدمة",
-        "دعم فني على مدار الساعة",
-        "تكامل مع أنظمة الدفع",
-      ],
-      popular: true,
-    },
-    {
-      title: "الشركات",
-      price: 319,
-      description: "حلول مخصصة للشركات الكبرى",
-      features: [
-        "جميع ميزات المحترف",
-        "دعم غير محدود للمتاجر",
-        "تقارير مخصصة",
-        "مدير مخصص",
-        "أولوية في الدعم الفني",
-        "حلول مخصصة"
-      ],
-    },
-  ],
-};
+import { pricingData, type Plan } from '@/features/landing/data/pricingData'; // استيراد البيانات
+import { usePricingAnimation } from '@/features/landing/hooks/usePricingAnimation'; 
 
 // تصميم مخصص لبطاقة الأسعار
 const PlanCard = styled(Paper, {
@@ -157,15 +71,22 @@ export default function PricingSection() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
     "monthly"
   );
+  const sectionRef = useRef<HTMLDivElement>(null);
+  usePricingAnimation(sectionRef as RefObject<HTMLElement>, billingCycle);
 
   const handleCycleChange = (cycle: "monthly" | "yearly") => {
-    setBillingCycle(cycle);
+    // لا نغير الحالة إلا إذا كانت مختلفة لتجنب إعادة تشغيل الأنميشن
+    if (cycle !== billingCycle) {
+      setBillingCycle(cycle);
+    }
   };
 
+  // البيانات الآن ثابتة أثناء الأنميشن، والخطاف هو من يحدث الأرقام
   const plans = pricingData[billingCycle];
 
   return (
     <Box
+      ref={sectionRef}
       id="pricing"
       sx={{
         py: 10,
@@ -177,6 +98,7 @@ export default function PricingSection() {
       {/* العنوان والوصف */}
       <Box sx={{ textAlign: "center", mb: 6, maxWidth: "600px", mx: "auto" }}>
         <Typography
+          className="pricing-title"
           variant="h3"
           component="h2"
           fontWeight="bold"
@@ -184,13 +106,13 @@ export default function PricingSection() {
         >
           خطط الأسعار المناسبة لك
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography className="pricing-subtitle" variant="body1" color="text.secondary">
           اختر الباقة التي تناسب احتياجات عملك مع خصم يصل إلى 20% عند الاشتراك السنوي
         </Typography>
       </Box>
 
       {/* مفتاح التبديل شهري/سنوي */}
-      <Box sx={{ display: "flex", justifyContent: "center", mb: 6 }}>
+      <Box className="pricing-switch"  sx={{ display: "flex", justifyContent: "center", mb: 6 }}>
         <PricingSwitch>
           <SwitchButton
             active={billingCycle === "yearly"}
@@ -232,7 +154,7 @@ export default function PricingSection() {
                 }}
               />
             )}
-            <Typography variant="h4" component="div" fontWeight="bold">
+            <Typography className="plan-price" variant="h4" component="div" fontWeight="bold">
               ${plan.price}
               <Typography
                 component="span"

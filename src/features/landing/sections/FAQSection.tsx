@@ -11,45 +11,25 @@ import {
   alpha
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { useState } from "react";
-
-const faqs = [
-  { 
-    q: "هل يدعم العربية بالكامل؟", 
-    a: "نعم، الواجهة والردود تدعم اللغة العربية بالكامل مع دعم RTL والخطوط العربية المُحسّنة لتوفير تجربة مستخدم سلسة." 
-  },
-  { 
-    q: "كيف يتم التسعير؟", 
-    a: "نقدم باقات شهرية وسنوية مرنة مع إمكانية التجربة المجانية لمدة 14 يوم دون الحاجة لربط بطاقة ائتمانية." 
-  },
-  { 
-    q: "هل البيانات آمنة؟", 
-    a: "نستخدم أعلى معايير الأمان مع تشفير AES-256 وسياسات وصول محددة بالأدوار، بالإضافة لاستضافة البيانات في خوادم معتمدة." 
-  },
-  { 
-    q: "هل أستطيع ربط متجري الإلكتروني؟", 
-    a: "نعم، نوفر ربطًا مباشرًا مع منصات سلة وزد، كما سيتم إضافة دعم Shopify وWooCommerce قريبًا." 
-  },
-  { 
-    q: "ما مدى دقة الذكاء الاصطناعي؟", 
-    a: "يحقق نظامنا دقة تزيد عن 95% في فهم الاستفسارات العربية مع تحسينات مستمرة تعتمد على تعلم الآلة." 
-  },
-  { 
-    q: "هل يمكنني تخصيص الردود؟", 
-    a: "بالطبع، يمكنك تدريب النظام على ردود مخصصة لعلامتك التجارية وإضافة معرفة محددة لمجال عملك." 
-  }
-];
+import { useRef, useState, type RefObject } from "react";
+import { useFaqAnimation } from "@/features/landing/hooks/useFaqAnimation";
+import { faqs } from "@/features/landing/data/faqData";
 
 export default function FAQSection() {
   const theme = useTheme();
   const [expanded, setExpanded] = useState<string | false>(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
+  // 2. استدعاء الخطاف وتمرير المرجع له
+  useFaqAnimation(sectionRef as RefObject<HTMLElement>);
   const handleChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpanded(isExpanded ? panel : false);
   };
 
   return (
     <Box 
+    ref={sectionRef}
+
       id="faq"
       sx={{ 
         py: { xs: 6, md: 10 },
@@ -72,6 +52,7 @@ export default function FAQSection() {
           {/* Header */}
           <Box textAlign="center">
             <Typography 
+              className="faq-title"
               variant="h3" 
               component="h2"
               sx={{ 
@@ -85,6 +66,7 @@ export default function FAQSection() {
             </Typography>
             <Typography 
               variant="h6" 
+                   className="faq-subtitle"
               color="text.secondary"
               sx={{ 
                 maxWidth: '600px',
@@ -102,6 +84,7 @@ export default function FAQSection() {
             {faqs.map((faq, index) => (
               <Accordion
                 key={index}
+                className="faq-accordion-item" // <-- إضافة className
                 expanded={expanded === `panel${index}`}
                 onChange={handleChange(`panel${index}`)}
                 sx={{
@@ -184,6 +167,7 @@ export default function FAQSection() {
           {/* Call to Action */}
           <Box 
             textAlign="center" 
+            className="faq-cta" 
             sx={{
               mt: 4,
               p: 4,

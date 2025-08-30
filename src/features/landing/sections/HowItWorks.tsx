@@ -11,6 +11,8 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import ShareIcon from "@mui/icons-material/Share";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { useStepsAnimation } from '@/features/landing/hooks/useStepsAnimation';
+import { useRef, type RefObject } from "react";
 
 const steps = [
   {
@@ -174,9 +176,13 @@ const DurationBadge = styled(Box)(() => ({
 export default function HowItWorksStepsSection() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const sectionRef = useRef<HTMLElement>(null);
 
+  // 2. استدعاء الخطاف وتمرير المرجع له
+  useStepsAnimation(sectionRef as RefObject<HTMLElement>);
   return (
     <Box
+    ref={sectionRef}
       id="how-it-works"
       sx={{
         p: { xs: 3, md: 6 },
@@ -190,6 +196,7 @@ export default function HowItWorksStepsSection() {
       {/* العنوان الرئيسي */}
       <Box textAlign="center" mb={6}>
         <Typography
+         className="steps-title"
           component="h2"
           variant="h3"
           fontWeight={800}
@@ -205,6 +212,7 @@ export default function HowItWorksStepsSection() {
           كيف يعمل كليم في ٤ خطوات سهلة؟
         </Typography>
         <Typography
+         className="steps-subtitle"
           variant="h6"
           color="#666"
           fontWeight={400}
@@ -228,6 +236,7 @@ export default function HowItWorksStepsSection() {
       >
         {steps.map((step, idx) => (
           <Box
+          className="step-box-item"
             key={idx}
             sx={{
               flex: 1,
@@ -236,7 +245,7 @@ export default function HowItWorksStepsSection() {
               position: "relative",
             }}
           >
-            <StepBox>
+            <StepBox className="step-box-animated">
               {/* رقم الخطوة */}
               <StepNumber className="step-number">{idx + 1}</StepNumber>
 
@@ -279,11 +288,9 @@ export default function HowItWorksStepsSection() {
                 {step.duration}
               </DurationBadge>
 
-              {/* خط الربط الأفقي */}
-              {!isMobile && idx < steps.length - 1 && <ConnectorLine />}
-
-              {/* خط الربط العمودي للموبايل */}
-              {isMobile && idx < steps.length - 1 && <VerticalConnector />}
+             {/* سنضيف className لخطوط الربط */}
+             {!isMobile && idx < steps.length - 1 && <ConnectorLine className="connector-line" />}
+              {isMobile && idx < steps.length - 1 && <VerticalConnector className="connector-line" />}
             </StepBox>
           </Box>
         ))}

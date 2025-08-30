@@ -18,6 +18,8 @@ import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import ChatRoundedIcon from "@mui/icons-material/ChatRounded";
 import RocketLaunchRoundedIcon from "@mui/icons-material/RocketLaunchRounded";
 import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineRounded";
+import { useStorefrontAnimation } from '@/features/landing/hooks/useStorefrontAnimation';
+import { useRef, type RefObject } from "react";
 
 // ========= تصميم القسم الأساسي بخلفية متدرجة وإضاءات =========
 const Section = styled(Box)(({ theme }) => ({
@@ -96,7 +98,7 @@ const featureDetails: FeatureItem[] = [
   },
   {
     icon: ChatRoundedIcon,
-    text: "دردشة واتساب/تيليجرام مدمجة للشراء عبر المحادثة",
+    text: "دردشة  مدمجة للشراء عبر المحادثة",
   },
   { icon: ShieldRoundedIcon, text: "سياسات شحن/استبدال + صلاحيات آمنة" },
   {
@@ -109,7 +111,9 @@ const featureDetails: FeatureItem[] = [
 function StorefrontPreview() {
   return (
     <GlassCard
-      sx={{
+      className="storefront-preview" // <-- إضافة className
+
+    sx={{
         flex: "1 1 360px",
         minWidth: 0,
         p: 3,
@@ -122,6 +126,8 @@ function StorefrontPreview() {
         sx={{ position: "absolute", top: 12, left: 12, opacity: 0.9 }}
       />
       <Box
+        className="storefront-preview-image" // <-- إضافة className
+
         sx={{
           borderRadius: 14,
           overflow: "hidden",
@@ -171,13 +177,17 @@ function StorefrontPreview() {
 }
 
 export default function StorefrontSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+  useStorefrontAnimation(sectionRef as RefObject<HTMLElement>);
   return (
-    <Section id="storefront" dir="rtl">
+    <Section ref={sectionRef} id="storefront" dir="rtl">
       <Container maxWidth="lg" sx={{ px: 2 }}>
         {/* الرأس */}
         <Box sx={{ textAlign: "center", mb: 5 }}>
           <Chip label="ميزة أساسية" />
           <Typography
+                      className="storefront-title" // <-- إضافة className
+
             variant="h3"
             sx={{ mt: 1.5, mb: 1, fontWeight: 800, letterSpacing: 0 }}
           >
@@ -185,6 +195,8 @@ export default function StorefrontSection() {
           </Typography>
           <Typography
             variant="subtitle1"
+            className="storefront-subtitle" // <-- إضافة className
+
             color="text.secondary"
             sx={{ maxWidth: 900, mx: "auto" }}
           >
@@ -238,6 +250,7 @@ export default function StorefrontSection() {
         >
           {/* كرت تعريفي غني */}
           <GlassCard
+            className="storefront-main-card" // 
             sx={{
               flex: "1 1 360px",
               minWidth: 0,
@@ -245,11 +258,11 @@ export default function StorefrontSection() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-              لماذا المتجر المصغّر؟
+              لماذا المتجر ؟
             </Typography>
             <Typography color="text.secondary" sx={{ mb: 2, lineHeight: 1.9 }}>
-              مناسب للبدايات السريعة والبيع عبر المحادثات وروابط الدفع المباشرة.
-              ولو احتجت لاحقًا مزايا أوسع (بوابات دفع/شحن متقدمة)، تقدر تنتقل
+              مناسب للبدايات السريعة والبيع عبر المحادثات .
+              ولو احتجت لاحقًا مزايا أوسع تقدر تنتقل
               لسلة/زد وتستمر تستخدم كليم بالتكامل.
             </Typography>
 
@@ -269,16 +282,15 @@ export default function StorefrontSection() {
                 <LinkRoundedIcon fontSize="small" />
                 رابط فوري
               </Pill>
-              <Pill>
-                <ChatRoundedIcon fontSize="small" />
-                واتساب/تيليجرام
-              </Pill>
+           
             </Box>
 
             {/* قائمة ميزات تفصيلية */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
               {featureDetails.map(({ icon: IconCmp, text }) => (
                 <Box
+                className="feature-detail-item" // <-- إضافة className
+
                   key={text}
                   sx={{ display: "flex", alignItems: "center", gap: 1.25 }}
                 >
@@ -291,13 +303,18 @@ export default function StorefrontSection() {
               ))}
             </Box>
           </GlassCard>
+          <Box className="storefront-main-card" sx={{ flex: "1 1 360px", minWidth: 0 }}>
 
           {/* معاينة متجر */}
           <StorefrontPreview />
+          </Box>
+
         </Box>
 
         {/* كرت “كيف يعمل؟” بعرض كامل */}
         <GlassCard
+                  className="storefront-how-it-works" // <-- إضافة className
+
           sx={{
             p: { xs: 3, md: 4 },
             mt: 1,

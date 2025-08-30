@@ -1,5 +1,5 @@
 // HeroSection.tsx
-import React from "react"; // يجب استيراد React لتعريف المكونات
+import React, { useEffect, useRef, type RefObject } from "react"; // يجب استيراد React لتعريف المكونات
 import { Box, Button, Container, Typography, useMediaQuery } from "@mui/material";
 import bgShape from "@/assets/Vector.png";
 import bgShape2 from "@/assets/Vector2.png";
@@ -7,11 +7,37 @@ import { useTheme } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import KaleemLogoGsap from "./KaleemLogoGsap";
 // تعريف واجهة للـ Props
+import { useStaggeredAnimation } from "@/features/landing/hooks/useStaggeredAnimation"; 
+const AnimatedWords: React.FC<{ text: string }> = ({ text }) => {
+	return (
+	  <>
+		{text.split(' ').map((word, index) => (
+		  <span key={index} style={{ display: 'inline-block', marginRight: '0.5em' }}>
+			{word}
+		  </span>
+		))}
+	  </>
+	);
+  };
 
 const HeroSection: React.FC = () => {
 	const theme = useTheme();
 	const isXs = useMediaQuery(theme.breakpoints.down("sm"));
 	const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
+
+	const h2Ref = useRef<HTMLHeadingElement>(null);
+    const pRef = useRef<HTMLParagraphElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+	useStaggeredAnimation(h2Ref as RefObject<HTMLElement>, 0.5); // يبدأ العنوان بعد 0.5 ثانية
+    useStaggeredAnimation(pRef as RefObject<HTMLElement>, 1.0);   // يبدأ النص الفرعي بعد 1 ثانية
+	useEffect(() => {
+        if (buttonRef.current) {
+            gsap.fromTo(buttonRef.current, 
+                { opacity: 0, scale: 0.8 }, 
+                { opacity: 1, scale: 1, duration: 0.7, delay: 1.5, ease: 'back.out(1.7)' }
+            );
+        }
+    }, []);
 	const navigate = useNavigate();
 	return (
 		<Box
@@ -109,6 +135,7 @@ const HeroSection: React.FC = () => {
 					{/* Text Content */}
 					<Box sx={{ textAlign: { xs: "center", md: "left" } }}>
 						<Typography
+							ref={h2Ref}
 							variant={isMdUp ? "h2" : "h3"}
 							component="h2"
 							sx={{
@@ -119,12 +146,11 @@ const HeroSection: React.FC = () => {
 								lineHeight: { xs: 1.25, md: 1.3 },
 							}}
 						>
-							دع كليم يرد على عملائك...
-							<Box component="span" sx={{ color: "#563fa6" }}>
-								خلال ثوانٍ
-							</Box>
+							                            <AnimatedWords text="دع كليم يرد على عملائك خلال ثوانٍ" />
+
 						</Typography>
 						<Typography
+							ref={pRef}
 							variant="h6"
 							color="text.secondary"
 							sx={{
@@ -139,6 +165,7 @@ const HeroSection: React.FC = () => {
 							ويقترح الأفضل تلقائيًا.
 						</Typography>
 						<Button
+							ref={buttonRef}
 							variant="contained"
 							size="large"
 							onClick={() => navigate("/signup")}

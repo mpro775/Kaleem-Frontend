@@ -1,29 +1,11 @@
 import { Box, Typography, Paper } from "@mui/material";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
-import RecommendIcon from "@mui/icons-material/Recommend";
-import AppsIcon from "@mui/icons-material/Apps";
-import DashboardIcon from "@mui/icons-material/Dashboard";
+
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import { useComparisonAnimation } from "../hooks/useComparisonAnimation";
+import { useRef, type RefObject } from "react";
+import { afterItems, beforeItems } from "../data/comparisonData";
 
-// بيانات قائمة "قبل"
-const beforeItems = [
-  { icon: <AccessTimeIcon />, text: "تأخير في الردود" },
-  { icon: <ChatBubbleOutlineIcon />, text: "إدارة يدوية للطلبات" },
-  { icon: <RecommendIcon />, text: "لا توجد توصيات للعملاء" },
-  { icon: <AppsIcon />, text: "ردود غير موحدة" },
-  { icon: <DashboardIcon />, text: "عدم توفر لوحة تحكم" },
-];
-
-// بيانات قائمة "بعد"
-const afterItems = [
-  { icon: <AccessTimeIcon />, text: "ردود فورية عبر المنصات" },
-  { icon: <ChatBubbleOutlineIcon />, text: "إدارة تلقائية ذكية" },
-  { icon: <RecommendIcon />, text: "توصية العملاء" },
-  { icon: <AppsIcon />, text: "ردود ذكية موحدة ومخصصة" },
-  { icon: <DashboardIcon />, text: "لوحة تحكم مخصصة لكل تاجر" },
-];
 
 // مكون فرعي لإنشاء كل عنصر في القائمة
 const ComparisonItem = ({
@@ -108,9 +90,12 @@ const ComparisonItem = ({
 
 // المكون الرئيسي للمقارنة
 export default function BeforeAfterComparison() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  useComparisonAnimation(sectionRef as RefObject<HTMLElement>);
   return (
-    <Box sx={{ py: 8, px: 2, bgcolor: "#f9fafb" }}>
+    <Box ref={sectionRef} sx={{ py: 8, px: 2, bgcolor: "#f9fafb" }}>
       <Typography
+         className="comparison-title"
         variant="h3"
         component="h2"
         fontWeight="bold"
@@ -141,12 +126,13 @@ export default function BeforeAfterComparison() {
             بعد كَلِيم
           </Typography>
           {afterItems.map((item, index) => (
-            <ComparisonItem
-              key={index}
-              icon={item.icon}
-              text={item.text}
-              type="after"
-            />
+             <Box key={index} className="after-item"> 
+             <ComparisonItem
+               icon={item.icon}
+               text={item.text}
+               type="after"
+             />
+           </Box>
           ))}
         </Box>
 
@@ -161,12 +147,14 @@ export default function BeforeAfterComparison() {
             قبل كَلِيم
           </Typography>
           {beforeItems.map((item, index) => (
-            <ComparisonItem
+            <Box key={index} className="before-item"> 
+             <ComparisonItem
               key={index}
               icon={item.icon}
               text={item.text}
               type="before"
             />
+            </Box>
           ))}
         </Box>
       </Box>

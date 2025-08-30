@@ -1,497 +1,155 @@
 // src/components/landing/IntegrationsSection.tsx
+import { useEffect, useRef } from "react";
 import {
   Box,
   Typography,
-  Paper,
-  Chip,
-  Tooltip,
   IconButton,
-  useMediaQuery,
-  useTheme,
   ButtonBase,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
-import { styled } from "@mui/material/styles";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
-import StorefrontIcon from "@mui/icons-material/Storefront";
-import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
-import ExtensionIcon from "@mui/icons-material/Extension";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-import SallaIcon from "@/assets/Salla.svg";
-import ZidIcon from "@/assets/Zid.svg";
-import ShopifyIcon from "@/assets/Shopify.svg";
-import WooCommerceIcon from "@/assets/WooCommerce.svg";
+import { useCarousel } from "@/features/landing/hooks/useCarousel";
+import { IntegrationCard } from "@/features/landing/ui/IntegrationCard";
+import { items } from "@/features/landing/data/integrationsData";
 
-type Item = {
-  title: string;
-  desc: string;
-  iconImg?: string;
-  Icon?: typeof StorefrontIcon;
-  soon?: boolean;
-  /** مقياس اختياري لتكبير/تصغير الشعار داخل الإطار الموحّد */
-  scale?: number; // 1 = عادي، 1.2 = تكبير 20%
-};
-
-const items: Item[] = [
-  {
-    title: "Salla",
-    desc: "مزامنة سلسة للمنتجات، الأسعار، والمخزون مع متجرك.",
-    iconImg: SallaIcon,
-    // تكبير بسيط لتعويض فراغ الـ viewBox
-    scale: 1.25,
-  },
-  {
-    title: "Zid",
-    desc: "تحديثات فورية للمخزون وبيانات المنتجات تلقائيًا.",
-    iconImg: ZidIcon,
-    scale: 1.25,
-  },
-  {
-    title: "Shopify",
-    desc: "تكامل عالمي لمتجر إلكتروني احترافي.",
-    iconImg: ShopifyIcon,
-    Icon: ShoppingBagIcon,
-    soon: true,
-  },
-  {
-    title: "WooCommerce",
-    desc: "ربط قوي مع منصة ووردبريس لإدارة أعمالك.",
-    iconImg: WooCommerceIcon,
-    Icon: ExtensionIcon,
-    soon: true,
-  },
-];
-
-const Section = styled(Box)(({ theme }) => ({
-  paddingTop: theme.spacing(10),
-  paddingBottom: theme.spacing(10),
-  paddingLeft: theme.spacing(2),
-  paddingRight: theme.spacing(2),
-  backgroundColor:
-    theme.palette.mode === "dark"
-      ? theme.palette.background.default
-      : theme.palette.grey[50],
-  position: "relative",
-  overflow: "hidden",
-  maxWidth: "100vw",
-  width: "100%",
-}));
-
-const IntegrationCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  height: "100%",
-  borderRadius: theme.shape.borderRadius as number * 2,
-  boxShadow: theme.shadows[5],
-  transition: "transform 0.3s ease, box-shadow 0.3s ease",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  textAlign: "center",
-  cursor: "default",
-  position: "relative",
-  "&:hover": {
-    transform: "translateY(-8px)",
-    boxShadow: theme.shadows[12],
-  },
-}));
-
-/** إطار موحّد لكل الشعارات */
-const BRAND_BOX = {
-  // مربّع أيقونة موحّد
-  width: { xs: 64, md: 72 },
-  height: { xs: 64, md: 72 },
-  mb: 2,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-} as const;
-
-function BrandVisual({ item }: { item: Item }) {
-  const scale = item.scale ?? 1; // افتراضي بدون سكّيل
-  if (item.iconImg) {
-    return (
-      <Box sx={BRAND_BOX}>
-        <Box
-          component="img"
-          src={item.iconImg}
-          alt={item.title}
-          sx={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            transform: `scale(${scale})`,
-            transformOrigin: "center",
-            userSelect: "none",
-            display: "block",
-          }}
-        />
-      </Box>
-    );
-  }
-  if (item.Icon) {
-    const Cmp = item.Icon;
-    return (
-      <Box sx={BRAND_BOX}>
-        <Cmp
-          sx={{
-            fontSize: { xs: 48, md: 56 },
-            color: (theme) => theme.palette.primary.main,
-            transform: `scale(${scale})`,
-            transformOrigin: "center",
-          }}
-        />
-      </Box>
-    );
-  }
-  return <Box sx={BRAND_BOX} />;
-}
+gsap.registerPlugin(ScrollTrigger);
 
 export default function IntegrationsSection() {
   const theme = useTheme();
-  const isMdUp = useMediaQuery(theme.breakpoints.up("md")); // ≥ md -> 4
-  const isSmUp = useMediaQuery(theme.breakpoints.up("sm")); // ≥ sm -> 2 (وإلا 1)
+  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
+  const isSmUp = useMediaQuery(theme.breakpoints.up("sm"));
+  const slidesPerView = isMdUp ? 4 : isSmUp ? 2 : 1;
 
-  const perView = isMdUp ? 4 : isSmUp ? 2 : 1;
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const {
+    emblaRef,
+    emblaApi,
+    scrollSnaps,
+    selectedIndex,
+    scrollTo,
+    scrollPrev,
+    scrollNext,
+  } = useCarousel({
+    emblaOptions: { loop: true, slidesToScroll: slidesPerView, align: "start" },
+    autoplayOptions: { delay: 6000, stopOnInteraction: true },
+  });
 
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const [page, setPage] = useState(0);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const totalPages = useMemo(() => {
-    const calculated = Math.ceil(items.length / perView);
-    return Math.max(1, calculated);
-  }, [perView, items.length]);
-
-  // Auto-scroll functionality
+  // أنميشن الدخول للقسم والبطاقات
   useEffect(() => {
-    if (!autoScroll) return;
-
-    const interval = setInterval(() => {
-      setPage((p) => {
-        const nextPage = (p + 1) % totalPages;
-        return nextPage;
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 80%",
+          toggleActions: "play none none none",
+        },
       });
-    }, 5000);
-
-    scrollInterval.current = interval;
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoScroll, totalPages]);
-
-  // Sync scroll position with page state
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-
-    const targetScrollLeft = page * el.clientWidth;
-
-    // Only scroll if we're not already at the target position
-    if (Math.abs(el.scrollLeft - targetScrollLeft) > 10) {
-      setIsScrolling(true);
-      el.scrollTo({
-        left: targetScrollLeft,
-        behavior: "smooth",
-      });
-
-      // Reset scrolling flag after animation
-      setTimeout(() => setIsScrolling(false), 500);
-    }
-
-    // Pause auto-scroll on manual interaction
-    const pauseAutoScroll = () => {
-      setAutoScroll(false);
-      if (scrollInterval.current) {
-        clearTimeout(scrollInterval.current);
+      const titleElement = sectionRef.current?.querySelector(".integrations-title");
+      
+      if (titleElement) {
+        tl.from(titleElement, {
+          opacity: 0,
+          y: -50,
+          duration: 0.8,
+          ease: "power3.out",
+        }).from(
+          gsap.utils.toArray(".integration-card-item"),
+          {
+            opacity: 0,
+            y: 50,
+            duration: 0.6,
+            ease: "power3.out",
+            stagger: 0.15, // التأثير المتتالي الرائع!
+          },
+          "-=0.5"
+        );
       }
-      setTimeout(() => setAutoScroll(true), 10000); // Resume after 10s
-    };
+    }, sectionRef);
+    return () => ctx.revert();
+  }, []);
 
-    el.addEventListener("touchstart", pauseAutoScroll);
-    el.addEventListener("mousedown", pauseAutoScroll);
-
-    return () => {
-      el.removeEventListener("touchstart", pauseAutoScroll);
-      el.removeEventListener("mousedown", pauseAutoScroll);
-    };
-  }, [page, totalPages]);
-
-  // Reset page when perView changes
-  useEffect(() => {
-    setPage(0);
-  }, [perView]);
-
-  // Move to specific page
-// استبدل scrollToPage بالكامل بهذه النسخة
-const scrollToPage = (p: number) => {
-  const el = trackRef.current;
-  if (!el) return;
-
-  const newPage = Math.max(0, Math.min(p, totalPages - 1));
-  setPage(newPage);
-  setAutoScroll(false);
-
-  // أوّل عنصر في هذه الصفحة
-  const firstIndex = newPage * perView;
-  const child = el.children.item(firstIndex) as HTMLElement | null;
-  const left = child ? child.offsetLeft : newPage * el.clientWidth;
-
-  el.scrollTo({ left, behavior: "smooth" });
-
-  if (scrollInterval.current) clearTimeout(scrollInterval.current as any);
-  setTimeout(() => setAutoScroll(true), 10000);
-};
-
-
-  const next = () => scrollToPage(page + 1);
-  const prev = () => scrollToPage(page - 1);
-
-  // Sync indicator on manual scroll
-  const onScroll = () => {
-    const el = trackRef.current;
-    if (!el || isScrolling) return;
-  
-    // ابنِ قائمة مواضع أوّل عنصر في كل صفحة
-    const firsts: number[] = [];
-    for (let p = 0; p < totalPages; p++) {
-      const idx = p * perView;
-      const child = el.children.item(idx) as HTMLElement | null;
-      firsts.push(child ? child.offsetLeft : p * el.clientWidth);
-    }
-  
-    // اختر أقرب صفحة للموضع الحالي
-    const x = el.scrollLeft;
-    let nearest = 0;
-    let best = Infinity;
-    for (let p = 0; p < firsts.length; p++) {
-      const d = Math.abs(firsts[p] - x);
-      if (d < best) { best = d; nearest = p; }
-    }
-  
-    if (nearest !== page) {
-      setPage(nearest);
-      setAutoScroll(false);
-      if (scrollInterval.current) clearTimeout(scrollInterval.current as any);
-      setTimeout(() => setAutoScroll(true), 10000);
-    }
-  };
-  
   return (
-    <Section id="integrations">
+    <Box ref={sectionRef} id="integrations" sx={{ py: 8, bgcolor: "grey.50" }}>
       <Typography
+        className="integrations-title"
         variant="h4"
-        textAlign="center"
-        sx={{ mb: { xs: 5, md: 8 }, fontWeight: 800, letterSpacing: 0.2 }}
-        color="primary"
+        fontWeight="bold"
+        align="center"
+        color="primary.dark"
+        mb={6}
       >
         تكاملات تمنحك القوة
       </Typography>
 
-      {/* حاوية السلايدر */}
-      <Box
-        sx={{
-          position: "relative",
-          mx: "auto",
-          maxWidth: { xs: "100%", sm: 1400 },
-          width: "100%",
-          px: { xs: 0, sm: 2, md: 0 },
-          overflowX: "hidden",
-          // حواف تدرج شفافة
-          "&::before, &::after": {
-            content: '""',
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            width: 48,
-            pointerEvents: "none",
-            zIndex: 2,
-            display: { xs: "none", sm: "block" },
-          },
-          "&::before": {
-            left: 0,
-            background:
-              "linear-gradient(to right, rgba(248,250,252,1), rgba(248,250,252,0))",
-          },
-          "&::after": {
-            right: 0,
-            background:
-              "linear-gradient(to left, rgba(248,250,252,1), rgba(248,250,252,0))",
-          },
-        }}
-      >
-        {/* المسار */}
-        <Box
-          ref={trackRef}
-          onScroll={onScroll}
-          dir="ltr"
-          sx={{
-            display: "flex",
-            overflowX: "auto",
-            scrollSnapType: { xs: "x mandatory", md: "none" },
-            scrollBehavior: "smooth",
-            scrollbarWidth: "none",
-            "&::-webkit-scrollbar": { display: "none" },
-            gap: { xs: 4, sm: 8, md: 16 },
-            px: { xs: 1, sm: 3, md: 3 },
-            scrollPaddingInline: { xs: 8, sm: 24, md: 24 },
-            justifyContent: { xs: "center", sm: "flex-start" },
-            maxWidth: "100%",
-            width: "100%",
-          }}
-        >
-          {/* العنصر (الكارت) */}
-          {items.map((item) => (
-            <Box
-              key={item.title}
-              sx={{
-                flex: "0 0 auto",
-                // عرض الكارت بحسب perView مع هوامش
-                width: {
-                  xs: "calc(100% - 8px)",
-                  sm: "calc((100% - 8px) / 2)",
-                  md: "calc((100% - 3 * 16px) / 4)",
-                },
-                minWidth: { xs: 280, sm: 200, md: 250 },
-                mx: 0,
-                my: 1,
-                scrollSnapAlign: { xs: "start", md: "unset" },
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                "&:hover": {
-                  transform: "translateY(-8px)",
-                },
-              }}
-            >
-              <IntegrationCard>
-                {item.soon && (
-                  <Chip
-                    label="قريبًا"
-                    color="default"
-                    size="small"
-                    sx={{
-                      position: "absolute",
-                      top: 10,
-                      right: 10,
-                      opacity: 0.9,
-                    }}
-                  />
-                )}
-
-                <BrandVisual item={item} />
-
-                <Tooltip title={item.title}>
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 700, mb: 1, fontSize: "1.15rem" }}
-                  >
-                    {item.title}
-                  </Typography>
-                </Tooltip>
-
-                <Typography
-                  variant="body1"
-                  color="text.secondary"
-                  sx={{ lineHeight: 1.9 }}
-                >
-                  {item.desc}
-                </Typography>
-              </IntegrationCard>
-            </Box>
-          ))}
+      <Box sx={{ position: "relative", maxWidth: 1200, mx: "auto" }}>
+        <Box ref={emblaRef} sx={{ overflow: "hidden" }}>
+          <Box
+            sx={{ display: "flex", direction: "rtl", gap: { xs: 2, sm: 3 } }}
+          >
+            {items.map((item, i) => (
+              <Box
+                key={i}
+                className="integration-card-item"
+                sx={{
+                  flex: {
+                    xs: "0 0 90%",
+                    sm: "0 0 48%",
+                    md: `0 0 calc(${100 / slidesPerView}% - ${
+                      (3 * (slidesPerView - 1)) / slidesPerView
+                    }px)`,
+                  },
+                }}
+              >
+                <IntegrationCard item={item} />
+              </Box>
+            ))}
+          </Box>
         </Box>
 
-        {/* أزرار التصفح */}
+        {/* أزرار التحكم */}
         <IconButton
-          aria-label="السابق"
-          onClick={prev}
-          disabled={page === 0}
+          onClick={scrollPrev}
           sx={{
             position: "absolute",
             top: "50%",
-            left: { xs: 4, sm: 8 },
-            transform: "translateY(-50%)",
-            zIndex: 3,
-            bgcolor: "background.paper",
-            boxShadow: 2,
-            width: 40,
-            height: 40,
-            "&:hover": {
-              bgcolor: "background.paper",
-              transform: "translateY(-50%) scale(1.1)",
-            },
-            transition: "all 0.2s ease",
-            opacity: page === 0 ? 0.5 : 1,
-            "&.Mui-disabled": {
-              opacity: 0.3,
-            },
+            left: { xs: -10, sm: -20 } /* ... */,
           }}
         >
           <ChevronLeftRoundedIcon />
         </IconButton>
-
         <IconButton
-          aria-label="التالي"
-          onClick={next}
-          disabled={page === totalPages - 1}
+          onClick={scrollNext}
           sx={{
             position: "absolute",
             top: "50%",
-            right: { xs: 4, sm: 8 },
-            transform: "translateY(-50%)",
-            zIndex: 3,
-            bgcolor: "background.paper",
-            boxShadow: 2,
-            width: 40,
-            height: 40,
-            "&:hover": {
-              bgcolor: "background.paper",
-              transform: "translateY(-50%) scale(1.1)",
-            },
-            transition: "all 0.2s ease",
-            opacity: page === totalPages - 1 ? 0.5 : 1,
-            "&.Mui-disabled": {
-              opacity: 0.3,
-            },
+            right: { xs: -10, sm: -20 } /* ... */,
           }}
         >
           <ChevronRightRoundedIcon />
         </IconButton>
       </Box>
 
-      {/* النقاط (Pagination) */}
-      <Box
-        sx={{
-          mt: 4,
-          mb: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1.5,
-        }}
-      >
-        {Array.from({ length: totalPages }).map((_, i) => (
+      {/* نقاط التنقل */}
+      <Box sx={{ display: "flex", justifyContent: "center", gap: 1.5, mt: 4 }}>
+        {scrollSnaps.map((_, i) => (
           <ButtonBase
             key={i}
-            onClick={() => scrollToPage(i)}
-            aria-label={`الذهاب إلى الصفحة ${i + 1}`}
+            onClick={() => scrollTo(i)}
             sx={{
-              width: i === page ? 24 : 12,
+              width: i === selectedIndex ? 24 : 12,
               height: 12,
               borderRadius: 6,
-              bgcolor: i === page ? "primary.main" : "action.selected",
-              opacity: i === page ? 1 : 0.5,
+              bgcolor: i === selectedIndex ? "primary.main" : "action.selected",
               transition: "all 0.3s ease",
-              "&:hover": {
-                opacity: 1,
-                bgcolor: i === page ? "primary.dark" : "action.hover",
-              },
             }}
           />
         ))}
       </Box>
-    </Section>
+    </Box>
   );
 }
