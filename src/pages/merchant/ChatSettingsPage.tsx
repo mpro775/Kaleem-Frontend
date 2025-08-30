@@ -16,7 +16,6 @@ import {
   Tooltip,
   CircularProgress,
   Snackbar,
-  useMediaQuery,
   useTheme,
 } from "@mui/material";
 import {
@@ -65,7 +64,6 @@ const ALLOWED_BRAND_DARK = [
 
 export default function ChatWidgetConfigSinglePage() {
   const theme = useTheme();
-  const isSm = useMediaQuery(theme.breakpoints.down("sm"));
   const { user } = useAuth();
   const merchantId = user?.merchantId ?? "";
   const ORIGIN = typeof window !== "undefined" ? window.location.origin : "";
