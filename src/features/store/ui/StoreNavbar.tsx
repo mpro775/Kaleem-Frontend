@@ -16,10 +16,12 @@ import {
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import MenuIcon from "@mui/icons-material/Menu";
 import StorefrontIcon from "@mui/icons-material/Storefront";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useCart } from "@/context/CartContext";
 import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
 import type { Storefront } from "@/features/mechant/storefront-theme/type";
 import CartDialog from "./CartDialog";
+import CustomerInfoDialog from "@/features/store/home/ui/CustomerInfoDialog";
 import { useNavigate, useParams } from "react-router-dom";
 import { getSessionId } from "@/shared/utils/session";
 import { getLocalCustomer } from "@/shared/utils/customer";
@@ -35,6 +37,7 @@ export function StoreNavbar({ merchant }: Props) {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { items } = useCart();
   const [openCart, setOpenCart] = useState(false);
+  const [openInfo, setOpenInfo] = useState(false);
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -52,7 +55,6 @@ export function StoreNavbar({ merchant }: Props) {
       <AppBar
         position="sticky"
         sx={{
-          mb: 4,
           borderRadius: 0,
           backgroundColor: "var(--brand)",
           color: "var(--on-brand)",
@@ -106,6 +108,15 @@ export function StoreNavbar({ merchant }: Props) {
               >
                 <MenuItem
                   onClick={() => {
+                    navigate(`/store/${slug}`);
+                    handleCloseMenu();
+                  }}
+                >
+                  الصفحة الرئيسية
+                </MenuItem>
+
+                <MenuItem
+                  onClick={() => {
                     navigate(`/store/${slug}/about`);
                     handleCloseMenu();
                   }}
@@ -120,6 +131,19 @@ export function StoreNavbar({ merchant }: Props) {
                   }}
                 >
                   طلباتي
+                </MenuItem>
+
+                {/* ✅ معلوماتي داخل القائمة في الموبايل */}
+                <MenuItem
+                  onClick={() => {
+                    setOpenInfo(true);
+                    handleCloseMenu();
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <InfoOutlinedIcon sx={{ mr: 1 }} />
+                    معلوماتي
+                  </Box>
                 </MenuItem>
 
                 <MenuItem
@@ -165,7 +189,6 @@ export function StoreNavbar({ merchant }: Props) {
                   background: "var(--brand)",
                   "&:hover": { backgroundColor: "var(--brand-hover)" },
                 }}
-
                 onClick={() => navigate(`/store/${slug}/about`)}
               >
                 من نحن
@@ -176,13 +199,26 @@ export function StoreNavbar({ merchant }: Props) {
                   fontWeight: "bold",
                   mx: 1,
                   background: "var(--brand)",
-
                   color: "var(--on-brand)",
                   "&:hover": { backgroundColor: "var(--brand-hover)" },
                 }}
                 onClick={() => navigate(`/store/${slug}/my-orders`)}
               >
                 طلباتي
+              </Button>
+
+              {/* ✅ زر معلوماتي في الديسكتوب */}
+              <Button
+                sx={{
+                  fontWeight: "bold",
+                  mx: 1,
+                  background: "var(--brand)",
+                  color: "var(--on-brand)",
+                  "&:hover": { backgroundColor: "var(--brand-hover)" },
+                }}
+                onClick={() => setOpenInfo(true)}
+              >
+                معلوماتي
               </Button>
 
               <IconButton
@@ -202,6 +238,7 @@ export function StoreNavbar({ merchant }: Props) {
         </Toolbar>
       </AppBar>
 
+      {/* ✅ سلة المشتريات */}
       <CartDialog
         open={openCart}
         onClose={() => setOpenCart(false)}
@@ -211,6 +248,13 @@ export function StoreNavbar({ merchant }: Props) {
         onOrderSuccess={(orderId) => {
           navigate(`/store/${slug}/order/${orderId}`);
         }}
+      />
+
+      {/* ✅ دايلوج معلوماتي */}
+      <CustomerInfoDialog
+        open={openInfo}
+        onClose={() => setOpenInfo(false)}
+        merchantId={merchant._id}
       />
     </>
   );

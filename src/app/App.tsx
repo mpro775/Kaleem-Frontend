@@ -7,6 +7,7 @@ import RoleRoute from "./routes/RoleRoute";
 import GlobalGradients from "./GlobalGradients";
 import InstructionsPage from "@/pages/merchant/InstructionsPage";
 import ContactPage from "@/pages/public/Contact";
+import ProductDetailsPageWithCart from "@/pages/store/ProductDetailsPage";
 // === Public ===
 const Home = lazy(() => import("@/pages/public/Home"));
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
@@ -121,7 +122,7 @@ export default function App() {
         <Route path="/store/:slug/my-orders" element={<MyOrdersPage />} />
         <Route
           path="/store/:slug/product/:productId"
-          element={<ProductDetailsPage />}
+          element={<ProductDetailsPageWithCart />}
         />
         <Route path="/store/:slug/about" element={<AboutPage />} />
 

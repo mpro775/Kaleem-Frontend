@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Typography, Stack, Paper, Button } from "@mui/material";
+import { Box, Typography, Stack, Paper } from "@mui/material";
 import ProductsActions from "@/features/mechant/products/ui/ProductsActions";
 import ProductsTable from "@/features/mechant/products/ui/ProductsTable";
 import AddProductDialog from "@/features/mechant/products/ui/AddProductDialog";

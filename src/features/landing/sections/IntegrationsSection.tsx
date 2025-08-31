@@ -12,7 +12,6 @@ import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-
 import { useCarousel } from "@/features/landing/hooks/useCarousel";
 import { IntegrationCard } from "@/features/landing/ui/IntegrationCard";
 import { items } from "@/features/landing/data/integrationsData";
@@ -21,25 +20,31 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function IntegrationsSection() {
   const theme = useTheme();
-  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
-  const isSmUp = useMediaQuery(theme.breakpoints.up("sm"));
-  const slidesPerView = isMdUp ? 4 : isSmUp ? 2 : 1;
-
+  const isSm = useMediaQuery(theme.breakpoints.down("sm")); // <600px
+  const isMd = useMediaQuery(theme.breakpoints.between("sm", "md")); // 600–900
   const sectionRef = useRef<HTMLDivElement>(null);
+
+  // كم كارد نعرض؟
+  const slidesPerView = isSm ? 1 : isMd ? 2 : 4;
+
   const {
     emblaRef,
-    emblaApi,
     scrollSnaps,
     selectedIndex,
     scrollTo,
     scrollPrev,
     scrollNext,
   } = useCarousel({
-    emblaOptions: { loop: true, slidesToScroll: slidesPerView, align: "start" },
+    emblaOptions: {
+      loop: !isSm, // ✅ الموبايل بدون loop
+      align: isSm ? "center" : "start",
+      containScroll: "trimSnaps",
+      slidesToScroll: 1,
+      direction: "rtl",
+    },
     autoplayOptions: { delay: 6000, stopOnInteraction: true },
   });
 
-  // أنميشن الدخول للقسم والبطاقات
   useEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -49,10 +54,9 @@ export default function IntegrationsSection() {
           toggleActions: "play none none none",
         },
       });
-      const titleElement = sectionRef.current?.querySelector(".integrations-title");
-      
-      if (titleElement) {
-        tl.from(titleElement, {
+      const title = sectionRef.current?.querySelector(".integrations-title");
+      if (title) {
+        tl.from(title, {
           opacity: 0,
           y: -50,
           duration: 0.8,
@@ -64,9 +68,9 @@ export default function IntegrationsSection() {
             y: 50,
             duration: 0.6,
             ease: "power3.out",
-            stagger: 0.15, // التأثير المتتالي الرائع!
+            stagger: 0.12,
           },
-          "-=0.5"
+          "-=0.4"
         );
       }
     }, sectionRef);
@@ -74,7 +78,12 @@ export default function IntegrationsSection() {
   }, []);
 
   return (
-    <Box ref={sectionRef} id="integrations" sx={{ py: 8, bgcolor: "grey.50" }}>
+    <Box
+      ref={sectionRef}
+      id="integrations"
+      sx={{ py: 8, bgcolor: "grey.50" }}
+      dir="rtl"
+    >
       <Typography
         className="integrations-title"
         variant="h4"
@@ -86,55 +95,91 @@ export default function IntegrationsSection() {
         تكاملات تمنحك القوة
       </Typography>
 
-      <Box sx={{ position: "relative", maxWidth: 1200, mx: "auto" }}>
-        <Box ref={emblaRef} sx={{ overflow: "hidden" }}>
+      <Box
+        className="embla"
+        sx={
+          {
+            position: "relative",
+            maxWidth: 1200,
+            mx: "auto",
+            // متغيرات للتحكم بالحجم مثل الديمو
+            "--slide-spacing": "16px",
+            "--slide-size": isSm
+              ? "86%"
+              : isMd
+              ? "48%"
+              : `${100 / slidesPerView}%`,
+          } as any
+        }
+      >
+        {/* viewport */}
+        <Box
+          className="embla__viewport"
+          ref={emblaRef}
+          sx={{ overflow: "hidden" }}
+          dir="rtl"
+        >
+          {/* container */}
           <Box
-            sx={{ display: "flex", direction: "rtl", gap: { xs: 2, sm: 3 } }}
+            className="embla__container"
+            sx={{
+              display: "flex",
+              touchAction: "pan-y pinch-zoom",
+              marginInlineStart: "calc(var(--slide-spacing) * -1)",
+            }}
           >
             {items.map((item, i) => (
+              // slide
               <Box
                 key={i}
-                className="integration-card-item"
+                className="embla__slide integration-card-item"
                 sx={{
-                  flex: {
-                    xs: "0 0 90%",
-                    sm: "0 0 48%",
-                    md: `0 0 calc(${100 / slidesPerView}% - ${
-                      (3 * (slidesPerView - 1)) / slidesPerView
-                    }px)`,
-                  },
+                  transform: "translate3d(0,0,0)",
+                  flex: "0 0 var(--slide-size)",
+                  minWidth: 0,
+                  paddingInlineStart: "var(--slide-spacing)",
+                  display: "flex",
+                  justifyContent: "center", // ✅ الكارد بالوسط
                 }}
               >
-                <IntegrationCard item={item} />
+                <Box sx={{ width: "100%" }}>
+                  <IntegrationCard item={item} />
+                </Box>
               </Box>
             ))}
           </Box>
         </Box>
 
-        {/* أزرار التحكم */}
-        <IconButton
-          onClick={scrollPrev}
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: { xs: -10, sm: -20 } /* ... */,
-          }}
-        >
-          <ChevronLeftRoundedIcon />
-        </IconButton>
+        {/* ✅ RTL: اليسار = Next، اليمين = Prev */}
         <IconButton
           onClick={scrollNext}
           sx={{
             position: "absolute",
             top: "50%",
-            right: { xs: -10, sm: -20 } /* ... */,
+            left: { xs: 4, sm: -10 },
+            transform: "translateY(-50%)",
+            zIndex: 1,
+            display: { xs: "none", sm: "inline-flex" },
+          }}
+        >
+          <ChevronLeftRoundedIcon />
+        </IconButton>
+        <IconButton
+          onClick={scrollPrev}
+          sx={{
+            position: "absolute",
+            top: "50%",
+            right: { xs: 4, sm: -10 },
+            transform: "translateY(-50%)",
+            zIndex: 1,
+            display: { xs: "none", sm: "inline-flex" },
           }}
         >
           <ChevronRightRoundedIcon />
         </IconButton>
       </Box>
 
-      {/* نقاط التنقل */}
+      {/* النقاط */}
       <Box sx={{ display: "flex", justifyContent: "center", gap: 1.5, mt: 4 }}>
         {scrollSnaps.map((_, i) => (
           <ButtonBase

@@ -2,81 +2,70 @@
 import { useEffect, type RefObject } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-// تسجيل إضافة ScrollTrigger مع GSAP
 gsap.registerPlugin(ScrollTrigger);
 
-/**
- * خطاف مخصص لتطبيق تأثير الظهور المتتابع على قسم "كيف يعمل".
- * @param sectionRef - مرجع (ref) للعنصر الحاوي للقسم بأكمله.
- */
 export const useStepsAnimation = (sectionRef: RefObject<HTMLElement>) => {
   useEffect(() => {
     const sectionElement = sectionRef.current;
     if (!sectionElement) return;
 
-    // استخدام gsap.utils.context لتسهيل عملية التنظيف (cleanup)
     const ctx = gsap.context(() => {
-      // 1. اختيار جميع العناصر التي سنقوم بتحريكها
-      const title = sectionElement.querySelector(".steps-title");
-      const subtitle = sectionElement.querySelector(".steps-subtitle");
-      const steps = gsap.utils.toArray<HTMLElement>(".step-box-item");
+      // ✅ استخدم selector محلي داخل القسم
+      const q = gsap.utils.selector(sectionElement);
 
-      // 2. إنشاء 타임라인 (Timeline) لتنظيم الحركات بشكل متسلسل
+      const title = q(".steps-title")[0] as HTMLElement | undefined;
+      const subtitle = q(".steps-subtitle")[0] as HTMLElement | undefined;
+      const steps = q(".step-box-item") as HTMLElement[];
+      const cards = steps.map((s) =>
+        s.querySelector(".step-box-animated")
+      ) as HTMLElement[];
+      const connectors = steps
+        .map((s) => s.querySelector(".connector-line"))
+        .filter(Boolean) as HTMLElement[];
+
+      if (!title || !subtitle || cards.length === 0) return;
+
+      // ✅ ثبّت الحالة الابتدائية بدل from() لتفادي immediateRender
+      gsap.set([title, subtitle], { opacity: 0, y: 50 });
+      gsap.set(cards, { opacity: 0, y: 60, scale: 0.9 });
+      gsap.set(connectors, { scaleX: 0, transformOrigin: "left center" });
+
       const tl = gsap.timeline({
         scrollTrigger: {
-          trigger: sectionElement, // العنصر الذي يفعل الحركة عند ظهوره
-          start: "top 80%", // تبدأ الحركة عندما يصل أعلى العنصر إلى 80% من الشاشة
-          end: "bottom 20%", // (اختياري) يمكن استخدامه لتأثيرات معقدة
-          toggleActions: "play none none none", // تشغيل الحركة مرة واحدة فقط
+          trigger: sectionElement,
+          start: "top 80%",
+          end: "bottom 20%",
+          toggleActions: "play none none none", // مرّة واحدة
+          // markers: true, // للتشخيص
         },
       });
 
-      // 3. إضافة الحركات إلى الـ Timeline
-      // حركة العنوان الرئيسي والفرعي
-      tl.from([title, subtitle], {
-        opacity: 0,
-        y: 50,
+      // عناوين
+      tl.to([title, subtitle], {
+        opacity: 1,
+        y: 0,
         duration: 0.7,
         ease: "power3.out",
-        stagger: 0.2, // تأخير بسيط بين حركة العنوان والعنوان الفرعي
+        stagger: 0.2,
       });
 
-      // حركة بطاقات الخطوات وخطوط الربط
-      steps.forEach((step, index) => {
-        const stepCard = step.querySelector(".step-box-animated");
-        const connector = step.querySelector(".connector-line");
-
-        // حركة ظهور البطاقة
-        tl.from(
-          stepCard,
-          {
-            opacity: 0,
-            scale: 0.9,
-            y: 60,
-            duration: 0.8,
-            ease: "power4.out",
-          },
+      // البطاقات + الخطوط
+      cards.forEach((card, i) => {
+        tl.to(
+          card,
+          { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power4.out" },
           ">-0.4"
-        ); // تداخل بسيط مع الحركة السابقة لتبدو أكثر سلاسة
-
-        // حركة "رسم" خط الربط (إذا كان موجودًا)
-        if (connector) {
-          tl.from(
-            connector,
-            {
-              scaleX: 0, // يبدأ بعرض 0
-              transformOrigin: "left center", // ينمو من اليسار
-              duration: 0.7,
-              ease: "power2.inOut",
-            },
-            "<"
-          ); // يبدأ مع حركة البطاقة
+        );
+        const line = connectors[i];
+        if (line) {
+          tl.to(line, { scaleX: 1, duration: 0.7, ease: "power2.inOut" }, "<");
         }
       });
+
+      // أحياناً مفيد بعد التحميل/الصور
+      ScrollTrigger.refresh();
     }, sectionElement);
 
-    // دالة التنظيف لإزالة كل الحركات عند إزالة المكون
     return () => ctx.revert();
   }, [sectionRef]);
 };

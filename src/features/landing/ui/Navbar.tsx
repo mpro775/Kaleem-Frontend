@@ -22,7 +22,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import type { User } from "@/context/AuthContext";
 
-// اجعل الاستيراد اختياريًا بدون كسر إن لم تكن تعتمد الكونتكست
 let useAuthSafe:
   | undefined
   | (() => { user: User | null; token: string | null });
@@ -52,7 +51,6 @@ function useAuthState() {
       tokenFromContext = auth?.token ?? null;
     }
   } catch {}
-  // حماية SSR
   const ls = typeof window !== "undefined" ? window.localStorage : null;
   const isAuthed =
     !!userFromContext ||
@@ -66,7 +64,6 @@ function scrollToHash(hash: string) {
   const id = hash.replace(/^#/, "");
   const el = document.getElementById(id);
   if (el) {
-    // دعم تقليل الحركة
     const prefersReduced =
       window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -89,18 +86,14 @@ export default function Navbar() {
   const [open, setOpen] = React.useState(false);
   const toggle = (v: boolean) => () => setOpen(v);
 
-  // تمييز الرابط النشط (الرئيسية vs الأقسام)
   const activeHash =
     typeof window !== "undefined" && location.hash ? location.hash : "";
 
   const go = (href?: string) => () => {
     if (!href) return;
     if (href.startsWith("#")) {
-      // نفس الصفحة
       if (location.pathname !== "/") {
-        // اذهب للصفحة الرئيسية ثم مرّر بعد التنقل
         navigate("/" + href);
-        // بعد تغيّر المسار، نفّذ التمرير (small timeout لتأكيد DOM ready)
         setTimeout(() => scrollToHash(href), 0);
       } else {
         scrollToHash(href);
@@ -113,197 +106,139 @@ export default function Navbar() {
   };
 
   return (
-    <AppBar
-      position="sticky"
-      dir="rtl"
-      sx={{
-        bgcolor: "rgba(255,255,255,0.9)",
-        backdropFilter: "blur(8px)",
-        borderBottom: (t) => `1px solid ${t.palette.divider}`,
-        boxShadow: "none",
-        px: { xs: 2, md: 6 },
-      }}
-    >
-      {/* زر تخطي للمحتوى لسهولة الوصول */}
-      <MLink
-        href="#main-content"
+    <>
+      <AppBar
+        position="fixed" // ✅ ثابت أعلى الصفحة
+        dir="rtl"
         sx={{
-          position: "absolute",
-          right: -9999,
-          "&:focus": {
-            right: 16,
-            top: 8,
-            zIndex: 2000,
-            p: 1,
-            bgcolor: "background.paper",
-            border: (t) => `1px solid ${t.palette.divider}`,
-            borderRadius: 1,
-          },
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: (t) => t.zIndex.appBar,
+          bgcolor: "rgba(255,255,255,0.9)",
+          backdropFilter: "blur(8px)",
+          borderBottom: (t) => `1px solid ${t.palette.divider}`,
+          boxShadow: "none",
+          px: { xs: 2, md: 6 },
         }}
       >
-        تخطِّ إلى المحتوى
-      </MLink>
-
-      <Toolbar
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          p: "0 !important",
-          minHeight: 68,
-        }}
-      >
-        {/* Logo */}
-        <Box
+        {/* زر تخطي للمحتوى */}
+        <MLink
+          href="#main-content"
           sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            cursor: "pointer",
+            position: "absolute",
+            right: -9999,
+            "&:focus": {
+              right: 16,
+              top: 8,
+              zIndex: 2000,
+              p: 1,
+              bgcolor: "background.paper",
+              border: (t) => `1px solid ${t.palette.divider}`,
+              borderRadius: 1,
+            },
           }}
-          onClick={() => navigate("/")}
-          aria-label="العودة للرئيسية"
         >
-          <img src={logo} alt="Kleem" style={{ width: "auto", height: 44 }} />
-        </Box>
+          تخطِّ إلى المحتوى
+        </MLink>
 
-        {/* Links (Desktop) */}
-        <Box
-          component="nav"
-          aria-label="التنقل الرئيسي"
-          sx={{ display: { xs: "none", md: "flex" }, gap: 1 }}
+        <Toolbar
+          sx={{
+            position: "relative", // ✅ نستخدم تموضع نسبي لتوسيط الشعار
+            display: "flex",
+            justifyContent: "space-between",
+            p: "0 !important",
+            minHeight: { xs: 64, md: 72 },
+          }}
         >
-          {NAV_LINKS.map((l) => {
-            const isActive =
-              (l.href === "/" && location.pathname === "/") ||
-              (l.href?.startsWith("#") && activeHash === l.href);
-            return (
-              <Button
-                key={l.label}
-                onClick={go(l.href)}
-                aria-current={isActive ? "page" : undefined}
-                variant={isActive ? "contained" : "text"}
-                sx={{
-                  color: isActive ? "common.white" : "#563fa6",
-                  background: isActive
-                    ? `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`
-                    : "transparent",
-                  borderRadius: 2,
-                  boxShadow: "none",
-                  fontWeight: 700,
-                  px: 1.5,
-                  "&:hover": {
-                    background: isActive ? undefined : "rgba(86,63,166,.06)",
-                  },
-                }}
-              >
-                {l.label}
-              </Button>
-            );
-          })}
-        </Box>
-
-        {/* CTAs */}
-        <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1.2 }}>
-          {isAuthed ? (
-            <Button
-              variant="contained"
-              onClick={() => navigate(DASHBOARD_PATH)}
+          {/* زر الهامبرجر (يثبت على الطرف) */}
+          <Box sx={{ display: { xs: "flex", md: "none" } }}>
+            <IconButton
+              onClick={toggle(true)}
+              aria-label="فتح القائمة"
               sx={{
-                background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-                px: 3,
-                fontWeight: 800,
-                borderRadius: 2,
-                boxShadow: "none",
+                position: "absolute",
+                right: 8, // في RTL واجهة عربية: الزر بطرف اليمين
+                top: "50%",
+                transform: "translateY(-50%)",
               }}
             >
-              لوحة التحكم
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              onClick={() => navigate("/signup")}
-              sx={{
-                background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-                px: 3,
-                fontWeight: 800,
-                borderRadius: 2,
-                boxShadow: "none",
-              }}
-            >
-              اطلب الخدمة
-            </Button>
-          )}
-          <Button
-            variant="outlined"
-            onClick={() => navigate("/contact")}
-            sx={{
-              color: "#563fa6",
-              border: "1px solid #563fa6",
-              px: 2.5,
-              fontWeight: 800,
-              borderRadius: 2,
-              backgroundImage: "none",
-              "&:hover": { backgroundColor: "rgba(86,63,166,.06)" },
-            }}
-          >
-            تواصل معنا
-          </Button>
-        </Box>
-
-        {/* Hamburger */}
-        <Box sx={{ display: { xs: "flex", md: "none" } }}>
-          <IconButton onClick={toggle(true)} aria-label="فتح القائمة">
-            <MenuIcon />
-          </IconButton>
-        </Box>
-      </Toolbar>
-
-      {/* Drawer Mobile */}
-      <Drawer
-        anchor="right"
-        open={open}
-        onClose={toggle(false)}
-        ModalProps={{ keepMounted: true }} // أفضل أداء على الجوال
-      >
-        <Box sx={{ width: 300, p: 2 }} role="presentation">
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              mb: 1,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <img src={logo} alt="Kleem" style={{ width: 28, height: 28 }} />
-              <Typography fontWeight={900}>كليم</Typography>
-            </Box>
-            <IconButton aria-label="إغلاق" onClick={toggle(false)}>
-              <CloseIcon />
+              <MenuIcon />
             </IconButton>
           </Box>
-          <Divider />
-          <List component="nav" aria-label="قائمة الروابط">
-            {NAV_LINKS.map((l) => (
-              <ListItemButton key={l.label} onClick={go(l.href)}>
-                <ListItemText primary={l.label} />
-              </ListItemButton>
-            ))}
-          </List>
 
+          {/* الشعار — متمركز على الجوال، طبيعي على الديسكتوب */}
           <Box
-            sx={{ display: "flex", flexDirection: "column", gap: 1.2, mt: 1 }}
+            onClick={() => navigate("/")}
+            aria-label="العودة للرئيسية"
+            sx={{
+              position: { xs: "absolute", md: "static" },
+              left: { xs: "50%", md: "auto" },
+              transform: { xs: "translateX(-50%)", md: "none" },
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              cursor: "pointer",
+            }}
           >
+            <img
+              src={logo}
+              alt="Kleem"
+              style={{
+                // ✅ حجم طبيعي ومرن للموبايل
+                height: isMdUp ? 44 : 40,
+                width: "auto",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </Box>
+
+          {/* روابط الديسكتوب */}
+          <Box
+            component="nav"
+            aria-label="التنقل الرئيسي"
+            sx={{ display: { xs: "none", md: "flex" }, gap: 1 }}
+          >
+            {NAV_LINKS.map((l) => {
+              const isActive =
+                (l.href === "/" && location.pathname === "/") ||
+                (l.href?.startsWith("#") && activeHash === l.href);
+              return (
+                <Button
+                  key={l.label}
+                  onClick={go(l.href)}
+                  aria-current={isActive ? "page" : undefined}
+                  variant={isActive ? "contained" : "text"}
+                  sx={{
+                    color: isActive ? "common.white" : "#563fa6",
+                    background: isActive
+                      ? `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`
+                      : "transparent",
+                    borderRadius: 2,
+                    boxShadow: "none",
+                    fontWeight: 700,
+                    px: 1.5,
+                    "&:hover": {
+                      background: isActive ? undefined : "rgba(86,63,166,.06)",
+                    },
+                  }}
+                >
+                  {l.label}
+                </Button>
+              );
+            })}
+          </Box>
+
+          {/* CTAs ديسكتوب */}
+          <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1.2 }}>
             {isAuthed ? (
               <Button
-                fullWidth
                 variant="contained"
-                onClick={() => {
-                  navigate(DASHBOARD_PATH);
-                  setOpen(false);
-                }}
+                onClick={() => navigate(DASHBOARD_PATH)}
                 sx={{
                   background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                  px: 3,
                   fontWeight: 800,
                   borderRadius: 2,
                   boxShadow: "none",
@@ -313,14 +248,11 @@ export default function Navbar() {
               </Button>
             ) : (
               <Button
-                fullWidth
                 variant="contained"
-                onClick={() => {
-                  navigate("/signup");
-                  setOpen(false);
-                }}
+                onClick={() => navigate("/signup")}
                 sx={{
                   background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                  px: 3,
                   fontWeight: 800,
                   borderRadius: 2,
                   boxShadow: "none",
@@ -329,25 +261,146 @@ export default function Navbar() {
                 اطلب الخدمة
               </Button>
             )}
-
             <Button
-              fullWidth
               variant="outlined"
-              onClick={() => {
-                navigate("/contact");
-                setOpen(false);
-              }}
+              onClick={() => navigate("/contact")}
               sx={{
                 color: "#563fa6",
                 border: "1px solid #563fa6",
+                px: 2.5,
+                fontWeight: 800,
                 borderRadius: 2,
+                backgroundImage: "none",
+                "&:hover": { backgroundColor: "rgba(86,63,166,.06)" },
               }}
             >
               تواصل معنا
             </Button>
           </Box>
-        </Box>
-      </Drawer>
-    </AppBar>
+        </Toolbar>
+
+        {/* Drawer Mobile */}
+        <Drawer
+          anchor="right"
+          open={open}
+          onClose={toggle(false)}
+          ModalProps={{ keepMounted: true }}
+        >
+          <Box sx={{ width: 320, p: 2 }} role="presentation">
+            {/* رأس الدرج */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 1,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <img
+                  src={logo}
+                  alt="Kleem"
+                  style={{
+                    height: 28, // ✅ الشعار بحجمه الطبيعي داخل الدرج
+                    width: "auto",
+                    objectFit: "contain",
+                  }}
+                />
+                <Typography fontWeight={900}>كليم</Typography>
+              </Box>
+              <IconButton aria-label="إغلاق" onClick={toggle(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            <Divider />
+
+            {/* روابط — وسط */}
+            <List
+              component="nav"
+              aria-label="قائمة الروابط"
+              sx={{ textAlign: "center" }} // ✅ توسيط النصوص
+            >
+              {NAV_LINKS.map((l) => (
+                <ListItemButton key={l.label} onClick={go(l.href)}>
+                  <ListItemText
+                    primaryTypographyProps={{ align: "center" }}
+                    primary={l.label}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+
+            {/* CTAs — نفس ألوان الديسكتوب ومُوسّطة */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.2,
+                mt: 1,
+                alignItems: "center", // ✅ توسيط العناصر
+              }}
+            >
+              {isAuthed ? (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={() => {
+                    navigate(DASHBOARD_PATH);
+                    setOpen(false);
+                  }}
+                  sx={{
+                    background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                    fontWeight: 800,
+                    borderRadius: 2,
+                    boxShadow: "none",
+                  }}
+                >
+                  لوحة التحكم
+                </Button>
+              ) : (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={() => {
+                    navigate("/signup");
+                    setOpen(false);
+                  }}
+                  sx={{
+                    background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                    fontWeight: 800,
+                    borderRadius: 2,
+                    boxShadow: "none",
+                  }}
+                >
+                  اطلب الخدمة
+                </Button>
+              )}
+
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => {
+                  navigate("/contact");
+                  setOpen(false);
+                }}
+                sx={{
+                  color: "#563fa6",
+                  border: "1px solid #563fa6",
+                  borderRadius: 2,
+                  backgroundImage: "none",
+                  "&:hover": { backgroundColor: "rgba(86,63,166,.06)" },
+                }}
+              >
+                تواصل معنا
+              </Button>
+            </Box>
+          </Box>
+        </Drawer>
+      </AppBar>
+
+      {/* ✅ Spacer لتفادي قفزة المحتوى بسبب position: fixed */}
+      <Box sx={{ height: { xs: 64, md: 72 } }} />
+    </>
   );
 }

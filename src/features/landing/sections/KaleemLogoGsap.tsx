@@ -1,5 +1,5 @@
 // src/components/landing/KaleemLogoGsap.tsx
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Box } from "@mui/material";
 import { ReactSVG } from "react-svg";
 import { useKaleemLogoAnimation } from "@/features/landing/hooks/useKaleemLogoAnimation"; // تأكد من المسار
@@ -20,11 +20,11 @@ export default function KaleemLogoGsap({
   hoverBoost = true,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [svgElement, setSvgElement] = useState<SVGSVGElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   // استدعاء الخطاف الجديد الذي يحتوي على كل منطق الأنميشن
   useKaleemLogoAnimation(
-    { current: svgElement }, // نمرر SVG كـ ref-like object
+    svgRef, // نمرر SVG كـ ref
     rootRef,
     { speed, float, hoverBoost }
   );
@@ -46,7 +46,8 @@ export default function KaleemLogoGsap({
           elements.forEach((el) => {
             (el as SVGElement).style.transformBox = "fill-box";
           });
-          setSvgElement(svg);
+          // حفظ المرجع بدون إعادة التصيير
+          svgRef.current = svg;
         }}
       />
     </Box>

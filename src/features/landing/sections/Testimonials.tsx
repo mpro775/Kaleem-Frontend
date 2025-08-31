@@ -5,22 +5,21 @@ import {
   ButtonBase,
   useTheme,
   IconButton,
+  useMediaQuery,
 } from "@mui/material";
-
-import { useCallback } from "react";
-import { TestimonialCard } from "../ui/TestimonialCard";
-import { testimonials } from "../data/testimonialsData";
-import { useCarousel } from "../hooks/useCarousel";
+import { useCallback, useMemo } from "react";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 
-
-
+import { TestimonialCard } from "../ui/TestimonialCard";
+import { testimonials } from "../data/testimonialsData";
+import { useCarousel } from "../hooks/useCarousel";
 
 export default function TestimonialsSection() {
   const theme = useTheme();
+  const isSm = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // 1. كل ما نحتاجه يأتي من هذا الخطاف فقط. لا يوجد state أو refs إضافية.
+  // ✅ RTL + containScroll + إطفاء loop على الموبايل
   const {
     emblaRef,
     emblaApi,
@@ -30,35 +29,44 @@ export default function TestimonialsSection() {
     scrollPrev,
     scrollNext,
   } = useCarousel({
-    emblaOptions: { loop: true, align: "center" },
-    autoplayOptions: { delay: 4000, stopOnInteraction: false, stopOnMouseEnter: true },
+    emblaOptions: {
+      direction: "rtl",
+      align: "center",
+      containScroll: "trimSnaps",
+      slidesToScroll: 1,
+      loop: !isSm, // على الموبايل: لا
+    },
+    autoplayOptions: {
+      delay: 4000,
+      stopOnInteraction: false,
+      stopOnMouseEnter: true,
+    },
   });
 
-  // 2. دالة حساب التأثير بقيت كما هي لأنها تعتمد على emblaApi الصحيح
-  const getTweenValues = useCallback((emblaApi: any) => {
+  // ✅ Tween آمن يعتمد على progress وعدد الـsnaps
+  const tweenValues = useMemo(() => {
     if (!emblaApi) return [];
-    const scrollSnapList = emblaApi.scrollSnapList();
-    return scrollSnapList.map((scrollSnap: number) => {
-      const diffToTarget = scrollSnap - emblaApi.scrollProgress();
-      const tweenFactor = 1 - Math.abs(diffToTarget);
-      return Math.max(0, tweenFactor);
+    const progress = emblaApi.scrollProgress();
+    const snaps = emblaApi.scrollSnapList();
+    return snaps.map((snap) => {
+      const diff = snap - progress;
+      const factor = 1 - Math.abs(diff);
+      return Math.max(0, factor); // 0 → بعيد، 1 → في المنتصف
     });
-  }, []);
-
-  const tweenValues = getTweenValues(emblaApi);
+  }, [emblaApi, selectedIndex]); // يعاد الحساب عند التبدّل
 
   return (
     <Box
-    id="testimonials"
-    sx={{
-      py: 12,
-      px: { xs: 0, md: 3 }, // تعديل بسيط لإعطاء مساحة للأطراف
-      background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-      position: "relative",
-      overflow: "hidden",
-    }}
-    dir="rtl"
-  >
+      id="testimonials"
+      sx={{
+        py: 12,
+        px: { xs: 0, md: 3 },
+        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+      dir="rtl"
+    >
       {/* زخارف */}
       <Box
         sx={{
@@ -129,41 +137,89 @@ export default function TestimonialsSection() {
         انظر ماذا يقول عملاؤنا عن تجربتهم مع Kaleem
       </Typography>
 
-  {/* السلايدر */}
-  <Box sx={{ position: "relative", mx: "auto", maxWidth: 1400 }}>
-        {/* 3. حاوية Embla الرئيسية */}
-        <Box className="embla" ref={emblaRef} sx={{ overflow: "hidden" }}>
-          <Box sx={{ display: "flex", direction: "rtl" }}>
-            {testimonials.map((item, i) => (
-              <Box
-                key={i}
-                sx={{
-                  flex: "0 0 85%", // تعديل بسيط لترك مساحة جانبية
-                  sm: "0 0 48%",
-                  md: "0 0 32%",
-                  pl: { xs: 1, sm: 2 }, // استخدام padding بدلاً من gap
-                }}
-              >
-                <TestimonialCard
-                  testimonial={item}
-                  scale={tweenValues[i] * 0.1 + 0.9}
-                  opacity={tweenValues[i] * 0.5 + 0.5}
-                />
-              </Box>
-            ))}
+      {/* السلايدر: بنية Embla الرسمية + CSS متغيرات */}
+      <Box sx={{ position: "relative", mx: "auto", maxWidth: 1400 }}>
+        <Box
+          className="embla"
+          sx={{
+            "--slide-spacing": "16px",
+            "--slide-size": { xs: "86%", sm: "48%", md: "32%" } as any, // ✅ كارد واحد وسط على الموبايل
+          }}
+        >
+          {/* viewport */}
+          <Box
+            className="embla__viewport"
+            ref={emblaRef}
+            sx={{ overflow: "hidden" }}
+            dir="rtl"
+          >
+            {/* container */}
+            <Box
+              className="embla__container"
+              sx={{
+                display: "flex",
+                touchAction: "pan-y pinch-zoom",
+                marginInlineStart: "calc(var(--slide-spacing) * -1)", // بديل gap
+              }}
+            >
+              {testimonials.map((item, i) => (
+                // slide
+                <Box
+                  key={i}
+                  className="embla__slide"
+                  sx={{
+                    transform: "translate3d(0,0,0)",
+                    flex: "0 0 var(--slide-size)",
+                    minWidth: 0,
+                    paddingInlineStart: "var(--slide-spacing)",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Box sx={{ width: "100%" }}>
+                    <TestimonialCard
+                      testimonial={item}
+                      // ✅ تأثير لطيف حسب القرب من المركز
+                      scale={(tweenValues[i] ?? 0) * 0.1 + 0.9}
+                      opacity={(tweenValues[i] ?? 0) * 0.5 + 0.5}
+                    />
+                  </Box>
+                </Box>
+              ))}
+            </Box>
           </Box>
         </Box>
 
-        {/* 4. أزرار التحكم تستخدم دوال الخطاف مباشرة */}
-        <IconButton onClick={scrollPrev} sx={{ position: "absolute", top: "50%", left: 8, /* ... */ }}>
+        {/* في RTL: اليسار = Next، اليمين = Prev */}
+        <IconButton
+          onClick={scrollNext}
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: { xs: 6, md: -10 },
+            transform: "translateY(-50%)",
+            zIndex: 1,
+            display: { xs: "none", sm: "inline-flex" },
+          }}
+        >
           <ChevronLeftRoundedIcon />
         </IconButton>
-        <IconButton onClick={scrollNext} sx={{ position: "absolute", top: "50%", right: 8, /* ... */ }}>
+        <IconButton
+          onClick={scrollPrev}
+          sx={{
+            position: "absolute",
+            top: "50%",
+            right: { xs: 6, md: -10 },
+            transform: "translateY(-50%)",
+            zIndex: 1,
+            display: { xs: "none", sm: "inline-flex" },
+          }}
+        >
           <ChevronRightRoundedIcon />
         </IconButton>
       </Box>
 
-      {/* 5. النقاط (Pagination) تستخدم selectedIndex و scrollTo */}
+      {/* النقاط */}
       <Box sx={{ mt: 4, display: "flex", justifyContent: "center", gap: 1.5 }}>
         {scrollSnaps.map((_, i) => (
           <ButtonBase

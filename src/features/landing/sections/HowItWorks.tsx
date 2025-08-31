@@ -111,6 +111,9 @@ const StepBox = styled(Box)(({ theme }) => ({
   border: "2px solid transparent",
   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   cursor: "pointer",
+  // ضمان ظهور العناصر قبل الأنيميشن
+  opacity: 1,
+  transform: "translateY(0) scale(1)",
   "&:hover": {
     transform: "translateY(-8px)",
     boxShadow: `0 16px 48px rgba(${theme.palette.primary.dark}, 0.2)`,
@@ -245,7 +248,20 @@ export default function HowItWorksStepsSection() {
               position: "relative",
             }}
           >
-            <StepBox className="step-box-animated">
+            <StepBox 
+              className="step-box-animated"
+              sx={{
+                // تحسينات للهواتف
+                [theme.breakpoints.down("md")]: {
+                  padding: theme.spacing(2.5),
+                  marginBottom: theme.spacing(4),
+                },
+                [theme.breakpoints.down("sm")]: {
+                  padding: theme.spacing(2),
+                  marginBottom: theme.spacing(3),
+                },
+              }}
+            >
               {/* رقم الخطوة */}
               <StepNumber className="step-number">{idx + 1}</StepNumber>
 

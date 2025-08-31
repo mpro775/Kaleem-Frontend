@@ -1,6 +1,6 @@
 import { Avatar, Box, Typography } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
-import { KLEEM_COLORS } from './constants';
+import { KLEEM_COLORS } from '../constants';
 
 export default function ChatHeader() {
   return (

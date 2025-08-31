@@ -1,19 +1,25 @@
 // src/components/landing/WhyChooseKaleem.tsx
-import { useEffect, useRef } from "react";
-import { Box, Typography, IconButton, ButtonBase } from "@mui/material";
+import { useRef } from "react";
+import {
+  Box,
+  Typography,
+  IconButton,
+  ButtonBase,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
 import { useFeatureCarousel } from "@/features/landing/hooks/useFeatureCarousel";
 import { FeatureCard } from "@/features/landing/ui/FeatureCard";
-import { features } from "@/features/landing/data/featuresData"; // افترضنا أنك نقلت بيانات الميزات لملف منفصل
-
-gsap.registerPlugin(ScrollTrigger);
+import { features } from "@/features/landing/data/featuresData";
 
 export default function WhyChooseKaleem() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  // على الموبايل نطفئ loop لتفادي ظهور الـ clones عند الأطراف
   const {
     emblaRef,
     scrollSnaps,
@@ -21,40 +27,7 @@ export default function WhyChooseKaleem() {
     scrollTo,
     scrollPrev,
     scrollNext,
-  } = useFeatureCarousel();
-
-  // حركة الدخول للقسم بالكامل
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 85%",
-          toggleActions: "play none none none",
-        },
-      });
-
-      const titleElement = sectionRef.current?.querySelector(".section-title");
-      const emblaElement = sectionRef.current?.querySelector(".embla");
-      
-      if (titleElement) {
-        tl.from(titleElement, {
-          opacity: 0,
-          y: -50,
-          duration: 0.8,
-          ease: "power3.out",
-        });
-      }
-      
-      if (emblaElement) {
-        tl.from(emblaElement, 
-          { opacity: 0, y: 50, duration: 1, ease: "power3.out" },
-          "-=0.5"
-        );
-      }
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
+  } = useFeatureCarousel({ loop: !isMobile });
 
   return (
     <Box
@@ -64,7 +37,6 @@ export default function WhyChooseKaleem() {
       dir="rtl"
     >
       <Typography
-        className="section-title"
         variant="h4"
         fontWeight="bold"
         align="center"
@@ -76,50 +48,86 @@ export default function WhyChooseKaleem() {
 
       <Box
         className="embla"
-        sx={{ position: "relative", maxWidth: 1200, mx: "auto" }}
+        sx={{
+          position: "relative",
+          maxWidth: 1200,
+          mx: "auto",
+          // CSS variables مثل الديمو الرسمي
+          "--slide-height": "19rem",
+          "--slide-spacing": "1rem",
+          // كارد واحد متوسط على الموبايل، شبكي على الأكبر
+          "--slide-size": { xs: "86%", sm: "48%", md: "23.5%" } as any,
+        }}
       >
-        <Box ref={emblaRef} sx={{ overflow: "hidden" }}>
+        {/* ✅ viewport مطابق لعينة Embla */}
+        <Box
+          className="embla__viewport"
+          ref={emblaRef}
+          sx={{ overflow: "hidden" }}
+          dir="rtl"
+        >
+          {/* ✅ container */}
           <Box
-            sx={{ display: "flex", gap: { xs: 2, sm: 3 }, direction: "rtl" }}
+            className="embla__container"
+            sx={{
+              display: "flex",
+              touchAction: "pan-y pinch-zoom",
+              // في RTL نستبدل margin-left بـ margin-inline-start (يتحول تلقائيًا)
+              marginInlineStart: "calc(var(--slide-spacing) * -1)",
+            }}
           >
             {features.map((feature, i) => (
+              // ✅ slide
               <Box
                 key={i}
-                sx={{ flex: { xs: "0 0 90%", sm: "0 0 48%", md: "0 0 23.5%" } }}
+                className="embla__slide"
+                sx={{
+                  transform: "translate3d(0,0,0)",
+                  flex: "0 0 var(--slide-size)",
+                  minWidth: 0,
+                  paddingInlineStart: "var(--slide-spacing)",
+                  // نوسّط محتوى الشريحة نفسها (الكارد) — هذا أهم شيء
+                  display: "flex",
+                  justifyContent: "center",
+                }}
               >
-                <FeatureCard feature={feature} />
+                <Box sx={{ width: "100%" }}>
+                  <FeatureCard feature={feature} />
+                </Box>
               </Box>
             ))}
           </Box>
         </Box>
 
-        {/* أزرار التحكم */}
-        <IconButton
-          onClick={scrollPrev}
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: -10,
-            transform: "translateY(-50%)",
-            zIndex: 1 /* ... styles */,
-          }}
-        >
-          <ChevronLeftRoundedIcon />
-        </IconButton>
+        {/* في RTL: السهم الأيسر بصريًا يتقدم للأمام */}
         <IconButton
           onClick={scrollNext}
           sx={{
             position: "absolute",
             top: "50%",
-            right: -10,
+            left: { xs: 4, md: -10 },
             transform: "translateY(-50%)",
-            zIndex: 1 /* ... styles */,
+            zIndex: 1,
+            display: { xs: "none", sm: "inline-flex" },
+          }}
+        >
+          <ChevronLeftRoundedIcon />
+        </IconButton>
+        <IconButton
+          onClick={scrollPrev}
+          sx={{
+            position: "absolute",
+            top: "50%",
+            right: { xs: 4, md: -10 },
+            transform: "translateY(-50%)",
+            zIndex: 1,
+            display: { xs: "none", sm: "inline-flex" },
           }}
         >
           <ChevronRightRoundedIcon />
         </IconButton>
 
-        {/* نقاط التنقل */}
+        {/* نقاط */}
         <Box
           sx={{ display: "flex", justifyContent: "center", gap: 1.5, mt: 4 }}
         >

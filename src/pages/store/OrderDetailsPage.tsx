@@ -1,142 +1,72 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "@/shared/api/axios";
-import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  Chip,
-  Divider,
-  useTheme,
-  Avatar,
-  Skeleton,
-  IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-} from "@mui/material";
-import {
-  ArrowBack,
-  CheckCircle,
-  LocalShipping,
-  Assignment,
-  Payment,
-  Storefront as StorefrontIcon,
-  Person,
-  Phone,
-  LocationOn,
-  Receipt,
-} from "@mui/icons-material";
-import type { Order, OrderProduct } from "@/features/store/type";
-import type { MerchantInfo } from "@/features/mechant/merchant-settings/types";
-
-// ⬅️ لون المتجر الداكن
-import { getStorefrontInfo } from "@/features/mechant/storefront-theme/api";
-import { setBrandVars } from "@/features/shared/brandCss";
-import { useErrorHandler } from '@/shared/errors';
+import { Box, Button, IconButton } from "@mui/material";
+import ArrowBack from "@mui/icons-material/ArrowBack";
+import { useNavigate, useParams } from "react-router-dom";
+import { useOrderDetails } from "@/features/store/order/hooks/useOrderDetails";
+import OrderHeader from "@/features/store/order/ui/OrderHeader";
+import CustomerInfoCard from "@/features/store/order/ui/CustomerInfoCard";
+import OrderInfoCard from "@/features/store/order/ui/OrderInfoCard";
+import ItemsList from "@/features/store/order/ui/ItemsList";
+import SummaryCard from "@/features/store/order/ui/SummaryCard";
+import StatusTimeline from "@/features/store/order/ui/StatusTimeline";
+import OrderDetailsSkeleton from "@/features/store/order/ui/OrderDetailsSkeleton";
+import { useErrorHandler } from "@/shared/errors";
 
 export default function OrderDetailsPage() {
-  const { handleError } = useErrorHandler();
-  const theme = useTheme();
-  const navigate = useNavigate();
-  const { orderId, slug } = useParams<{
+  const { orderId = "", slug = "" } = useParams<{
     orderId: string;
     slug: string;
   }>();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [merchant, setMerchant] = useState<MerchantInfo | null>(null);
-  const isDemo = slug === "demo";
+  const navigate = useNavigate();
+  const { handleError } = useErrorHandler();
 
-  useEffect(() => {
-    setLoading(true);
-    if (!orderId) {
-      // لو وصلنا بدون id، ارجع للصفحة السابقة أو لصفحة المتجر
-      navigate(`/store/${slug}`);
-      return;
-    }
-    if (isDemo && orderId?.startsWith("DEMO-")) {
-      const raw = localStorage.getItem("kleem:lastDemoOrder");
-      if (raw) {
-        try {
-          const o = JSON.parse(raw);
-          setOrder(o);
-        } catch {
-          console.error("Failed to parse demo order");
-        }
-      }
-      // جلب بيانات المتجر للعرض + تطبيق اللون
-      axiosInstance
-        .get(`/storefront/${slug}`)
-        .then(async (res) => {
-          setMerchant(res.data.merchant);
-          try {
-            const sf = await getStorefrontInfo(res.data.merchant._id);
-            setBrandVars(sf.brandDark || "#111827");
-          } catch {
-            setBrandVars("#111827");
-          }
-        })
-        .catch(() => {});
-      setLoading(false);
-      return;
-    }
+  const { order, merchant, loading } = useOrderDetails(orderId, slug);
 
-    // طلب حقيقي
-    axiosInstance
-      .get(`/orders/${orderId}`)
-      .then((res) => setOrder(res.data))
-      
-      .catch(handleError)
-        .finally(() => setLoading(false));
-  }, [orderId, isDemo, slug]);
-
-  // عند الطلب الحقيقي: اجلب التاجر ثم طبّق لون المتجر
-  useEffect(() => {
-    if (!isDemo && order?.merchantId) {
-      axiosInstance
-        .get(`/merchants/${order.merchantId}`)
-        .then(async (res) => {
-          setMerchant(res.data);
-          try {
-            const sf = await getStorefrontInfo(res.data._id);
-            setBrandVars(sf.brandDark || "#111827");
-          } catch {
-            setBrandVars("#111827");
-          }
-        })
-        .catch(() => {});
-    }
-  }, [order?.merchantId, isDemo]);
+  if (!orderId) {
+    // لو وصلنا بدون id، ارجع للمتجر أو للخلف
+    navigate(`/store/${slug}`);
+    return null;
+  }
 
   if (loading) return <OrderDetailsSkeleton />;
 
-  if (!order)
+  if (!order) {
     return (
       <Box
         sx={{
           display: "flex",
-          justifyContent: "center",
+          flexDirection: "column",
           alignItems: "center",
           minHeight: "70vh",
+          justifyContent: "center",
           textAlign: "center",
+          p: 3,
         }}
       >
-        <Typography variant="h5" color="error">
-          تعذر تحميل تفاصيل الطلب
-        </Typography>
+        تعذر تحميل تفاصيل الطلب
         <Button variant="outlined" sx={{ mt: 2 }} onClick={() => navigate(-1)}>
           العودة
         </Button>
       </Box>
     );
+  }
 
-  const totalAmount = order.products.reduce(
-    (sum: number, i: OrderProduct) => sum + i.price * i.quantity,
-    0
-  );
+  const currency = (order as any).currency || "SAR";
+
+  const steps = [
+    { label: "تم الطلب", date: "١٠ مارس ٢٠٢٣", time: "١٠:٣٠ ص", active: true },
+    {
+      label: "قيد التجهيز",
+      date: "١٠ مارس ٢٠٢٣",
+      time: "١١:٤٥ ص",
+      active: order.status !== "pending",
+    },
+    {
+      label: "تم التوصيل",
+      date: "١٢ مارس ٢٠٢٣",
+      time: "٠٢:٣٠ م",
+      active: ["delivered", "paid"].includes(order.status as any),
+    },
+  ];
 
   return (
     <Box
@@ -155,7 +85,7 @@ export default function OrderDetailsPage() {
         </IconButton>
       </Box>
 
-      <Paper
+      <Box
         sx={{
           borderRadius: 3,
           overflow: "hidden",
@@ -163,363 +93,23 @@ export default function OrderDetailsPage() {
           mb: 4,
         }}
       >
-        {/* هيدر داكن موحّد */}
-        <Box
-          sx={{
-            backgroundColor: "var(--brand)",
-            color: "var(--on-brand)",
-            p: 3,
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h4" fontWeight="bold">
-            الطلب #{order._id.substring(0, 8).toUpperCase()}
-          </Typography>
-
-          <Chip
-            label={
-              {
-                pending: "قيد الانتظار",
-                paid: "مدفوع",
-                canceled: "ملغي",
-                shipped: "تم الشحن",
-                delivered: "تم التسليم",
-                refunded: "مسترد",
-              }[order.status] || order.status
-            }
-            sx={{
-              bgcolor: "var(--on-brand)",
-              color: "var(--brand)",
-              fontWeight: "bold",
-              fontSize: 16,
-              px: 2,
-              py: 1,
-              mt: { xs: 2, sm: 0 },
-            }}
-          />
-        </Box>
-
+        <OrderHeader orderId={order._id} status={order.status} />
         <Box sx={{ p: 3 }}>
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4, mb: 4 }}>
-            {/* معلومات العميل */}
-            <Box sx={{ flex: 1, minWidth: 300 }}>
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                sx={{ mb: 2, display: "flex", alignItems: "center" }}
-              >
-                <Person sx={{ mr: 1, color: "var(--brand)" }} />
-                معلومات العميل
-              </Typography>
-
-              <List>
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Person sx={{ color: "var(--brand)" }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="الاسم"
-                    secondary={order.customer.name}
-                    secondaryTypographyProps={{ sx: { fontWeight: "bold" } }}
-                  />
-                </ListItem>
-
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Phone sx={{ color: "var(--brand)" }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="رقم الجوال"
-                    secondary={order.customer.phone}
-                    secondaryTypographyProps={{ sx: { fontWeight: "bold" } }}
-                  />
-                </ListItem>
-
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <LocationOn sx={{ color: "var(--brand)" }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="العنوان"
-                    secondary={order.customer.address}
-                    secondaryTypographyProps={{ sx: { fontWeight: "bold" } }}
-                  />
-                </ListItem>
-              </List>
-            </Box>
-
-            {/* معلومات الطلب */}
-            <Box sx={{ flex: 1, minWidth: 300 }}>
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                sx={{ mb: 2, display: "flex", alignItems: "center" }}
-              >
-                <Assignment sx={{ mr: 1, color: "var(--brand)" }} />
-                معلومات الطلب
-              </Typography>
-
-              <List>
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Receipt sx={{ color: "var(--brand)" }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="رقم الطلب"
-                    secondary={`#${order._id.substring(0, 8).toUpperCase()}`}
-                    secondaryTypographyProps={{ sx: { fontWeight: "bold" } }}
-                  />
-                </ListItem>
-
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <StorefrontIcon sx={{ color: "var(--brand)" }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="المتجر"
-                    secondary={merchant?.name || "متجرنا"}
-                    onClick={() =>
-                      navigate(
-                        `/store/${
-                          merchant?.publicSlug || merchant?._id || order.merchantId
-                        }`
-                      )
-                    }
-                    secondaryTypographyProps={{
-                      sx: { fontWeight: "bold", cursor: "pointer" },
-                    }}
-                  />
-                </ListItem>
-
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    <Payment sx={{ color: "var(--brand)" }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="طريقة الدفع"
-                    secondary="الدفع عند الاستلام"
-                    secondaryTypographyProps={{ sx: { fontWeight: "bold" } }}
-                  />
-                </ListItem>
-              </List>
-            </Box>
+            <CustomerInfoCard order={order} />
+            <OrderInfoCard order={order} merchant={merchant} />
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          <ItemsList products={order.products} currency={currency} />
 
-          {/* تفاصيل الطلب */}
-          <Typography
-            variant="h6"
-            fontWeight="bold"
-            sx={{ mb: 3, display: "flex", alignItems: "center" }}
-          >
-            <LocalShipping sx={{ mr: 1, color: "var(--brand)" }} />
-            تفاصيل الطلب
-          </Typography>
+          <SummaryCard
+            products={order.products}
+            shipping={0}
+            discount={0}
+            currency={currency}
+          />
 
-          <List
-            sx={{
-              backgroundColor: theme.palette.grey[50],
-              borderRadius: 3,
-              p: 2,
-              mb: 3,
-            }}
-          >
-            {order.products.map((item: OrderProduct, idx: number) => (
-              <ListItem
-                key={idx}
-                sx={{
-                  py: 2,
-                  borderBottom:
-                    idx < order.products.length - 1
-                      ? `1px solid ${theme.palette.divider}`
-                      : "none",
-                }}
-              >
-                <Avatar
-                  src={item.image}
-                  variant="rounded"
-                  sx={{
-                    width: 60,
-                    height: 60,
-                    mr: 2,
-                    backgroundColor: theme.palette.grey[200],
-                  }}
-                >
-                  <StorefrontIcon />
-                </Avatar>
-
-                <ListItemText
-                  primary={
-                    <Typography fontWeight="bold">{item.name}</Typography>
-                  }
-                  secondary={
-                    <Box
-                      sx={{ display: "flex", justifyContent: "space-between" }}
-                    >
-                      <Typography variant="body2" color="text.secondary">
-                        {item.quantity} × {item.price.toFixed(2)} ر.س
-                      </Typography>
-                      <Typography fontWeight="bold">
-                        {(item.price * item.quantity).toFixed(2)} ر.س
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-
-          {/* ملخص الطلب */}
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              backgroundColor: theme.palette.grey[50],
-            }}
-          >
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-              ملخص الطلب
-            </Typography>
-
-            <Box sx={{ mb: 2 }}>
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
-              >
-                <Typography>المجموع الفرعي:</Typography>
-                <Typography>{totalAmount.toFixed(2)} ر.س</Typography>
-              </Box>
-
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
-              >
-                <Typography>رسوم الشحن:</Typography>
-                <Typography>0.00 ر.س</Typography>
-              </Box>
-
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
-              >
-                <Typography>الخصم:</Typography>
-                <Typography>0.00 ر.س</Typography>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Typography variant="h6" fontWeight="bold">
-                  الإجمالي النهائي:
-                </Typography>
-                <Typography
-                  variant="h5"
-                  fontWeight="bold"
-                  sx={{ color: "var(--brand)" }}
-                >
-                  {totalAmount.toFixed(2)} ر.س
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-
-          {/* حالة الطلب (timeline مبسّط) */}
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>
-              حالة الطلب
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
-                justifyContent: "space-between",
-                position: "relative",
-                "&:before": {
-                  content: '""',
-                  position: "absolute",
-                  top: 20,
-                  left: { xs: 20, sm: "10%" },
-                  right: { xs: 20, sm: "10%" },
-                  height: 4,
-                  backgroundColor: theme.palette.grey[300],
-                  zIndex: 0,
-                },
-              }}
-            >
-              {[
-                {
-                  status: "تم الطلب",
-                  date: "١٠ مارس ٢٠٢٣",
-                  time: "١٠:٣٠ ص",
-                  active: true,
-                },
-                {
-                  status: "قيد التجهيز",
-                  date: "١٠ مارس ٢٠٢٣",
-                  time: "١١:٤٥ ص",
-                  active: order.status !== "pending",
-                },
-                {
-                  status: "تم التوصيل",
-                  date: "١٢ مارس ٢٠٢٣",
-                  time: "٠٢:٣٠ م",
-                  active: order.status === "paid",
-                },
-              ].map((step, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    mb: { xs: 4, sm: 0 },
-                    position: "relative",
-                    zIndex: 1,
-                    width: { sm: "25%" },
-                  }}
-                >
-                  <Avatar
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      mb: 1,
-                      backgroundColor: step.active
-                        ? "var(--brand)"
-                        : theme.palette.grey[300],
-                      color: step.active
-                        ? "var(--on-brand)"
-                        : theme.palette.text.primary,
-                    }}
-                  >
-                    {step.active ? <CheckCircle /> : index + 1}
-                  </Avatar>
-
-                  <Typography fontWeight="bold" sx={{ mb: 0.5 }}>
-                    {step.status}
-                  </Typography>
-
-                  {step.active && (
-                    <Box sx={{ textAlign: "center" }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {step.date}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {step.time}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              ))}
-            </Box>
-          </Box>
+          <StatusTimeline steps={steps} />
 
           <Box
             sx={{ display: "flex", justifyContent: "center", mt: 5, gap: 2 }}
@@ -535,11 +125,19 @@ export default function OrderDetailsPage() {
                 color: "var(--on-brand)",
                 "&:hover": { background: "var(--brand-hover)" },
               }}
-              onClick={() => navigate(`/store/${merchant?.publicSlug || ""}`)}
+              onClick={() =>
+                navigate(
+                  `/store/${
+                    merchant?.publicSlug ||
+                    merchant?._id ||
+                    order.merchantId ||
+                    ""
+                  }`
+                )
+              }
             >
               متابعة التسوق
             </Button>
-
             <Button
               variant="outlined"
               sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: "bold" }}
@@ -549,124 +147,7 @@ export default function OrderDetailsPage() {
             </Button>
           </Box>
         </Box>
-      </Paper>
+      </Box>
     </Box>
   );
 }
-
-const OrderDetailsSkeleton = () => (
-  <Box sx={{ maxWidth: "md", mx: "auto", py: 4, px: { xs: 2, sm: 3 } }}>
-    <Skeleton variant="rectangular" width={100} height={40} sx={{ mb: 3 }} />
-    <Paper sx={{ borderRadius: 3, overflow: "hidden", mb: 4 }}>
-      <Skeleton variant="rectangular" height={80} />
-      <Box sx={{ p: 3 }}>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4, mb: 4 }}>
-          <Box sx={{ flex: 1, minWidth: 300 }}>
-            <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
-            <Skeleton
-              variant="rectangular"
-              height={120}
-              sx={{ borderRadius: 2 }}
-            />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 300 }}>
-            <Skeleton variant="text" width="40%" height={30} sx={{ mb: 2 }} />
-            <Skeleton
-              variant="rectangular"
-              height={120}
-              sx={{ borderRadius: 2 }}
-            />
-          </Box>
-        </Box>
-        <Skeleton variant="rectangular" height={2} sx={{ mb: 3 }} />
-        <Skeleton variant="text" width="40%" height={30} sx={{ mb: 3 }} />
-        <Box
-          sx={{
-            backgroundColor: (theme) => theme.palette.grey[50],
-            borderRadius: 3,
-            p: 2,
-            mb: 3,
-          }}
-        >
-          {[...Array(3)].map((_, i) => (
-            <Box
-              key={i}
-              sx={{
-                display: "flex",
-                py: 2,
-                borderBottom: i < 2 ? "1px solid #eee" : "none",
-              }}
-            >
-              <Skeleton
-                variant="circular"
-                width={60}
-                height={60}
-                sx={{ mr: 2 }}
-              />
-              <Box sx={{ flex: 1 }}>
-                <Skeleton variant="text" height={25} sx={{ mb: 1 }} />
-                <Skeleton variant="text" width="60%" height={20} />
-              </Box>
-            </Box>
-          ))}
-        </Box>
-        <Skeleton
-          variant="rectangular"
-          height={180}
-          sx={{ borderRadius: 3, mb: 4 }}
-        />
-        <Skeleton variant="text" width="40%" height={30} sx={{ mb: 3 }} />
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            justifyContent: "space-between",
-            mb: 5,
-          }}
-        >
-          {[...Array(4)].map((_, i) => (
-            <Box
-              key={i}
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                mb: { xs: 4, sm: 0 },
-                width: { sm: "25%" },
-              }}
-            >
-              <Skeleton
-                variant="circular"
-                width={40}
-                height={40}
-                sx={{ mb: 1 }}
-              />
-              <Skeleton
-                variant="text"
-                width={80}
-                height={25}
-                sx={{ mb: 0.5 }}
-              />
-              <Skeleton variant="text" width={100} height={20} />
-              <Skeleton variant="text" width={80} height={20} />
-            </Box>
-          ))}
-        </Box>
-        <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
-          <Skeleton
-            variant="rectangular"
-            width={150}
-            height={45}
-            sx={{ borderRadius: 2 }}
-          />
-          <Skeleton
-            variant="rectangular"
-            width={150}
-            height={45}
-            sx={{ borderRadius: 2 }}
-          />
-        </Box>
-      </Box>
-    </Paper>
-  </Box>
-);

@@ -6,6 +6,7 @@ import bgShape2 from "@/assets/Vector2.png";
 import { useTheme } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import KaleemLogoGsap from "./KaleemLogoGsap";
+import { gsap } from "gsap";
 // تعريف واجهة للـ Props
 import { useStaggeredAnimation } from "@/features/landing/hooks/useStaggeredAnimation"; 
 const AnimatedWords: React.FC<{ text: string }> = ({ text }) => {

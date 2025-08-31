@@ -58,7 +58,7 @@ export default function CartDialog({
     saveLocalCustomer({
       name: customer.name,
       phone: customer.phone,
-      address: customer.address,
+      address: typeof customer.address === 'string' ? customer.address : customer.address?.line1 || '',
     });
   }, [customer]);
 
@@ -66,7 +66,7 @@ export default function CartDialog({
     const newErrors: Record<string, string> = {};
     if (!customer.name.trim()) newErrors.name = "الرجاء إدخال الاسم";
     if (!customer.phone.trim()) newErrors.phone = "الرجاء إدخال رقم الجوال";
-    if (!customer.address.trim()) newErrors.address = "الرجاء إدخال العنوان";
+    if (!customer.address || (typeof customer.address === 'string' && !customer.address.trim()) || (typeof customer.address === 'object' && !customer.address.line1?.trim())) newErrors.address = "الرجاء إدخال العنوان";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -115,7 +115,11 @@ export default function CartDialog({
         return;
       }
   
-      saveLocalCustomer({ name: customer.name, phone: customer.phone, address: customer.address });
+      saveLocalCustomer({ 
+      name: customer.name, 
+      phone: customer.phone, 
+      address: typeof customer.address === 'string' ? customer.address : customer.address?.line1 || ''
+    });
   
       clearCart();
       onOrderSuccess(id);        // ✅ الآن نمرر الـ id الصحيح دائمًا
@@ -625,7 +629,14 @@ export default function CartDialog({
 
                   <Box>
                     <Typography fontWeight="bold">العنوان:</Typography>
-                    <Typography>{customer.address}</Typography>
+                    <Typography>
+                      {customer.address ? 
+                        typeof customer.address === 'string' 
+                          ? customer.address 
+                          : `${customer.address.line1 || ''} ${customer.address.city || ''} ${customer.address.state || ''}`.trim() || 'غير محدد'
+                        : 'غير محدد'
+                      }
+                    </Typography>
                   </Box>
                 </Box>
 

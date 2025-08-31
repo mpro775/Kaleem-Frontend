@@ -14,7 +14,7 @@ import {
   FAQSection,
   Footer,
 } from "@/features/landing";
-import { Box, Container, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { motion } from "framer-motion";
 
 const SectionReveal = ({

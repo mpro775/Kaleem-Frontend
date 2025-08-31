@@ -4,8 +4,8 @@ import { Avatar, Box, Paper, Typography } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useTheme } from '@mui/material/styles';
-import type { ChatMessage } from './types';
-import { autoLineBreaks } from '../../../shared/utils/formatText';
+import type { ChatMessage } from '../types';
+import { autoLineBreaks } from '../../../../shared/utils/formatText';
 
 export type ChatBubbleProps = {
   msg: ChatMessage;

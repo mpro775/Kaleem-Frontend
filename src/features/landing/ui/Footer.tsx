@@ -5,10 +5,9 @@ import {
   Typography,
   Link as MLink,
   IconButton,
-  TextField,
-  Button,
   Divider,
   Tooltip,
+  useMediaQuery,
   useTheme,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -36,7 +35,7 @@ const FooterRoot = styled(Box)(({ theme }) => ({
 }));
 
 const FooterA = styled(MLink)(({ theme }) => ({
-  display: "flex",
+  display: "inline-flex",
   alignItems: "center",
   gap: 6,
   color: theme.palette.text.secondary,
@@ -50,9 +49,10 @@ const FooterA = styled(MLink)(({ theme }) => ({
 }));
 
 export default function Footer({ brand = "كليم" }: { brand?: string }) {
-  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const year = new Date().getFullYear();
 
   const primaryNav: FooterLink[] = [
@@ -80,14 +80,13 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
       if (location.pathname !== "/") {
         navigate("/" + href);
         setTimeout(() => {
-          const id = href.replace("#", "");
           document
-            .getElementById(id)
+            .getElementById(href.slice(1))
             ?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 0);
       } else {
         document
-          .getElementById(href.replace("#", ""))
+          .getElementById(href.slice(1))
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       return;
@@ -99,19 +98,23 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
 
   return (
     <FooterRoot dir="rtl">
-      <Container maxWidth="lg" sx={{ px: 2 }}>
+      <Container
+        maxWidth="lg"
+        sx={{ px: 2, textAlign: { xs: "center", md: "unset" } }}
+      >
         {/* شبكة عليا */}
         <Box
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", md: "2fr 1fr 1fr 1.5fr" },
             gap: { xs: 3, md: 4 },
-            alignItems: "flex-start",
+            alignItems: { xs: "center", md: "flex-start" },
+            justifyItems: { xs: "center", md: "start" }, // ✅ وسَط العناصر في الجوال
             mb: 4,
           }}
         >
           {/* البراند */}
-          <Box>
+          <Box sx={{ maxWidth: 520, mx: { xs: "auto", md: 0 } }}>
             <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
               {brand}
             </Typography>
@@ -119,7 +122,13 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
               {brand} — مساعد متاجر ذكي بالعربية لزيادة مبيعاتك عبر القنوات
               المختلفة، مع تجربة سلسة وسريعة الانطلاق.
             </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                justifyContent: { xs: "center", md: "flex-start" }, // ✅
+              }}
+            >
               <Tooltip title="X / Twitter">
                 <IconButton
                   size="small"
@@ -177,12 +186,25 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           </Box>
 
           {/* روابط أساسية */}
-          <Box component="nav" aria-label="روابط المنتج">
+          <Box
+            component="nav"
+            aria-label="روابط المنتج"
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: { xs: "center", md: "flex-start" }, // ✅
+            }}
+          >
             <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
               المنتج
             </Typography>
             {primaryNav.map((l) => (
-              <FooterA key={l.label} href={l.href} onClick={handleLink(l.href)}>
+              <FooterA
+                key={l.label}
+                href={l.href}
+                onClick={handleLink(l.href)}
+                sx={{ justifyContent: { xs: "center", md: "flex-start" } }} // ✅
+              >
                 {l.label}
                 {!l.href.startsWith("#") && l.external && (
                   <LaunchRoundedIcon sx={{ fontSize: 14, opacity: 0.6 }} />
@@ -192,7 +214,15 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           </Box>
 
           {/* روابط ثانوية */}
-          <Box component="nav" aria-label="مزيد من الروابط">
+          <Box
+            component="nav"
+            aria-label="مزيد من الروابط"
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: { xs: "center", md: "flex-start" }, // ✅
+            }}
+          >
             <Typography sx={{ fontWeight: 800, mb: 2, letterSpacing: 0.2 }}>
               المزيد
             </Typography>
@@ -203,6 +233,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
                 onClick={handleLink(l.href)}
                 target={l.external ? "_blank" : undefined}
                 rel={l.external ? "noopener" : undefined}
+                sx={{ justifyContent: { xs: "center", md: "flex-start" } }} // ✅
               >
                 {l.label}
                 {l.external && (
@@ -212,7 +243,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
             ))}
           </Box>
 
-       
+          {/* (اختياري) عمود رابع مستقبلًا... */}
         </Box>
 
         <Divider sx={{ my: 2 }} />
@@ -223,7 +254,8 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
             display: "flex",
             flexWrap: "wrap",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: { xs: "center", md: "space-between" }, // ✅
+            textAlign: { xs: "center", md: "unset" }, // ✅
             gap: 2,
             mt: 2,
           }}
@@ -234,10 +266,19 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
               alignItems: "center",
               gap: 2,
               flexWrap: "wrap",
+              justifyContent: { xs: "center", md: "flex-start" }, // ✅
             }}
           >
             {legal.map((l) => (
-              <FooterA key={l.label} href={l.href} onClick={handleLink(l.href)}>
+              <FooterA
+                key={l.label}
+                href={l.href}
+                onClick={handleLink(l.href)}
+                sx={{
+                  fontSize: { xs: "0.8rem", sm: "0.875rem", md: "1rem" },
+                  justifyContent: { xs: "center", md: "flex-start" }, // ✅
+                }}
+              >
                 {l.label}
               </FooterA>
             ))}
@@ -246,7 +287,7 @@ export default function Footer({ brand = "كليم" }: { brand?: string }) {
           <Typography
             variant="caption"
             color="text.disabled"
-            sx={{ order: { xs: 3, md: 2 } }}
+            sx={{ order: { xs: 3, md: 2 }, width: { xs: "100%", md: "auto" } }} // ✅ يتمدّد ويتوسّط على الجوال
           >
             © {year} {brand}. جميع الحقوق محفوظة.
           </Typography>

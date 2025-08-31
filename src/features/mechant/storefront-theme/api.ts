@@ -57,3 +57,7 @@ export async function checkSlug(slug: string): Promise<{ available: boolean }> {
   );
   return res.data; // ✅ لا .data.data
 }
+export async function getPublicStorefrontBundle(slug: string) {
+  const res = await axios.get(`/public/${slug}/bundle`);
+  return res.data?.data ?? res.data; // يدعم كلا الشكلين
+}
