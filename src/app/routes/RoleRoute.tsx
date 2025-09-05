@@ -1,5 +1,5 @@
 // src/routes/RoleRoute.tsx
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import type { JSX } from "react";
 
@@ -11,8 +11,14 @@ export default function RoleRoute({
   children: JSX.Element;
 }) {
   const { isAuthenticated, user } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!user || !allow.includes(user.role as "ADMIN" | "MERCHANT" | "MEMBER"))
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    const redirect = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?redirect=${redirect}`} replace />;
+  }
+  if (!user || !allow.includes(user.role as any)) {
     return <Navigate to="/" replace />;
+  }
   return children;
 }

@@ -25,12 +25,10 @@ import {
   STORE_CATEGORIES,
 } from "@/features/onboarding/constants";
 import { ensureMerchant } from "@/auth/api";
-import { useErrorHandler } from '@/shared/errors';
 
 export default function OnboardingPage() {
-  const { handleError } = useErrorHandler();
   const navigate = useNavigate();
-  const { user, token, setAuth } = useAuth(); // ← جديد
+  const { user, token, setAuth } = useAuth();
   const [businessType, setBusinessType] = useState("store");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -40,6 +38,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ensuring, setEnsuring] = useState(false);
+  const [merchantEnsured, setMerchantEnsured] = useState(false);
 
   const isPhoneValid = useMemo(() => !phone || matchIsValidTel(phone), [phone]);
   const canSubmit = useMemo(() => {
@@ -51,43 +50,42 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     let mounted = true;
+
     (async () => {
-      // 🔑 لا تشترط emailVerified هنا؛ السيرفر سيتحقق ويمنع إن لم يكن مفعّلًا
-      if (token && !user?.merchantId && !ensuring) {
-        try {
-          setEnsuring(true);
-          const res = await ensureMerchant(token);
-          if (!mounted) return;
-          // نتوقع payload: { accessToken, user }
-          if (res?.user?.merchantId) {
-            setAuth(res.user, res.accessToken, { silent: true });
-          } else {
-            // لو رجع 400 "Email not verified" وتم التقاطها أعلاه لن نصل هنا
-            // ولو رجع بدون merchantId لسبب ما، اعرض رسالة ودية
-            setError("نُجهّز متجرك الآن.. جرّب بعد لحظات قليلة.");
-          }
-        } catch (e) {
-          if (!mounted) return;
-          // لو البريد غير مفعل سيرجع السيرفر 400 — وجّه المستخدم لصفحة التفعيل
-          const msg = getAxiosMessage(e);
-          if (String(msg).includes("Email not verified")) {
-            setError("رجاءً فعِّل بريدك أولاً.");
-            // (اختياري) وجّه مباشرة:
-            // navigate("/verify-email", { replace: true });
-          } else {
-            setError(getAxiosMessage(e, "تعذر تهيئة المتجر الآن"));
-          }
-        } finally {
-          if (mounted) setEnsuring(false);
+      if (!token || user?.merchantId || merchantEnsured) return;
+      try {
+        setEnsuring(true);
+        setError(null);
+        const res = await ensureMerchant(token);
+        if (!mounted) return;
+        if (res?.user?.merchantId) {
+          setAuth(res.user, res.accessToken, { silent: true });
+          setMerchantEnsured(true);
+        } else {
+          // مجرد إشعار، لا تمنع المتابعة
+          setError("نُجهّز متجرك الآن.. جرّب بعد لحظات قليلة.");
         }
+      } catch (e) {
+        if (!mounted) return;
+        const msg = getAxiosMessage(e);
+        if (String(msg).includes("Email not verified")) {
+          setError("رجاءً فعِّل بريدك أولاً.");
+          navigate("/verify-email", { replace: true });
+        } else {
+        }
+      } finally {
+        if (mounted) setEnsuring(false);
       }
     })();
+
     return () => {
       mounted = false;
     };
-    // ⚠️ اعتمد فقط على token و user?.merchantId (لا تعتمد على emailVerified هنا)
-  }, [token, user?.merchantId, setAuth, ensuring, handleError]); // 👈 أزلنا user?.emailVerified
-  console.log('token', !!token, 'user', user)
+    // 👇 لاحظ أننا أزلنا ensuring من القائمة:
+  }, [token, user?.merchantId, merchantEnsured, setAuth, navigate]);
+
+  console.log("token", !!token, "user", user);
+
   const handleContinue = async () => {
     try {
       setError(null);
@@ -97,24 +95,30 @@ export default function OnboardingPage() {
         setError("الجلسة منتهية، سجّل الدخول مجددًا");
         return;
       }
-      if (ensuring) {
-        setError("نُجهّز متجرك الآن.. انتظر اكتمال التهيئة ثم جرّب ثانية.");
-        return;
-      }
-      if (!user?.merchantId) {
-        // حاول مرة سريعة أخيرة قبل الإنهاء
+
+      // 👇 لا تمنع الإرسال لمجرد أن ensuring=true
+      // إن كنت تريد المنع: تأكد أن ensuring سيصبح false سريعًا.
+
+      let effectiveMerchantId = user?.merchantId;
+
+      if (!effectiveMerchantId) {
         try {
           const res = await ensureMerchant(token);
+          // 👇 خذ الـ merchantId مباشرة من الاستجابة
           if (res?.user?.merchantId) {
+            effectiveMerchantId = res.user.merchantId;
+            // حدّث الكونتكست “بهدوء” لكن لا تعتمد عليه في هذه الدالة
             setAuth(res.user, res.accessToken, { silent: true });
           }
         } catch (e) {
           setError(getAxiosMessage(e, "تعذر تهيئة المتجر الآن"));
-        }
-        if (!user?.merchantId) {
-          setError("نُجهّز متجرك الآن.. جرّب بعد ثوانٍ");
           return;
         }
+      }
+
+      if (!effectiveMerchantId) {
+        setError("نُجهّز متجرك الآن.. جرّب بعد ثوانٍ");
+        return;
       }
 
       const payload = {
@@ -126,7 +130,8 @@ export default function OnboardingPage() {
         customCategory:
           category === "other" ? customCategory.trim() : undefined,
       };
-      await saveBasicInfo(user.merchantId!, token, payload);
+
+      await saveBasicInfo(effectiveMerchantId, token, payload);
       navigate("/onboarding/source");
     } catch (e) {
       setError(getAxiosMessage(e, "حدث خطأ أثناء الحفظ"));
@@ -150,7 +155,11 @@ export default function OnboardingPage() {
         </Typography>
       }
     >
-   {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       {ensuring && (
         <Alert severity="info" sx={{ mb: 2 }}>
           نُجهّز متجرك الآن…
@@ -284,7 +293,7 @@ export default function OnboardingPage() {
         fullWidth
         variant="contained"
         onClick={handleContinue}
-        disabled={!canSubmit || saving || ensuring} // 👈 عطّل أثناء ensuring
+        disabled={!canSubmit || saving || ensuring}
         sx={{
           fontWeight: "bold",
           py: 1.7,

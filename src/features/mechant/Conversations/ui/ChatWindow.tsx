@@ -255,7 +255,7 @@ const ChatWindow = ({ messages, loading, onRate }: Props) => {
                           elevation={0}
                           onDoubleClick={() => copyToClipboard(msg.text)}
                           onTouchStart={(e) => {
-                            let timeout = setTimeout(
+                            const timeout = setTimeout(
                               () => copyToClipboard(msg.text),
                               500
                             );
@@ -556,31 +556,5 @@ const ChatWindow = ({ messages, loading, onRate }: Props) => {
     </Box>
   );
 };
-
-// نقاط متحركة لمؤشر الكتابة
-function Dot({ delay = 0 }: { delay?: number }) {
-  const theme = useTheme();
-  return (
-    <Box
-      component="span"
-      sx={{
-        width: 6,
-        height: 6,
-        borderRadius: "50%",
-        display: "inline-block",
-        backgroundColor:
-          theme.palette.mode === "dark"
-            ? alpha("#fff", 0.8)
-            : theme.palette.primary.main,
-        animation: "blink 1.2s infinite",
-        animationDelay: `${delay}s`,
-        "@keyframes blink": {
-          "0%, 80%, 100%": { opacity: 0.2, transform: "translateY(0px)" },
-          "40%": { opacity: 1, transform: "translateY(-2px)" },
-        },
-      }}
-    />
-  );
-}
 
 export default ChatWindow;

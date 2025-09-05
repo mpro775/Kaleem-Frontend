@@ -43,6 +43,8 @@ interface Props {
     file?: File | null;
     audio?: Blob | null;
   }) => void;
+  disabled?: boolean; // 👈 جديد
+  disabledReason?: string;
 }
 
 const MAX_LEN = 1200;
@@ -62,7 +64,7 @@ function isPdf(file: File) {
   return file.type === "application/pdf";
 }
 
-const ChatInput: React.FC<Props> = ({ onSend }) => {
+const ChatInput: React.FC<Props> = ({ onSend, disabled, disabledReason }) => {
   const theme = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
@@ -78,9 +80,10 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
+  const isDisabled = !!disabled;
 
   const nearLimit = text.length >= MAX_LEN - 40;
-  const canInteract = !isRecording && !loadingAudio;
+  const canInteract = !isRecording && !loadingAudio && !isDisabled;
 
   const counterColor = useMemo(() => {
     if (text.length === 0) return "text.secondary";
@@ -102,6 +105,7 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
   }
 
   function handleSend() {
+    if (isDisabled) return; // ⬅️ جديد
     if (!text.trim() && !file && !audio) return;
     onSend({ text: text.trim() || undefined, file, audio });
     resetStates();
@@ -129,6 +133,7 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
   const handleRemoveFile = () => setFile(null);
 
   async function handleStartRecord() {
+    if (isDisabled) return; // ⬅️ جديد
     setError(null);
     setLoadingAudio(true);
     try {
@@ -317,6 +322,23 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
         paddingBottom: "max(env(safe-area-inset-bottom), 0px)",
       }}
     >
+      {isDisabled && disabledReason && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 1,
+            p: 1,
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
+            backgroundColor: alpha(theme.palette.warning.main, 0.08),
+          }}
+        >
+          <Typography variant="body2" color="warning.main">
+            {disabledReason}
+          </Typography>
+        </Paper>
+      )}
+
       {/* طبقة إسقاط الملفات */}
       <Fade in={dragOver}>
         <Box
@@ -467,7 +489,9 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
             <span>
               <IconButton
                 onClick={() => fileInputRef.current?.click()}
-                disabled={!!file || !!audio || isRecording || loadingAudio}
+                disabled={
+                  !!file || !!audio || isRecording || loadingAudio || isDisabled
+                }
                 size="medium"
                 color={file || audio ? "primary" : "default"}
                 aria-label="إرفاق ملف"
@@ -490,7 +514,9 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
           <Tooltip title="إدراج إيموجي">
             <IconButton
               onClick={() => setShowEmoji((s) => !s)}
-              disabled={!!file || !!audio || isRecording || loadingAudio}
+              disabled={
+                !!file || !!audio || isRecording || loadingAudio || isDisabled
+              }
               size="medium"
               aria-label="إدراج إيموجي"
               color={showEmoji ? "primary" : "default"}
@@ -512,7 +538,9 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
             maxRows={{ xs: 6, md: 4 } as any}
             placeholder="اكتب رسالة..."
             value={text}
-            disabled={!!file || !!audio || isRecording || loadingAudio}
+            disabled={
+              !!file || !!audio || isRecording || loadingAudio || isDisabled
+            }
             onChange={(e) => setText(e.target.value.slice(0, MAX_LEN))}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -562,7 +590,9 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
                       <IconButton
                         onClick={handleSend}
                         color="primary"
-                        disabled={!text.trim() && !file && !audio}
+                        disabled={
+                          (!text.trim() && !file && !audio) || isDisabled
+                        }
                         size="medium"
                         aria-label="إرسال الرسالة"
                         sx={{
@@ -659,7 +689,7 @@ const ChatInput: React.FC<Props> = ({ onSend }) => {
                 <IconButton
                   onClick={handleStartRecord}
                   color="primary"
-                  disabled={!!file || !!audio || loadingAudio}
+                  disabled={!!file || !!audio || loadingAudio || isDisabled}
                   size="medium"
                   aria-label="بدء التسجيل الصوتي"
                   sx={{

@@ -24,23 +24,30 @@ import ContactCard from "@/features/store/about/ui/ContactCard";
 import HoursCard from "@/features/store/about/ui/HoursCard";
 import PoliciesSection from "@/features/store/about/ui/PoliciesSection";
 import AboutSkeleton from "@/features/store/about/ui/AboutSkeleton";
-import { useAboutData } from "@/features/store/about/hooks/useAboutData";
 import { StoreNavbar } from "@/features/store/ui/StoreNavbar";
 import { Footer } from "@/features/store/ui/Footer";
+import { useStoreData } from "@/features/store/home/hooks/useStoreData";
+import { useErrorHandler } from "@/shared/errors";
 
 export default function AboutPage() {
-  const params = useParams();
-  const slug =
-    (params.slug as string) ||
-    (params.slugOrId as string) ||
-    (params.id as string) ||
-    "";
+  const { slug } = useParams<{ slug: string }>();
+
+  const { handleError } = useErrorHandler();
+
   const navigate = useNavigate();
-  const { merchant, loading, err } = useAboutData(slug);
+  const isDemo =
+    slug === "demo" || new URLSearchParams(location.search).has("demo");
+  // اجلب storefront وثبّت ألوان البراند (hook يُستدعى دائمًا)
+  const {
+    merchant,
+    storefront,
 
-  if (loading) return <AboutSkeleton />;
+    isLoading,
+    error,
+  } = useStoreData(slug, isDemo, handleError);
+  if (isLoading) return <AboutSkeleton />;
 
-  if (err || !merchant) {
+  if (error || !merchant) {
     return (
       <Box
         sx={{
@@ -53,7 +60,7 @@ export default function AboutPage() {
         }}
       >
         <Typography variant="h5" color="error">
-          {err || "تعذر تحميل معلومات المتجر"}
+          {error || "تعذر تحميل معلومات المتجر"}
         </Typography>
       </Box>
     );
@@ -63,32 +70,31 @@ export default function AboutPage() {
   const phone = merchant.phone;
   const hasPolicies =
     merchant.returnPolicy || merchant.exchangePolicy || merchant.shippingPolicy;
-  
+
   // Add missing categories property for StoreNavbar compatibility
   const merchantWithCategories = {
     ...merchant,
-    categories: []
+    categories: [],
   };
 
   const chipBase = {
-    backgroundColor: "rgba(0,0,0,0.08)",
-    borderColor: "rgba(0,0,0,0.12)",
-    color: "inherit",
+    backgroundColor: "var(--brand)",
+    borderColor: "var(--brand)",
+    color: "var(--on-brand)",
   };
 
   return (
     <Box sx={{ bgcolor: "#fff" }}>
       <StoreNavbar
         merchant={merchantWithCategories as any}
-        storefront={{} as any}
+        storefront={storefront as any} // ← صار فعلي
       />
       {/* هيرو أنيق بخلفية متدرجة وفق ألوان البراند */}
       <Box
         sx={{
           position: "relative",
           color: "var(--on-brand)",
-          background:
-            "linear-gradient(135deg, var(--brand) 0%, rgba(0,0,0,0.5) 100%)",
+          background: "var(--brand)",
           boxShadow: "inset 0 -1px 0 rgba(255,255,255,0.08)",
           overflow: "hidden",
         }}
@@ -98,8 +104,7 @@ export default function AboutPage() {
           sx={{
             position: "absolute",
             inset: -80,
-            background:
-              "radial-gradient(600px 300px at 85% -10%, rgba(255,255,255,0.16), transparent 60%)",
+            background: "var(--brand)",
             pointerEvents: "none",
           }}
         />
@@ -112,8 +117,7 @@ export default function AboutPage() {
             height: 520,
             borderRadius: "50%",
             filter: "blur(60px)",
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.14), transparent 60%)",
+            background: "var(--brand) !important",
             pointerEvents: "none",
           }}
         />
@@ -177,18 +181,19 @@ export default function AboutPage() {
                 }}
               />
             )}
-            {merchant.workingHours?.length && merchant.workingHours?.length > 0 && (
-              <Chip
-                icon={<ScheduleIcon />}
-                label={`${merchant.workingHours[0].day} ${merchant.workingHours[0].openTime}–${merchant.workingHours[0].closeTime}`}
-                sx={{
-                  ...chipBase,
-                  color: "var(--on-brand)",
-                  border: "1px solid rgba(255,255,255,0.28)",
-                  background: "rgba(255,255,255,0.14)",
-                }}
-              />
-            )}
+            {merchant.workingHours?.length &&
+              merchant.workingHours?.length > 0 && (
+                <Chip
+                  icon={<ScheduleIcon />}
+                  label={`${merchant.workingHours[0].day} ${merchant.workingHours[0].openTime}–${merchant.workingHours[0].closeTime}`}
+                  sx={{
+                    ...chipBase,
+                    color: "var(--on-brand)",
+                    border: "1px solid rgba(255,255,255,0.28)",
+                    background: "rgba(255,255,255,0.14)",
+                  }}
+                />
+              )}
             {hasPolicies && (
               <Chip
                 icon={<PolicyIcon />}
@@ -208,10 +213,10 @@ export default function AboutPage() {
       {/* المحتوى الأبيض أسفل الهيرو */}
       <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
         <Grid container spacing={4}>
-          <Grid  size={{xs:12, md:6}}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <ContactCard merchant={merchant} />
           </Grid>
-          <Grid size={{xs:12, md:6}}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <HoursCard merchant={merchant} />
           </Grid>
         </Grid>

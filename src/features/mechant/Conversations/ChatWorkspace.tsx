@@ -1,5 +1,5 @@
 // src/widgets/chat/ChatWorkspace.tsx
-import {  useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -56,7 +56,6 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { handleError } = useErrorHandler();
-
   // حفظ اختيارات المستخدم
   const [selectedChannel, setChannel] = useLocalStorage<"" | ChannelType>(
     "conv_selected_channel",
@@ -114,6 +113,7 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
 
   const { mutateAsync: toggleHandover } = useHandover(selectedSession);
   const handover = sessionDetails?.handoverToAgent ?? false;
+  const canAgentReply = !!handover;
 
   const activeChannel = useMemo(() => {
     if (!sessions || !Array.isArray(sessions)) return undefined;
@@ -181,6 +181,15 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
   }) => {
     const { text } = payload;
     if (!text || !selectedSession || !activeChannel) return;
+
+    // ⛔️ امنع الإرسال إذا البوت ما زال يعمل
+    if (!canAgentReply) {
+      handleError(
+        "لا يمكن الرد الآن. أوقف البوت من المفتاح العلوي ثم حاول مجددًا."
+      );
+      return;
+    }
+
     try {
       await sendMsg(text);
       setMessages((prev) => [
@@ -223,11 +232,7 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
           <Box sx={{ width: 40 }} />
         )}
         <Typography variant="h6" sx={{ fontWeight: 800 }} noWrap>
-          {mobileView === "chat"
-            ? selectedSession
-              ? `جلسة: ${selectedSession}`
-              : "محادثة"
-            : "المحادثات"}
+          {mobileView === "chat" ? "محادثة" : "المحادثات"}
         </Typography>
         <Box sx={{ flex: 1 }} />
         <Tooltip title={online ? "متصل" : "غير متصل"}>
@@ -378,7 +383,17 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
                   pb: "env(safe-area-inset-bottom)",
                 }}
               >
-                <ChatInput onSend={handleSend} />
+                <ChatInput
+                  onSend={handleSend}
+                  disabled={!handover || !selectedSession}
+                  disabledReason={
+                    !selectedSession
+                      ? "اختر محادثة أولاً."
+                      : !handover
+                      ? "البوت يعمل الآن. أوقف البوت من المفتاح بالأعلى لبدء الدردشة اليدوية."
+                      : undefined
+                  }
+                />{" "}
               </Box>
             )}
           </Box>
@@ -497,7 +512,17 @@ export default function ChatWorkspace({ merchantId }: { merchantId: string }) {
                   boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
                 }}
               >
-                <ChatInput onSend={handleSend} />
+                <ChatInput
+                  onSend={handleSend}
+                  disabled={!handover || !selectedSession}
+                  disabledReason={
+                    !selectedSession
+                      ? "اختر محادثة أولاً."
+                      : !handover
+                      ? "البوت يعمل الآن. أوقف البوت من المفتاح بالأعلى لبدء الدردشة اليدوية."
+                      : undefined
+                  }
+                />{" "}
               </Box>
             )}
           </Box>

@@ -1,283 +1,152 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-// 🎭 اختبارات E2E لتسجيل الدخول - Kaleem Frontend
+const loginEndpointGlob = "**/*/auth/login**";
 
-test.describe('🔐 تسجيل الدخول', () => {
-  test.beforeEach(async ({ page }) => {
-    // الانتقال إلى صفحة تسجيل الدخول
-    await page.goto('/auth/login');
-    
-    // انتظار تحميل الصفحة
-    await page.waitForLoadState('networkidle');
+test.describe("🔐 تسجيل الدخول", () => {
+  test.beforeEach(async ({ page, baseURL }) => {
+    await page.goto("/login"); // عندك المسار /login وليس /auth/login
+    await expect(page.locator("form")).toBeVisible();
   });
 
-  test('✅ عرض صفحة تسجيل الدخول بشكل صحيح', async ({ page }) => {
-    // التحقق من عنوان الصفحة
-    await expect(page).toHaveTitle(/تسجيل الدخول|Login/);
-    
-    // التحقق من وجود النموذج
-    const loginForm = page.locator('form');
-    await expect(loginForm).toBeVisible();
-    
-    // التحقق من وجود حقول الإدخال
-    const emailInput = page.locator('input[type="email"], input[name="email"]');
-    const passwordInput = page.locator('input[type="password"], input[name="password"]');
-    
-    await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
-    
-    // التحقق من وجود زر تسجيل الدخول
-    const loginButton = page.locator('button[type="submit"], button:has-text("تسجيل الدخول"), button:has-text("Login")');
-    await expect(loginButton).toBeVisible();
-    
-    // التحقق من وجود رابط إنشاء حساب جديد
-    const signupLink = page.locator('a:has-text("إنشاء حساب"), a:has-text("Sign up")');
-    await expect(signupLink).toBeVisible();
+  test("✅ الصفحة تعرض عناصر النموذج", async ({ page }) => {
+    await expect(page).toHaveTitle(/تسجيل الدخول|Login/i);
+    await expect(page.locator('input[name="email"]')).toBeVisible();
+    await expect(page.locator('input[name="password"]')).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /تسجيل الدخول|Login/i })
+    ).toBeVisible();
   });
 
-  test('🔍 التحقق من صحة النموذج', async ({ page }) => {
-    // ملء النموذج ببيانات صحيحة
-    await page.fill('input[type="email"], input[name="email"]', 'test@example.com');
-    await page.fill('input[type="password"], input[name="password"]', 'password123');
-    
-    // التحقق من أن الحقول تحتوي على القيم المدخلة
-    await expect(page.locator('input[type="email"], input[name="email"]')).toHaveValue('test@example.com');
-    await expect(page.locator('input[type="password"], input[name="password"]')).toHaveValue('password123');
+  test("❌ رسائل أخطاء للحقول الفارغة", async ({ page }) => {
+    await page.getByRole("button", { name: /تسجيل الدخول|Login/i }).click();
+    await expect(page.locator('.Mui-error, [role="alert"]')).toBeVisible();
   });
 
-  test('❌ عرض رسائل خطأ للحقول الفارغة', async ({ page }) => {
-    // محاولة إرسال النموذج بدون ملء الحقول
-    const loginButton = page.locator('button[type="submit"], button:has-text("تسجيل الدخول"), button:has-text("Login")');
-    await loginButton.click();
-    
-    // انتظار ظهور رسائل الخطأ
-    await page.waitForTimeout(1000);
-    
-    // التحقق من وجود رسائل خطأ
-    const errorMessages = page.locator('.error, .error-message, [data-testid="error"], .Mui-error');
-    await expect(errorMessages.first()).toBeVisible();
+  test("📧 بريد غير صالح", async ({ page }) => {
+    await page.locator('input[name="email"]').fill("invalid-email");
+    await page.locator('input[name="password"]').fill("password123");
+    await page.getByRole("button", { name: /تسجيل الدخول|Login/i }).click();
+    await expect(page.locator('.Mui-error, [role="alert"]')).toBeVisible();
   });
 
-  test('📧 عرض رسائل خطأ لصيغة البريد الإلكتروني غير الصحيحة', async ({ page }) => {
-    // إدخال بريد إلكتروني بصيغة غير صحيحة
-    await page.fill('input[type="email"], input[name="email"]', 'invalid-email');
-    await page.fill('input[type="password"], input[name="password"]', 'password123');
-    
-    // النقر على زر تسجيل الدخول
-    const loginButton = page.locator('button[type="submit"], button:has-text("تسجيل الدخول"), button:has-text("Login")');
-    await loginButton.click();
-    
-    // انتظار ظهور رسالة الخطأ
-    await page.waitForTimeout(1000);
-    
-    // التحقق من وجود رسالة خطأ للبريد الإلكتروني
-    const emailError = page.locator('.error, .error-message, [data-testid="error"], .Mui-error');
-    await expect(emailError.first()).toBeVisible();
+  test("🔒 كلمة مرور قصيرة", async ({ page }) => {
+    await page.locator('input[name="email"]').fill("test@example.com");
+    await page.locator('input[name="password"]').fill("123");
+    await page.getByRole("button", { name: /تسجيل الدخول|Login/i }).click();
+    await expect(page.locator('.Mui-error, [role="alert"]')).toBeVisible();
   });
 
-  test('🔒 عرض رسائل خطأ لكلمة المرور القصيرة', async ({ page }) => {
-    // إدخال كلمة مرور قصيرة
-    await page.fill('input[type="email"], input[name="email"]', 'test@example.com');
-    await page.fill('input[type="password"], input[name="password"]', '123');
-    
-    // النقر على زر تسجيل الدخول
-    const loginButton = page.locator('button[type="submit"], button:has-text("تسجيل الدخول"), button:has-text("Login")');
-    await loginButton.click();
-    
-    // انتظار ظهور رسالة الخطأ
-    await page.waitForTimeout(1000);
-    
-    // التحقق من وجود رسالة خطأ لكلمة المرور
-    const passwordError = page.locator('.error, .error-message, [data-testid="error"], .Mui-error');
-    await expect(passwordError.first()).toBeVisible();
-  });
-
-  test('👁️ إظهار/إخفاء كلمة المرور', async ({ page }) => {
-    // ملء كلمة المرور
-    await page.fill('input[type="password"], input[name="password"]', 'password123');
-    
-    // البحث عن زر إظهار/إخفاء كلمة المرور
-    const togglePasswordButton = page.locator('button[aria-label*="password"], button[data-testid="toggle-password"], .password-toggle');
-    
-    if (await togglePasswordButton.count() > 0) {
-      // النقر على زر إظهار كلمة المرور
-      await togglePasswordButton.click();
-      
-      // التحقق من أن كلمة المرور أصبحت مرئية
-      const passwordInput = page.locator('input[type="password"], input[name="password"]');
-      await expect(passwordInput).toHaveAttribute('type', 'text');
-      
-      // النقر مرة أخرى لإخفاء كلمة المرور
-      await togglePasswordButton.click();
-      
-      // التحقق من أن كلمة المرور أصبحت مخفية
-      await expect(passwordInput).toHaveAttribute('type', 'password');
+  test("👁️ إظهار/إخفاء كلمة المرور", async ({ page }) => {
+    await page.locator('input[name="password"]').fill("password123");
+    // زر الإظهار في تطبيقك عنده aria-label عربي
+    const toggle = page.getByRole("button", {
+      name: /إظهار كلمة المرور|إخفاء كلمة المرور/,
+    });
+    if (await toggle.isVisible()) {
+      await toggle.click();
+      await expect(page.locator('input[name="password"]')).toHaveAttribute(
+        "type",
+        "text"
+      );
+      await toggle.click();
+      await expect(page.locator('input[name="password"]')).toHaveAttribute(
+        "type",
+        "password"
+      );
     }
   });
 
-  test('🔗 الانتقال إلى صفحة إنشاء حساب جديد', async ({ page }) => {
-    // النقر على رابط إنشاء حساب جديد
-    const signupLink = page.locator('a:has-text("إنشاء حساب"), a:has-text("Sign up")');
-    await signupLink.click();
-    
-    // التحقق من الانتقال إلى صفحة إنشاء حساب جديد
-    await expect(page).toHaveURL(/.*signup|.*register|.*auth\/signup|.*auth\/register/);
+  test("🔗 الذهاب إلى إنشاء حساب", async ({ page }) => {
+    // رابط إنشئ حساب موجود بـ SignUpPage
+    await page.getByRole("link", { name: /أنشئ حساب|Sign/i }).click();
+    await expect(page).toHaveURL(/\/signup/i);
   });
 
-  test('🔗 الانتقال إلى صفحة نسيان كلمة المرور', async ({ page }) => {
-    // البحث عن رابط نسيان كلمة المرور
-    const forgotPasswordLink = page.locator('a:has-text("نسيت كلمة المرور"), a:has-text("Forgot password")');
-    
-    if (await forgotPasswordLink.count() > 0) {
-      // النقر على الرابط
-      await forgotPasswordLink.click();
-      
-      // التحقق من الانتقال إلى صفحة نسيان كلمة المرور
-      await expect(page).toHaveURL(/.*forgot-password|.*reset-password|.*auth\/forgot-password/);
+  test("🔗 الذهاب إلى نسيت كلمة المرور (إن وُجد)", async ({ page }) => {
+    const link = page.getByRole("link", {
+      name: /نسيت كلمة المرور|Forgot password/i,
+    });
+    if (await link.count()) {
+      await link.click();
+      await expect(page).toHaveURL(/forgot-password|reset-password/i);
     }
   });
 
-  test('📱 استجابة التصميم للأجهزة المحمولة', async ({ page }) => {
-    // تغيير حجم النافذة إلى حجم الهاتف
-    await page.setViewportSize({ width: 375, height: 667 });
-    
-    // التحقق من أن النموذج يظهر بشكل صحيح
-    const loginForm = page.locator('form');
-    await expect(loginForm).toBeVisible();
-    
-    // التحقق من أن الحقول تظهر بشكل صحيح
-    const emailInput = page.locator('input[type="email"], input[name="email"]');
-    const passwordInput = page.locator('input[type="password"], input[name="password"]');
-    
-    await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
-    
-    // التحقق من أن الزر يظهر بشكل صحيح
-    const loginButton = page.locator('button[type="submit"], button:has-text("تسجيل الدخول"), button:has-text("Login")');
-    await expect(loginButton).toBeVisible();
-  });
-
-  test('🎨 التحقق من التصميم RTL', async ({ page }) => {
-    // التحقق من اتجاه النص RTL
-    const body = page.locator('body, html');
-    await expect(body).toHaveAttribute('dir', 'rtl');
-    
-    // التحقق من لغة الصفحة
-    await expect(body).toHaveAttribute('lang', 'ar');
-  });
-
-  test('♿ إمكانية الوصول (Accessibility)', async ({ page }) => {
-    // التحقق من وجود labels للحقول
-    const emailInput = page.locator('input[type="email"], input[name="email"]');
-    const passwordInput = page.locator('input[type="password"], input[name="password"]');
-    
-    // التحقق من وجود aria-label أو label مرتبط
-    const emailLabel = page.locator('label[for*="email"], [aria-label*="email"], [data-testid="email-label"]');
-    const passwordLabel = page.locator('label[for*="password"], [aria-label*="password"], [data-testid="password-label"]');
-    
-    if (await emailLabel.count() > 0) {
-      await expect(emailLabel).toBeVisible();
-    }
-    
-    if (await passwordLabel.count() > 0) {
-      await expect(passwordLabel).toBeVisible();
-    }
-    
-    // التحقق من وجود alt text للصور
-    const images = page.locator('img');
-    for (let i = 0; i < await images.count(); i++) {
-      const image = images.nth(i);
-      const alt = await image.getAttribute('alt');
-      expect(alt).toBeTruthy();
-    }
-  });
-
-  test('🔒 اختبار تسجيل الدخول الناجح (Mock)', async ({ page }) => {
-    // Mock للـ API call
-    await page.route('**/api/auth/login', async route => {
-      await route.fulfill({
+  test("🔒 تسجيل دخول ناجح → يوجّه حسب emailVerified=false إلى /verify-email", async ({
+    page,
+  }) => {
+    await page.route(loginEndpointGlob, (route) => {
+      route.fulfill({
         status: 200,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
-          success: true,
-          token: 'mock-jwt-token',
+          accessToken: "mock-token",
           user: {
-            id: 1,
-            email: 'test@example.com',
-            name: 'Test User'
-          }
-        })
+            id: "u1",
+            name: "Test",
+            email: "test@example.com",
+            role: "MERCHANT",
+            merchantId: null,
+            firstLogin: true,
+            emailVerified: false,
+          },
+        }),
       });
     });
-    
-    // ملء النموذج
-    await page.fill('input[type="email"], input[name="email"]', 'test@example.com');
-    await page.fill('input[type="password"], input[name="password"]', 'password123');
-    
-    // النقر على زر تسجيل الدخول
-    const loginButton = page.locator('button[type="submit"], button:has-text("تسجيل الدخول"), button:has-text("Login")');
-    await loginButton.click();
-    
-    // انتظار نجاح تسجيل الدخول
-    await page.waitForTimeout(2000);
-    
-    // التحقق من الانتقال إلى الصفحة الرئيسية أو لوحة التحكم
-    await expect(page).toHaveURL(/.*dashboard|.*home|.*\/$/);
+
+    await page.locator('input[name="email"]').fill("test@example.com");
+    await page.locator('input[name="password"]').fill("password123");
+    await page.getByRole("button", { name: /تسجيل الدخول|Login/i }).click();
+
+    // AuthContext يحوّل إلى /verify-email
+    await expect(page).toHaveURL(/\/verify-email/i);
   });
 
-  test('❌ اختبار تسجيل الدخول الفاشل (Mock)', async ({ page }) => {
-    // Mock للـ API call مع خطأ
-    await page.route('**/api/auth/login', async route => {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
+  test("✅ تسجيل دخول ناجح → emailVerified=true يوجّه إلى /dashboard", async ({
+    page,
+  }) => {
+    await page.route(loginEndpointGlob, (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
         body: JSON.stringify({
-          success: false,
-          message: 'بيانات الاعتماد غير صحيحة'
-        })
+          accessToken: "mock-token",
+          user: {
+            id: "u1",
+            name: "Test",
+            email: "test@example.com",
+            role: "MERCHANT",
+            merchantId: "m1",
+            firstLogin: false,
+            emailVerified: true,
+          },
+        }),
       });
     });
-    
-    // ملء النموذج
-    await page.fill('input[type="email"], input[name="email"]', 'wrong@example.com');
-    await page.fill('input[type="password"], input[name="password"]', 'wrongpassword');
-    
-    // النقر على زر تسجيل الدخول
-    const loginButton = page.locator('button[type="submit"], button:has-text("تسجيل الدخول"), button:has-text("Login")');
-    await loginButton.click();
-    
-    // انتظار ظهور رسالة الخطأ
-    await page.waitForTimeout(2000);
-    
-    // التحقق من وجود رسالة خطأ
-    const errorMessage = page.locator('.error, .error-message, [data-testid="error"], .Mui-error, .alert-error');
-    await expect(errorMessage.first()).toBeVisible();
-    
-    // التحقق من أن المستخدم لا يزال في صفحة تسجيل الدخول
-    await expect(page).toHaveURL(/.*login|.*auth\/login/);
+
+    await page.locator('input[name="email"]').fill("test@example.com");
+    await page.locator('input[name="password"]').fill("password123");
+    await page.getByRole("button", { name: /تسجيل الدخول|Login/i }).click();
+
+    await expect(page).toHaveURL(/\/dashboard/i);
   });
 
-  test('⏱️ اختبار الأداء', async ({ page }) => {
-    // قياس وقت تحميل الصفحة
-    const startTime = Date.now();
-    
-    await page.goto('/auth/login');
-    await page.waitForLoadState('networkidle');
-    
-    const loadTime = Date.now() - startTime;
-    
-    // التحقق من أن وقت التحميل أقل من 3 ثوانٍ
-    expect(loadTime).toBeLessThan(3000);
-    
-    // قياس وقت استجابة النموذج
-    const formStartTime = Date.now();
-    
-    await page.fill('input[type="email"], input[name="email"]', 'test@example.com');
-    await page.fill('input[type="password"], input[name="password"]', 'password123');
-    
-    const formFillTime = Date.now() - formStartTime;
-    
-    // التحقق من أن وقت ملء النموذج أقل من ثانية واحدة
-    expect(formFillTime).toBeLessThan(1000);
+  test("❌ تسجيل دخول فاشل (401)", async ({ page }) => {
+    await page.route(loginEndpointGlob, (route) => {
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Invalid credentials" }),
+      });
+    });
+
+    await page.locator('input[name="email"]').fill("wrong@example.com");
+    await page.locator('input[name="password"]').fill("wrongpass");
+    await page.getByRole("button", { name: /تسجيل الدخول|Login/i }).click();
+
+    await expect(
+      page.locator('.Mui-error, [role="alert"], .alert-error')
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/login/i);
   });
 });

@@ -73,7 +73,9 @@ export default function CartDialog({
 
   const handleNextStep = () => {
     if (step === 1) setStep(2);
-    else if (step === 2) validateForm() && setStep(3);
+    else if (step === 2) {
+      if (validateForm()) setStep(3);
+    }
   };
 
   const handlePrevStep = () => {
@@ -137,22 +139,30 @@ export default function CartDialog({
     0
   );
 
+  // تحقق من حجم الشاشة
+  const isMobile = window.innerWidth <= 600;
   return (
     <Dialog
       open={open}
       onClose={onClose}
       fullWidth
-      maxWidth="md"
-      PaperProps={{ sx: { borderRadius: 3 } }}
+      maxWidth={isMobile ? undefined : "md"}
+      fullScreen={isMobile}
+      PaperProps={{
+        sx: {
+          borderRadius: isMobile ? 0 : 3,
+          m: isMobile ? 0 : 2,
+        },
+      }}
     >
       <DialogTitle
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          backgroundColor: "var(--brand)", // ✅ لون داكن موحد
+          backgroundColor: "var(--brand)",
           color: "var(--on-brand)",
-          py: 2,
+          py: isMobile ? 1 : 2,
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -176,7 +186,7 @@ export default function CartDialog({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 0 }}>
+  <DialogContent sx={{ p: isMobile ? 0 : 0 }}>
         {demo && (
           <Alert
             severity="info"
@@ -191,7 +201,7 @@ export default function CartDialog({
           sx={{
             display: "flex",
             justifyContent: "center",
-            py: 3,
+            py: isMobile ? 2 : 3,
             backgroundColor: theme.palette.grey[100],
             borderBottom: `1px solid ${theme.palette.divider}`,
           }}
@@ -267,31 +277,34 @@ export default function CartDialog({
             </Button>
           </Box>
         ) : (
-          <Box sx={{ p: 3 }}>
+          <Box sx={{ p: isMobile ? 1 : 3 }}>
             {/* الخطوة 1 */}
             {step === 1 && (
               <>
-                <Box sx={{ maxHeight: 400, overflowY: "auto", mb: 3 }}>
+                <Box sx={{ maxHeight: isMobile ? 250 : 400, overflowY: "auto", mb: isMobile ? 2 : 3 }}>
                   {items.map(({ product, quantity }) => (
                     <Box
                       key={product._id}
                       sx={{
                         display: "flex",
                         alignItems: "center",
-                        p: 2,
-                        mb: 1,
+                        p: isMobile ? 1 : 2,
+                        mb: isMobile ? 0.5 : 1,
                         borderRadius: 2,
                         backgroundColor: theme.palette.grey[50],
                         "&:hover": { backgroundColor: theme.palette.grey[100] },
+                        flexDirection: isMobile ? "column" : "row",
+                        gap: isMobile ? 1 : 0,
                       }}
                     >
                       <Box
                         sx={{
-                          width: 80,
-                          height: 80,
+                          width: isMobile ? 60 : 80,
+                          height: isMobile ? 60 : 80,
                           borderRadius: 2,
                           overflow: "hidden",
-                          mr: 2,
+                          mr: isMobile ? 0 : 2,
+                          mb: isMobile ? 1 : 0,
                           flexShrink: 0,
                         }}
                       >
@@ -323,7 +336,7 @@ export default function CartDialog({
                         )}
                       </Box>
 
-                      <Box sx={{ flexGrow: 1 }}>
+                      <Box sx={{ flexGrow: 1, width: isMobile ? "100%" : "auto" }}>
                         <Typography fontWeight="bold" sx={{ mb: 0.5 }}>
                           {product.name}
                         </Typography>
@@ -342,7 +355,7 @@ export default function CartDialog({
                       </Box>
 
                       <Box
-                        sx={{ display: "flex", alignItems: "center", ml: 2 }}
+                        sx={{ display: "flex", alignItems: "center", ml: isMobile ? 0 : 2 }}
                       >
                         <IconButton
                           size="small"
@@ -374,7 +387,7 @@ export default function CartDialog({
                           e.stopPropagation();
                           removeItem(product._id);
                         }}
-                        sx={{ ml: 2 }}
+                        sx={{ ml: isMobile ? 0 : 2 }}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -385,10 +398,11 @@ export default function CartDialog({
                 <Box
                   sx={{
                     display: "flex",
+                    flexDirection: isMobile ? "column" : "row",
                     justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 3,
-                    p: 2,
+                    alignItems: isMobile ? "flex-start" : "center",
+                    mt: isMobile ? 2 : 3,
+                    p: isMobile ? 1 : 2,
                     backgroundColor: theme.palette.grey[50],
                     borderRadius: 2,
                   }}
@@ -406,10 +420,10 @@ export default function CartDialog({
                 <Button
                   variant="contained"
                   fullWidth
-                  size="large"
+                  size={isMobile ? "medium" : "large"}
                   sx={{
-                    mt: 3,
-                    py: 1.5,
+                    mt: isMobile ? 2 : 3,
+                    py: isMobile ? 1 : 1.5,
                     borderRadius: 2,
                     fontWeight: "bold",
                     background: "var(--brand)",
@@ -440,7 +454,7 @@ export default function CartDialog({
                   معلومات العميل
                 </Typography>
 
-                <Stack spacing={3} sx={{ maxWidth: 600, mx: "auto" }}>
+                <Stack spacing={isMobile ? 2 : 3} sx={{ maxWidth: 600, mx: "auto" }}>
                   <TextField
                     label="الاسم بالكامل"
                     value={customer.name}
@@ -477,7 +491,7 @@ export default function CartDialog({
                     rows={3}
                   />
 
-                  <Box sx={{ mt: 2, display: "flex", gap: 2 }}>
+                  <Box sx={{ mt: 2, display: "flex", gap: isMobile ? 1 : 2 }}>
                     <Button
                       variant="outlined"
                       fullWidth
@@ -530,8 +544,8 @@ export default function CartDialog({
                   sx={{
                     backgroundColor: theme.palette.grey[50],
                     borderRadius: 3,
-                    p: 3,
-                    mb: 3,
+                    p: isMobile ? 1.5 : 3,
+                    mb: isMobile ? 2 : 3,
                     maxWidth: 600,
                     mx: "auto",
                   }}
@@ -607,8 +621,8 @@ export default function CartDialog({
                   sx={{
                     backgroundColor: theme.palette.grey[50],
                     borderRadius: 3,
-                    p: 3,
-                    mb: 3,
+                    p: isMobile ? 1.5 : 3,
+                    mb: isMobile ? 2 : 3,
                     maxWidth: 600,
                     mx: "auto",
                   }}
@@ -641,7 +655,7 @@ export default function CartDialog({
                 </Box>
 
                 <Box
-                  sx={{ display: "flex", gap: 2, maxWidth: 600, mx: "auto" }}
+                  sx={{ display: "flex", gap: isMobile ? 1 : 2, maxWidth: 600, mx: "auto" }}
                 >
                   <Button
                     variant="outlined"

@@ -6,36 +6,104 @@ import WidgetChatUI from "@/features/mechant/widget-config/ui/WidgetChatUI";
 import { Box, Paper, Skeleton, Alert, Stack } from "@mui/material";
 import { useErrorHandler } from "@/shared/errors";
 
-type Raw = any;
+type Raw = unknown;
+
+interface Settings {
+  merchantId: string | undefined;
+  botName: string;
+  welcomeMessage: string;
+  brandColor: string;
+  fontFamily: string;
+  avatarUrl?: string;
+  showPoweredBy: boolean;
+  publicSlug?: string;
+  widgetSlug?: string;
+  embedMode: string;
+}
 
 function unwrap(x: Raw) {
   // يدعم أشكال: res.data.data أو res.data أو الكائن مباشرة
-  return x?.data?.data ?? x?.data ?? x;
+  if (x && typeof x === "object") {
+    // إذا كان فيه خاصية data
+    const obj = x as Record<string, unknown>;
+    if ("data" in obj) {
+      const d1 = obj.data;
+      if (
+        d1 &&
+        typeof d1 === "object" &&
+        d1 !== null &&
+        "data" in (d1 as Record<string, unknown>)
+      ) {
+        return (d1 as Record<string, unknown>).data;
+      }
+      return d1;
+    }
+  }
+  return x;
 }
 
 // طبع الإعدادات إلى الواجهة المتوقعة من WidgetChatUI
-function normalizeSettings(raw: Raw) {
-  const d = unwrap(raw);
+function normalizeSettings(raw: Raw): Settings {
+  const d = unwrap(raw) as Record<string, unknown>;
 
-  // مصادر محتملة للمعرّف والسلاج والموضوعات
-  const merchantId = d?.merchant?.id || d?.merchant?._id || d?.merchantId;
-  const publicSlug = d?.merchant?.slug || d?.publicSlug || d?.slug;
-  const widgetSlug = d?.widgetSlug || publicSlug;
+  // merchant object
+  const merchant =
+    typeof d.merchant === "object" && d.merchant !== null
+      ? (d.merchant as Record<string, unknown>)
+      : undefined;
+  const merchantId =
+    typeof merchant?.id === "string"
+      ? merchant.id
+      : typeof merchant?._id === "string"
+      ? merchant._id
+      : typeof d.merchantId === "string"
+      ? d.merchantId
+      : undefined;
+
+  const publicSlug =
+    typeof merchant?.slug === "string"
+      ? merchant.slug
+      : typeof d.publicSlug === "string"
+      ? d.publicSlug
+      : typeof d.slug === "string"
+      ? d.slug
+      : undefined;
+
+  const widgetSlug =
+    typeof d.widgetSlug === "string" ? d.widgetSlug : publicSlug;
 
   return {
     merchantId,
-    botName: d?.botName || d?.merchant?.name || "Kaleem Bot",
-    welcomeMessage: d?.welcomeMessage ?? "أهلًا! كيف أقدر أساعدك؟",
-    brandColor: d?.theme?.primaryColor || d?.brandColor || "#111827",
-    fontFamily: d?.fontFamily || "Tajawal, system-ui, sans-serif",
-    avatarUrl: d?.avatarUrl,
-    showPoweredBy: d?.showPoweredBy !== false,
+    botName:
+      typeof d.botName === "string"
+        ? d.botName
+        : typeof merchant?.name === "string"
+        ? merchant.name
+        : "Kaleem Bot",
+    welcomeMessage:
+      typeof d.welcomeMessage === "string"
+        ? d.welcomeMessage
+        : "أهلًا! كيف أقدر أساعدك؟",
+    brandColor:
+      typeof d.theme === "object" &&
+      d.theme !== null &&
+      typeof (d.theme as Record<string, unknown>).primaryColor === "string"
+        ? ((d.theme as Record<string, unknown>).primaryColor as string)
+        : typeof d.brandColor === "string"
+        ? (d.brandColor as string)
+        : "#111827",
+    fontFamily:
+      typeof d.fontFamily === "string"
+        ? d.fontFamily
+        : "Tajawal, system-ui, sans-serif",
+    avatarUrl: typeof d.avatarUrl === "string" ? d.avatarUrl : undefined,
+    showPoweredBy:
+      typeof d.showPoweredBy === "boolean" ? d.showPoweredBy : true,
     publicSlug,
     widgetSlug,
-    embedMode: d?.embedMode || "bubble",
+    embedMode: typeof d.embedMode === "string" ? d.embedMode : "bubble",
   };
 }
-
 export default function ChatPage() {
   const { handleError } = useErrorHandler();
 
@@ -48,7 +116,7 @@ export default function ChatPage() {
     (params.id as string) ||
     "";
 
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,11 +138,35 @@ export default function ChatPage() {
         }
 
         if (mounted) setSettings(normalized);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!mounted) return;
-        setError(
-          e?.response?.data?.message || e?.message || "حدث خطأ غير متوقع"
-        );
+        let errorMsg = "حدث خطأ غير متوقع";
+        if (typeof e === "object" && e !== null) {
+          const errObj = e as Record<string, unknown>;
+          if (
+            "response" in errObj &&
+            typeof errObj.response === "object" &&
+            errObj.response !== null
+          ) {
+            const resp = errObj.response as Record<string, unknown>;
+            if (
+              "data" in resp &&
+              typeof resp.data === "object" &&
+              resp.data !== null &&
+              "message" in (resp.data as Record<string, unknown>) &&
+              typeof (resp.data as Record<string, unknown>).message === "string"
+            ) {
+              errorMsg = (resp.data as Record<string, unknown>)
+                .message as string;
+            }
+          } else if (
+            "message" in errObj &&
+            typeof errObj.message === "string"
+          ) {
+            errorMsg = errObj.message as string;
+          }
+        }
+        setError(errorMsg);
         handleError(e);
       } finally {
         if (mounted) setLoading(false);
@@ -100,7 +192,7 @@ export default function ChatPage() {
         sx={{
           mx: "auto",
           width: "100%",
-          maxWidth: { xs: "100%", sm: 720, md: 980 },
+          maxWidth: { xs: "100%", sm: "100%", md: "100%" },
           height: { xs: "calc(100dvh - 24px)", md: "calc(100dvh - 48px)" },
           display: "flex",
         }}
@@ -129,8 +221,12 @@ export default function ChatPage() {
 
         {!loading && !error && settings && (
           <WidgetChatUI
-            settings={{ ...settings, embedMode: "conversational" }}
-            layout="standalone" // 👈 جديد
+            settings={{
+              ...settings,
+              merchantId: settings.merchantId || "",
+              embedMode: "conversational",
+            }}
+            layout="standalone"
           />
         )}
       </Box>

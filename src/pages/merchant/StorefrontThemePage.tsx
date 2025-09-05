@@ -17,6 +17,7 @@ import { ButtonStyleSelect } from "@/features/mechant/storefront-theme/ui/Button
 import { SlugLinkField } from "@/features/mechant/storefront-theme/ui/SlugLinkField";
 import { BrandSwatches } from "@/features/mechant/storefront-theme/ui/BrandSwatches";
 import { useStorefrontTheme } from "@/features/mechant/storefront-theme/hooks";
+import { findBrandByHex } from "@/features/shared/brandPalette";
 
 export default function StorefrontThemePage() {
   const theme = useTheme();
@@ -40,9 +41,10 @@ export default function StorefrontThemePage() {
   } = useStorefrontTheme(merchantId);
 
   // CSS Vars للمعاينة الحية
-  const brand = brandDark || "#111827";
+  const picked = findBrandByHex(brandDark);
+  const brand = picked?.hex ?? "#111827";
   const onBrand = "#ffffff";
-  const brandHover = "#0f172a";
+  const brandHover = picked?.hover ?? "#0b1220";
 
   if (loading) {
     return (

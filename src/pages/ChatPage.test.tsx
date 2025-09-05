@@ -9,7 +9,7 @@ vi.mock("@/shared/api/axios", () => ({
 }));
 
 vi.mock("@/features/mechant/widget-config/ui/WidgetChatUI", () => ({
-  default: ({ settings }: any) => <div>Widget {settings.a}</div>,
+  default: ({ settings }: { settings: { a: number } }) => <div>Widget {settings.a}</div>,
 }));
 
 test("loads widget settings", async () => {

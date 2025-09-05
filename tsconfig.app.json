@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "incremental": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -8,7 +9,6 @@
     "skipLibCheck": true,
     "paths": { "@/*": ["src/*"] },
     "baseUrl": ".",
-
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -23,12 +23,10 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-    "exclude": [
+  "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "src/test/**",

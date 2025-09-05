@@ -2,7 +2,7 @@
 // File: src/pages/store/StorePage.tsx
 // (new path: moved from src/pages/StorePage.tsx)
 // =========================
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -17,7 +17,10 @@ import { useCart, CartProvider } from "@/context/CartContext";
 import { useErrorHandler } from "@/shared/errors";
 import { getSessionId } from "@/shared/utils/session";
 import { getLocalCustomer } from "@/shared/utils/customer";
-import type { CustomerInfo, ProductResponse } from "@/features/store/home/types";
+import type {
+  CustomerInfo,
+  ProductResponse,
+} from "@/features/store/home/types";
 import { useStoreData } from "@/features/store/home/hooks/useStoreData";
 import { useKleemWidget } from "@/features/store/home/hooks/useKleemWidget";
 import { useNoIndexWhenDemo } from "@/features/store/home/hooks/useNoIndexWhenDemo";
@@ -114,7 +117,7 @@ export function StorePageInner() {
   );
 
   return (
-    <Box sx={{ minHeight: "100vh", background: "#fff", pb: 8 }}>
+    <Box sx={{ minHeight: "100vh", background: "#fff" }}>
       <StoreNavbar merchant={merchant} storefront={storefront} />
 
       {/* ✅ زر السلة العائم (بدل أي نموذج ظاهر عشوائي) */}
@@ -164,7 +167,11 @@ export function StorePageInner() {
           <OffersSection
             offers={offerAsProducts}
             onOpenAll={() => setShowOffersOnly(true)}
-            onOpenProduct={(p) => navigate(`/store/${slug}/product/${p._id}`)}
+            onOpenProduct={(p) =>
+              navigate(
+                `/store/${slug}/product/${encodeURIComponent(p.slug || p._id)}`
+              )
+            }
             onAddToCart={addItem}
             slug={slug}
           />
@@ -256,7 +263,13 @@ export function StorePageInner() {
               <ProductGrid
                 products={filteredProducts}
                 onAddToCart={addItem}
-                onOpen={(p) => navigate(`/store/${slug}/product/${p._id}`)}
+                onOpen={(p) =>
+                  navigate(
+                    `/store/${slug}/product/${encodeURIComponent(
+                      p.slug || p._id
+                    )}`
+                  )
+                }
               />
             )}
           </Box>

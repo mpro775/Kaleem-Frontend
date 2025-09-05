@@ -44,7 +44,7 @@ const KnowledgePage = lazy(() => import("@/pages/merchant/KnowledgePage"));
 const LeadsManagerPage = lazy(
   () => import("@/pages/merchant/LeadsManagerPage")
 );
-    const SupportPage = lazy(() => import("@/pages/merchant/SupportCenterPage"));
+const SupportPage = lazy(() => import("@/pages/merchant/SupportCenterPage"));
 const AccountSettingsPage = lazy(
   () => import("@/pages/merchant/SettingsAdvancedPage")
 );
@@ -63,11 +63,13 @@ const ChannelsIntegrationPage = lazy(
 const MerchantSettingsPage = lazy(
   () => import("@/pages/merchant/MerchantSettingsPage")
 );
-  const StorefrontThemePage = lazy(
-    () => import("@/pages/merchant/StorefrontThemePage")
-  );
-  const AnalyticsPage = lazy(() => import("@/pages/merchant/AnalyticsPage"));
-const AnalyticsPageAdmin = lazy(() => import("@/pages/admin/kleem/AnalyticsPage"));
+const StorefrontThemePage = lazy(
+  () => import("@/pages/merchant/StorefrontThemePage")
+);
+const AnalyticsPage = lazy(() => import("@/pages/merchant/AnalyticsPage"));
+const AnalyticsPageAdmin = lazy(
+  () => import("@/pages/admin/kleem/AnalyticsPage")
+);
 
 // === Admin (Kleem) ===
 const KleemAdminLayout = lazy(
@@ -100,119 +102,118 @@ const KleemRatingsPage = lazy(
 export default function App() {
   return (
     <Box sx={{ overflowX: "hidden", maxWidth: "100vw", width: "100%" }}>
-      <Suspense fallback={<div style={{padding:16}}>جارِ التحميل…</div>}>
+      <Suspense fallback={<div style={{ padding: 16 }}>جارِ التحميل…</div>}>
         <GlobalGradients />
 
         <Routes>
-        {/* Public */}
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/error-test" element={<ErrorTestPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        {/* Storefront */}
-<Route path="/chat/:slug" element={<ChatPage />} />
-
-        <Route path="/store/:slug" element={<StorePage />} />
-        <Route
-          path="/store/:slug/order/:orderId"
-          element={<OrderDetailsPage />}
-        />
-        <Route path="/store/:slug/my-orders" element={<MyOrdersPage />} />
-        <Route
-          path="/store/:slug/product/:productId"
-          element={<ProductDetailsPageWithCart />}
-        />
-        <Route path="/store/:slug/about" element={<AboutPage />} />
-
-        {/* Onboarding */}
-        <Route
-          path="/onboarding"
-          element={
-            <ProtectedRoute>
-              <OnboardingPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/onboarding/source"
-          element={
-            <ProtectedRoute>
-              <SourceSelectPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/onboarding/sync"
-          element={
-            <ProtectedRoute>
-              <SyncPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Merchant Dashboard */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <MerchantLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<HomeDashboard />} />
-          <Route path="conversations" element={<ConversationsPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="prompt" element={<PromptStudio />} />
-          <Route path="chatsetting" element={<ChatSettingsPage />} />
-          <Route path="leads" element={<LeadsManagerPage />} />
-          <Route path="support" element={<SupportPage />} />
-          <Route path="category" element={<CategoriesPage />} />
-          <Route path="setting" element={<AccountSettingsPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="banners" element={<BannersManagementPage />} />
-          <Route path="channels" element={<ChannelsIntegrationPage />} />
-          <Route path="marchinfo" element={<MerchantSettingsPage />} />
-          <Route path="storefront-theme" element={<StorefrontThemePage />} />
-          <Route path="knowledge" element={<KnowledgePage />} />
-          <Route path="instructions" element={<InstructionsPage />} />
-          <Route path="missing-responses" element={<MissingResponsesPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
-        </Route>
-
-        {/* Admin (Kleem) */}
-        <Route
-          path="/admin/kleem"
-          element={
-            <RoleRoute allow={["ADMIN"]}>
-              <KleemAdminLayout />
-            </RoleRoute>
-          }
-        >
-          <Route index element={<KleemDashboard />} />
-          <Route path="prompts" element={<PromptsPage />} />
-          <Route path="knowledge-base" element={<KnowledgeBasePage />} />
-          <Route path="conversations" element={<ConversationsKleemPage />} />
+          {/* Public */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/error-test" element={<ErrorTestPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          {/* Storefront */}
+          <Route path="/chat/:slug" element={<ChatPage />} />
+          <Route path="/store/:slug" element={<StorePage />} />
           <Route
-            path="conversations/:sessionId"
-            element={<ConversationView />}
+            path="/store/:slug/order/:orderId"
+            element={<OrderDetailsPage />}
           />
-          <Route path="chat-settings" element={<ChatAdminSettingsPage />} />
+          <Route path="/store/:slug/my-orders" element={<MyOrdersPage />} />
+          +{" "}
           <Route
-            path="missing-responses"
-            element={<KleemMissingResponsesPage />}
+            path="/store/:slug/product/:idOrSlug"
+            element={<ProductDetailsPageWithCart />}
           />
-          <Route path="ratings" element={<KleemRatingsPage />} />
-          <Route path="analytics" element={<AnalyticsPageAdmin />} />
-        </Route>
-
-        {/* Optional legacy redirects */}
-        <Route
-          path="/admin/*"
-          element={<Navigate to="/admin/kleem" replace />}
-        />
-      </Routes>
+          <Route path="/store/:slug/about" element={<AboutPage />} />
+          {/* Onboarding */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/onboarding/source"
+            element={
+              <ProtectedRoute>
+                <SourceSelectPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/onboarding/sync"
+            element={
+              <ProtectedRoute>
+                <SyncPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Merchant Dashboard */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <MerchantLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<HomeDashboard />} />
+            <Route path="conversations" element={<ConversationsPage />} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="prompt" element={<PromptStudio />} />
+            <Route path="chatsetting" element={<ChatSettingsPage />} />
+            <Route path="leads" element={<LeadsManagerPage />} />
+            <Route path="support" element={<SupportPage />} />
+            <Route path="categories" element={<CategoriesPage />} />
+            <Route path="setting" element={<AccountSettingsPage />} />
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="banners" element={<BannersManagementPage />} />
+            <Route path="channels" element={<ChannelsIntegrationPage />} />
+            <Route path="marchinfo" element={<MerchantSettingsPage />} />
+            <Route path="storefront-theme" element={<StorefrontThemePage />} />
+            <Route path="knowledge" element={<KnowledgePage />} />
+            <Route path="instructions" element={<InstructionsPage />} />
+            <Route
+              path="missing-responses"
+              element={<MissingResponsesPage />}
+            />
+            <Route path="analytics" element={<AnalyticsPage />} />
+          </Route>
+          {/* Admin (Kleem) */}
+          <Route
+            path="/admin/kleem"
+            element={
+              <RoleRoute allow={["ADMIN"]}>
+                <KleemAdminLayout />
+              </RoleRoute>
+            }
+          >
+            <Route index element={<KleemDashboard />} />
+            <Route path="prompts" element={<PromptsPage />} />
+            <Route path="knowledge-base" element={<KnowledgeBasePage />} />
+            <Route path="conversations" element={<ConversationsKleemPage />} />
+            <Route
+              path="conversations/:sessionId"
+              element={<ConversationView />}
+            />
+            <Route path="chat-settings" element={<ChatAdminSettingsPage />} />
+            <Route
+              path="missing-responses"
+              element={<KleemMissingResponsesPage />}
+            />
+            <Route path="ratings" element={<KleemRatingsPage />} />
+            <Route path="analytics" element={<AnalyticsPageAdmin />} />
+          </Route>
+          {/* Optional legacy redirects */}
+          <Route
+            path="/admin/*"
+            element={<Navigate to="/admin/kleem" replace />}
+          />
+        </Routes>
       </Suspense>
     </Box>
   );

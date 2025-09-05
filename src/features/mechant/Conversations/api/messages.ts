@@ -29,19 +29,34 @@ export async function fetchConversations(
   return data.data;
 }
 
-export async function fetchSessionMessages(
+export async function fetchWidgetSessionMessages(
+  widgetSlug: string,
   sessionId: string
 ): Promise<ChatMessage[]> {
-  const { data } = await axios.get<ConversationSession>(
-    `/messages/session/${sessionId}`
+  const { data } = await axios.get(
+    `/messages/public/${widgetSlug}/webchat/${sessionId}`
   );
-  return data.messages;
+  return data?.messages ?? [];
 }
 
-// src/features/mechant/Conversations/api/messages.ts
+export async function fetchSessionMessagesDashboard(
+  merchantId: string,
+  sessionId: string,
+  channel: ChannelType = "webchat"
+): Promise<ChatMessage[]> {
+  const { data } = await axios.get<{ data: ConversationSession[] }>(
+    `/messages`,
+    {
+      params: { merchantId, channel },
+    }
+  );
+  const session = (data.data || []).find((s) => s.sessionId === sessionId);
+  return session?.messages ?? [];
+}
+
 export async function sendMessage(payload: {
-  merchantId?: string;                  // اختياري الآن
-  slug?: string;                        // ✅ جديد
+  merchantId?: string; // اختياري الآن
+  slug?: string; // ✅ جديد
   sessionId: string;
   channel: ChannelType;
   embedMode?: "bubble" | "iframe" | "bar" | "conversational"; // ✅ جديد
@@ -60,10 +75,6 @@ export async function sendMessage(payload: {
   });
 }
 
-export async function getSessionDetails(sessionId: string) {
-  const { data } = await axios.get(`/messages/session/${sessionId}`);
-  return data;
-}
 export async function setSessionHandover(sessionId: string, handover: boolean) {
   return axios.patch(`/messages/session/${sessionId}/handover`, {
     handoverToAgent: handover,

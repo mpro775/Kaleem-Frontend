@@ -1,38 +1,30 @@
 // src/context/AuthContext.tsx
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ReactNode,
+  useEffect,
+} from "react";
 import { useNavigate } from "react-router-dom";
+import type { User, Role } from "./types";
+// ⚠️ عدّل المسار حسب مشروعك
+import axiosInstance from "@/shared/api/axios"; // أو import axiosInstance from "@/shared/lib/axios"
 
-type Role = "ADMIN" | "MERCHANT" | "MEMBER";
-
-// --- تعريف نوع المستخدم
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  merchantId: string | null;
-  firstLogin: boolean;
-  emailVerified: boolean;
-  storeName?: string;
-  storeLogoUrl?: string;
-  storeAvatarUrl?: string;
-}
-
-// --- تعريف الـ Context Type
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (user: User, token: string) => void;
-  setAuth: (user: User, token: string, opts?: { silent?: boolean }) => void; // 👈 جديد
-  updateUser: (patch: Partial<User>) => void; // 👈 جديد
+  setAuth: (user: User, token: string, opts?: { silent?: boolean }) => void;
+  updateUser: (patch: Partial<User>) => void;
   logout: () => void;
   isAuthenticated: boolean;
   hasRole: (...roles: Role[]) => boolean;
   isAdmin: boolean;
   isLoading: boolean;
+  hydrated: boolean; // 👈 لمنع التحويل قبل قراءة التخزين المحلي
 }
 
-// --- إنشاء السياق
 const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
@@ -44,76 +36,178 @@ const AuthContext = createContext<AuthContextType>({
   hasRole: () => false,
   isAdmin: false,
   isLoading: true,
-  });
+  hydrated: false,
+});
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
-  // 1) نقرأ من localStorage قبل أول رندر
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem("token")
-  );
-  const [user, setUser] = useState<User | null>(() => {
-    const str = localStorage.getItem("user");
-    return str ? JSON.parse(str) : null;
+  // — Hydration من التخزين المحلي —
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("token");
+    } catch {
+      return null;
+    }
   });
+
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const str = localStorage.getItem("user");
+      return str ? (JSON.parse(str) as User) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [isLoading, setIsLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
+
+  // — عند الإقلاع: طبّق التوكن على Axios واضبط hydration —
+  useEffect(() => {
+    if (token) {
+      axiosInstance.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${token}`;
+    } else {
+      delete axiosInstance.defaults.headers.common["Authorization"];
+    }
+    setHydrated(true);
+    setIsLoading(false);
+    // sync عبر التبويبات (اختياري)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "token") {
+        const t = e.newValue;
+        setToken(t);
+        if (t) {
+          axiosInstance.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${t}`;
+        } else {
+          delete axiosInstance.defaults.headers.common["Authorization"];
+        }
+      }
+      if (e.key === "user") {
+        try {
+          setUser(e.newValue ? (JSON.parse(e.newValue) as User) : null);
+        } catch {
+          setUser(null);
+        }
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // مرة واحدة
+
   const hasRole = (...roles: Role[]) => !!user && roles.includes(user.role);
   const isAdmin = hasRole("ADMIN");
 
-  // 2) دالة موحّدة لضبط الحالة والتخزين، مع خيار silent لمنع التنقّل التلقائي
+  // — الدالة الموحدة لضبط الحالة + التخزين + Header —
   const setAuth: AuthContextType["setAuth"] = (userData, tokenValue, opts) => {
     setIsLoading(true);
+
+    // خزّن في الحالة
     setUser(userData);
     setToken(tokenValue);
-    localStorage.setItem("token", tokenValue);
-    localStorage.setItem("user", JSON.stringify(userData));
 
-    if (opts?.silent) return; // 👈 بدون أي تنقّلات
+    // خزّن محليًا
+    try {
+      localStorage.setItem("token", tokenValue);
+      localStorage.setItem("user", JSON.stringify(userData));
+    } catch {}
 
-    // توجيه ذكي بعد تسجيل الدخول
-    if (userData.role === "ADMIN") {
-      navigate("/admin/kleem", { replace: true });
+    // حقن الهيدر دائمًا حتى في الوضع الصامت
+    if (tokenValue) {
+      axiosInstance.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${tokenValue}`;
+    } else {
+      delete axiosInstance.defaults.headers.common["Authorization"];
+    }
+
+    // إن كان صامتًا: لا تنقّل، لكن أبقِ كل شيء مخزّنًا ومحقونًا
+    if (opts?.silent) {
+      setIsLoading(false);
       return;
     }
 
-    // لا نفترض أنه مفعّل إن لم يصل الحقل
+    // — توجيه ذكي بعد المصادقة —
+    // 1) إن وُجد redirect في URL استخدمه أولًا
+    let redirectUrl: string | null = null;
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      redirectUrl = qs.get("redirect");
+    } catch {
+      redirectUrl = null;
+    }
+
+    // 2) لو أدمن → لوحة الأدمن
+    if (userData.role === "ADMIN") {
+      navigate(redirectUrl ? decodeURIComponent(redirectUrl) : "/admin/kleem", {
+        replace: true,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // 3) تحقق تفعيل البريد
     const isEmailVerified = !!userData.emailVerified;
     if (!isEmailVerified) {
       navigate("/verify-email", { replace: true });
+      setIsLoading(false);
       return;
     }
 
-    if (userData.firstLogin) {
+    // 4) Onboarding أول الدخول، وإلا Dashboard — مع احترام redirect إن وجد
+    if (redirectUrl) {
+      navigate(decodeURIComponent(redirectUrl), { replace: true });
+    } else if (userData.firstLogin) {
       navigate("/onboarding", { replace: true });
     } else {
       navigate("/dashboard", { replace: true });
     }
+
     setIsLoading(false);
   };
 
-  // 3) login يستخدم setAuth بدون silent (سلوك سابق)
+  // — login يمر عبر setAuth (غير صامت) —
   const login = (userData: User, tokenValue: string) => {
     setAuth(userData, tokenValue, { silent: false });
   };
 
-  // 4) تحديث جزئي لملف المستخدم (ويبقى token كما هو)
+  // — تحديث جزئي لبيانات المستخدم مع حفظها —
   const updateUser: AuthContextType["updateUser"] = (patch) => {
     setUser((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, ...patch };
-      localStorage.setItem("user", JSON.stringify(next));
+      const base =
+        prev ??
+        (() => {
+          try {
+            const fromLS = localStorage.getItem("user");
+            return fromLS ? (JSON.parse(fromLS) as User) : ({} as User);
+          } catch {
+            return {} as User;
+          }
+        })();
+
+      const next = { ...base, ...patch } as User;
+      try {
+        localStorage.setItem("user", JSON.stringify(next));
+      } catch {}
       return next;
     });
   };
 
-  // 5) تسجيل الخروج
+  // — تسجيل الخروج —
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+    try {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    } catch {}
+    delete axiosInstance.defaults.headers.common["Authorization"];
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -122,13 +216,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         token,
         login,
-        setAuth, // 👈 نوفرها للاستهلاك
-        updateUser, // 👈 كذلك
+        setAuth,
+        updateUser,
         logout,
         isAuthenticated: !!token,
         hasRole,
         isAdmin,
         isLoading,
+        hydrated,
       }}
     >
       {children}
@@ -136,5 +231,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// هوك الاستهلاك
 export const useAuth = () => useContext(AuthContext);

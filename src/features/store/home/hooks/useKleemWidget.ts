@@ -24,30 +24,29 @@ export function useKleemWidget(
       headerBgColor: storefront.brandDark,
       bodyBgColor: "#FFFFFF",
       fontFamily: "Tajawal",
-      publicSlug: (merchant as any)?.publicSlug,
+      publicSlug: (merchant as unknown as { publicSlug: string })?.publicSlug,
     };
+    const host =
+      (import.meta?.env?.VITE_PUBLIC_WIDGET_HOST as string | undefined) ??
+      window.location.origin;
+      const widgetUrl = `${host.replace(/\/+$/, "")}/widget.js`;
 
-    if (!existing) {
-      const script = document.createElement("script");
-      script.id = "kleem-chat";
-      script.async = true;
-      script.src = `${(
-        import.meta?.env?.VITE_PUBLIC_WIDGET_HOST || "http://localhost:5173"
-      ).replace(/\/+$/, "")}/public/widget.js`;
-      script.setAttribute("data-config", JSON.stringify(cfg));
-      document.body.appendChild(script);
-    } else {
-      try {
-        const current = JSON.parse(
-          existing.getAttribute("data-config") || "{}"
-        );
-        existing.setAttribute(
-          "data-config",
-          JSON.stringify({ ...current, ...cfg })
-        );
-      } catch {
-        existing.setAttribute("data-config", JSON.stringify(cfg));
+      if (!existing) {
+        const script = document.createElement("script");
+        script.id = "kleem-chat";
+        script.async = true;
+        script.src = widgetUrl;
+        script.setAttribute("data-config", JSON.stringify(cfg));
+        document.body.appendChild(script);
+      } else {
+        try {
+          const current = JSON.parse(existing.getAttribute("data-config") || "{}");
+          existing.setAttribute("data-config", JSON.stringify({ ...current, ...cfg }));
+          // لو سكربت الويجت يدعم إعادة التحميل/التحديث، نادِ API داخل الويجت (اختياري)
+          // (window as any)?.KleemWidget?.update?.(cfg);
+        } catch {
+          existing.setAttribute("data-config", JSON.stringify(cfg));
+        }
       }
-    }
-  }, [merchant, storefront]);
-}
+    }, [merchant, storefront]);
+  }

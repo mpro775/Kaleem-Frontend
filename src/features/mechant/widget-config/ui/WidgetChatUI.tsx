@@ -1,5 +1,5 @@
 // src/features/mechant/widget-config/ui/WidgetChatUI.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Paper,
@@ -11,25 +11,27 @@ import {
   Divider,
   Chip,
   CircularProgress,
+  Popover,
 } from "@mui/material";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import InsertEmoticonRoundedIcon from "@mui/icons-material/InsertEmoticonRounded";
-import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
+
 import FlashOnRoundedIcon from "@mui/icons-material/FlashOnRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
 import {
-  fetchSessionMessages,
+  fetchWidgetSessionMessages,
   sendMessage,
 } from "@/features/mechant/Conversations/api/messages";
-import type { ChatMessage } from "@/features/mechant/Conversations/type";
+import type { ChatMessage, Role } from "@/features/mechant/Conversations/type";
 import { useChatWebSocket } from "../hooks";
 
-  /* 👇 المهم: توحيد اللون + المتغيرات */
+/* 👇 المهم: توحيد اللون + المتغيرات */
 import {
   ensureAllowedBrandHex,
   applyBrandCssVars,
 } from "@/features/shared/brandPalette";
+import Picker, { type EmojiClickData } from "emoji-picker-react";
 
 type WidgetSettings = {
   merchantId: string;
@@ -89,7 +91,7 @@ function formatTime(ts?: string | number | Date) {
 
 export default function WidgetChatUI({
   settings,
-  layout = "embed",                 // 👈 جديد
+  layout = "embed", // 👈 جديد
 }: {
   settings: WidgetSettings;
   layout?: "embed" | "standalone";
@@ -100,7 +102,7 @@ export default function WidgetChatUI({
       localStorage.getItem(`kaleem_session_${settings.merchantId}`) ||
       (() => {
         const uuid =
-          (globalThis.crypto as any)?.randomUUID?.() ??
+          (globalThis.crypto as Crypto)?.randomUUID?.() ??
           Date.now().toString(36) + Math.random().toString(36).slice(2);
         localStorage.setItem(`kaleem_session_${settings.merchantId}`, uuid);
         return uuid;
@@ -114,7 +116,22 @@ export default function WidgetChatUI({
   const listRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const isStandalone = layout === "standalone";
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
+  const emojiOpen = Boolean(emojiAnchor);
 
+  const handleOpenEmoji = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    // Use ref instead of event target for more stable positioning
+    setEmojiAnchor(emojiButtonRef.current || e.currentTarget);
+  }, []);
+
+  const handleCloseEmoji = useCallback(() => {
+    setEmojiAnchor(null);
+  }, []);
+
+  const handleEmojiClick = useCallback((emojiData: EmojiClickData) => {
+    setInput((prev) => prev + emojiData.emoji);
+  }, []);
   useChatWebSocket(sessionId, (msg) => {
     setWaitingReply(false);
     setMessages((prev) => [...prev, msg]);
@@ -122,13 +139,20 @@ export default function WidgetChatUI({
 
   useEffect(() => {
     let mounted = true;
-    fetchSessionMessages(sessionId)
-      .then((msgs) => mounted && setMessages(msgs ?? []))
-      .catch(() => {});
+    (async () => {
+      const slug = settings.publicSlug || settings.widgetSlug;
+      if (!slug) return; // لا تحاول النداء بدون slug
+      try {
+        const msgs = await fetchWidgetSessionMessages(slug, sessionId);
+        if (mounted) setMessages(msgs ?? []);
+      } catch {
+        /* تجاهل بدون إظهار أخطاء الشبكة */
+      }
+    })();
     return () => {
       mounted = false;
     };
-  }, [sessionId]);
+  }, [sessionId, settings.publicSlug, settings.widgetSlug]);
 
   useEffect(() => {
     if (bottomRef.current)
@@ -155,23 +179,23 @@ export default function WidgetChatUI({
   const handleSend = async () => {
     const text = input.trim();
     if (!text || sending) return;
-  
+
     const slug = settings.publicSlug || settings.widgetSlug;
     if (!slug || !settings.merchantId) {
       setMessages((m) => [
         ...m,
         {
-          role: "bot" as any,
+          role: "bot" as Role,
           text: "إعدادات الدردشة غير مكتملة (المعرف/السلاج غير متوفر).",
           timestamp: new Date().toISOString(),
           error: true,
-        } as any,
+        } as ChatMessage,
       ]);
       return;
     }
-  
+
     const out: ChatMessage = {
-      role: "customer" as any,
+      role: "customer" as Role,
       text,
       timestamp: new Date().toISOString(),
     };
@@ -179,7 +203,7 @@ export default function WidgetChatUI({
     setInput("");
     setSending(true);
     setWaitingReply(true);
-  
+
     try {
       await sendMessage({
         slug,
@@ -204,12 +228,15 @@ export default function WidgetChatUI({
       setSending(false);
     }
   };
-  
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+    // Close emoji picker on Escape
+    if (e.key === "Escape" && emojiOpen) {
+      handleCloseEmoji();
     }
   };
 
@@ -226,21 +253,21 @@ export default function WidgetChatUI({
 
   return (
     <Paper
-    elevation={isStandalone ? 6 : 0}
-    sx={{
-      direction: "rtl",
-      borderRadius: isStandalone ? 4 : 3,
-      overflow: "hidden",
-      border: isStandalone ? "none" : `1px solid ${themeVars.brandBorder}`,
-      background: themeVars.body,
-      fontFamily: settings.fontFamily || "Tajawal, system-ui, sans-serif",
-      display: "flex",             // 👈 امتلاء عمودي
-      flexDirection: "column",
-      flex: 1,                     // 👈 خذ كامل عرض وعاء ChatPage
-      minWidth: 0,
-      minHeight: 0,                // مهم مع الفليكس
-    }}
-  >
+      elevation={isStandalone ? 6 : 0}
+      sx={{
+        direction: "rtl",
+        borderRadius: isStandalone ? 4 : 3,
+        overflow: "hidden",
+        border: isStandalone ? "none" : `1px solid ${themeVars.brandBorder}`,
+        background: themeVars.body,
+        fontFamily: settings.fontFamily || "Tajawal, system-ui, sans-serif",
+        display: "flex", // 👈 امتلاء عمودي
+        flexDirection: "column",
+        flex: 1, // 👈 خذ كامل عرض وعاء ChatPage
+        minWidth: 0,
+        minHeight: 0, // مهم مع الفليكس
+      }}
+    >
       {/* Header */}
       <Box
         sx={{
@@ -250,10 +277,15 @@ export default function WidgetChatUI({
           px: { xs: 1.5, md: 2 },
           py: { xs: 1, md: 1.5 },
           background: isStandalone
-            ? `linear-gradient(90deg, ${themeVars.header}, ${rgba(themeVars.header, 0.9)})`
+            ? `linear-gradient(90deg, ${themeVars.header}, ${rgba(
+                themeVars.header,
+                0.9
+              )})`
             : themeVars.header,
           color: themeVars.headerText,
-          boxShadow: isStandalone ? "inset 0 -1px 0 rgba(255,255,255,.15)" : "none",
+          boxShadow: isStandalone
+            ? "inset 0 -1px 0 rgba(255,255,255,.15)"
+            : "none",
         }}
       >
         <Box sx={{ position: "relative" }}>
@@ -304,8 +336,8 @@ export default function WidgetChatUI({
         ref={listRef}
         sx={{
           position: "relative",
-          flex: 1,           // 👈 امتلاء المساحة المتبقية
-          minHeight: 0,      // 👈 ضروري مع overflow
+          flex: 1, // 👈 امتلاء المساحة المتبقية
+          minHeight: 0, // 👈 ضروري مع overflow
           overflowY: "auto",
           background: "#fff",
           px: { xs: 1, md: 1.5 },
@@ -314,7 +346,7 @@ export default function WidgetChatUI({
         aria-live="polite"
       >
         {messages.length === 0 && (
-          <Box sx={{ color: "#8c8c8c", textAlign: "center", py: 4 }}>
+          <Box sx={{ color: themeVars.brand, textAlign: "center", py: 4 }}>
             <Typography variant="body2">{settings.welcomeMessage}</Typography>
             <Box
               sx={{
@@ -364,13 +396,11 @@ export default function WidgetChatUI({
                 const mine = (msg as any).role === "customer";
                 const error = (msg as any).error;
                 const bubbleBg = mine ? "#f7f7f8" : themeVars.brand;
-                const bubbleColor = mine
-                  ? "#111"
-                  : getContrastText(themeVars.brand);
-                const align = mine ? "flex-end" : "flex-start";
+                const bubbleColor = mine ? "#111" : "#ffffff"; // 👈 لون أبيض للبوت
+                const align = mine ? "flex-end" : "flex-start"; // 👈 عكس الاتجاه للعربية
                 const radius = mine
-                  ? "16px 16px 4px 16px"
-                  : "16px 16px 16px 4px";
+                  ? "16px 16px 16px 4px" // 👈 عكس زوايا المستخدم
+                  : "16px 16px 4px 16px"; // 👈 عكس زوايا البوت
                 return (
                   <Box
                     key={idx}
@@ -398,6 +428,9 @@ export default function WidgetChatUI({
                     >
                       <Typography
                         variant="body2"
+                        dir="rtl"
+                        color={mine ? themeVars.brand : "white"}
+                        textAlign={mine ? "left" : "left"}
                         sx={{ whiteSpace: "pre-wrap" }}
                       >
                         {(msg as any).text}
@@ -408,7 +441,7 @@ export default function WidgetChatUI({
                           opacity: 0.7,
                           display: "block",
                           mt: 0.5,
-                          textAlign: mine ? "left" : "right",
+                          textAlign: mine ? "left" : "right", // 👈 عكس اتجاه الوقت
                         }}
                       >
                         {formatTime((msg as any).timestamp)}
@@ -491,29 +524,75 @@ export default function WidgetChatUI({
             bgcolor: "#fff",
           }}
         >
-          <Tooltip title="إرفاق ملف" placement="top">
-            <span>
-              <IconButton size="small" disabled>
-                <AttachFileRoundedIcon fontSize="small" />
-              </IconButton>
-            </span>
+          <Tooltip title="إدراج رموز" placement="top">
+            <IconButton
+              ref={emojiButtonRef}
+              size="small"
+              onClick={handleOpenEmoji}
+              sx={{
+                position: "relative", // Ensure stable positioning
+              }}
+            >
+              <InsertEmoticonRoundedIcon fontSize="small" />
+            </IconButton>
           </Tooltip>
-
+          <Popover
+            open={emojiOpen}
+            anchorEl={emojiAnchor}
+            onClose={handleCloseEmoji}
+            anchorOrigin={{ vertical: "top", horizontal: "left" }}
+            transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+            disablePortal={false}
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                border: `1px solid ${themeVars.brandBorder}`,
+                overflow: "hidden",
+              },
+            }}
+            disableScrollLock={true}
+            disableRestoreFocus={true}
+            disableEnforceFocus={true}
+            disableAutoFocus={true}
+            keepMounted={false}
+            slotProps={{
+              backdrop: {
+                sx: { backgroundColor: "transparent" },
+              },
+            }}
+          >
+            <Box
+              sx={{
+                p: 0,
+                maxHeight: "300px",
+                overflow: "hidden",
+                "& .EmojiMart": {
+                  border: "none",
+                  borderRadius: 0,
+                },
+              }}
+            >
+              <Picker
+                onEmojiClick={handleEmojiClick}
+                autoFocusSearch={false}
+                height={350}
+                width="100%"
+                previewConfig={{ showPreview: false }}
+                searchDisabled
+                skinTonesDisabled
+              />
+            </Box>
+          </Popover>{" "}
           <InputBase
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
+            dir="rtl"
             placeholder="اكتب رسالتك…"
             sx={{ flex: 1, px: 1, py: 0.5 }}
             inputProps={{ "aria-label": "حقل كتابة الرسالة" }}
           />
-
-          <Tooltip title="إدراج رموز" placement="top">
-            <IconButton size="small">
-              <InsertEmoticonRoundedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
           <Tooltip title="إرسال" placement="top">
             <span>
               <IconButton

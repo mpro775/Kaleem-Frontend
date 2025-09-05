@@ -1,11 +1,5 @@
 // src/pages/auth/VerifyEmailPage.tsx
-import {
-  Box,
-  Button,
-  Typography,
-  CircularProgress,
-  Link,
-} from "@mui/material";
+import { Box, Button, Typography, CircularProgress, Link } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -23,19 +17,56 @@ export default function VerifyEmailPage() {
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const initialCode = params.get("code") ?? "";
-  const { user } = useAuth();
-
+  const { user, setAuth } = useAuth();
+  const emailParam = params.get("email");
+  const codeParam = params.get("code");
   const [resendCooldown, setResendCooldown] = useState(0);
   const [code, setCode] = useState(initialCode);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
-
+  useEffect(() => {
+    const run = async () => {
+      if (emailParam && codeParam && codeParam.length === 6) {
+        try {
+          // بافتراض أن verifyEmailAPI يرجّع { accessToken, user }
+          const { user: freshUser, accessToken } = await verifyEmailAPI(
+            emailParam,
+            codeParam
+          );
+          setAuth(
+            { ...freshUser, emailVerified: true, firstLogin: true },
+            accessToken
+          );
+          // setAuth عندك يوجّه تلقائيًا للأونبوردنج لما firstLogin=true
+        } catch (e) {
+          toast.error(getAxiosMessage(e, "تعذر تفعيل الحساب"));
+        }
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailParam, codeParam]);
   const verify = async (verificationCode: string) => {
     try {
       setLoading(true);
-      const email = user?.email || "";
-      await verifyEmailAPI(email, verificationCode);
+      const email =
+        user?.email ||
+        localStorage.getItem("pendingEmail") ||
+        sessionStorage.getItem("pendingEmail") ||
+        "";
+
+      const { user: freshUser, accessToken } = await verifyEmailAPI(
+        email,
+        verificationCode
+      );
+
+      // 👈 ثبّت الجلسة فورًا (سيحدّث context + localStorage ويقود التوجيه)
+      setAuth(
+        { ...freshUser, emailVerified: true, firstLogin: true },
+        accessToken,
+        { silent: false } // اسمح للتوجيه الذكي يوصلك للأونبوردنج
+      );
       toast.success("✔️ تم تفعيل حسابك بنجاح");
       setSuccess(true);
       let counter = 5;
@@ -45,7 +76,7 @@ export default function VerifyEmailPage() {
         setCountdown(counter);
         if (counter <= 0) {
           clearInterval(t);
-          navigate("/onboarding");
+          navigate("/onboarding", { replace: true });
         }
       }, 1000);
     } catch (err) {

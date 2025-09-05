@@ -1,9 +1,13 @@
 import { Box, Divider, IconButton, Typography, Skeleton } from "@mui/material";
 import ArrowBack from "@mui/icons-material/ArrowBack";
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { CartProvider, useCart } from "@/context/CartContext";
-import { useProductDetails } from "@/features/store/product/hooks/useProductDetails";
+import {
+  isObjectId,
+  getProductById,
+  getPublicProductBySlug,
+} from "@/features/store/home/api";
 import Gallery from "@/features/store/product/ui/Gallery";
 import PriceSection from "@/features/store/product/ui/PriceSection";
 import AttributesSection from "@/features/store/product/ui/AttributesSection";
@@ -15,10 +19,7 @@ import { renderCategoryTrail } from "@/features/store/product/utils";
 import type { ProductResponse } from "@/features/mechant/products/type";
 import { Footer } from "@/features/store/ui/Footer";
 import { StoreNavbar } from "@/features/store/ui/StoreNavbar";
-import {
-  getPublicStorefrontBundle,
-  getStorefrontInfo,
-} from "@/features/mechant/storefront-theme/api";
+
 import { FloatingCartButton } from "@/features/store/home/ui/FloatingCartButton";
 import CartDialog from "@/features/store/ui/CartDialog";
 import { getLocalCustomer } from "@/shared/utils/customer";
@@ -30,11 +31,11 @@ import { useErrorHandler } from "@/shared/errors";
 function ProductSkeleton() {
   return (
     <Box
-      sx={{ 
-        maxWidth: "lg", 
-        mx: "auto", 
-        py: { xs: 2, sm: 3, md: 4 }, 
-        px: { xs: 1, sm: 2, md: 4 } 
+      sx={{
+        maxWidth: "lg",
+        mx: "auto",
+        py: { xs: 2, sm: 3, md: 4 },
+        px: { xs: 1, sm: 2, md: 4 },
       }}
     >
       <Box sx={{ mb: { xs: 2, sm: 3 } }}>
@@ -77,12 +78,48 @@ function ProductSkeleton() {
 }
 
 export function ProductDetailsPage() {
-  const { productId = "", slug = "" } = useParams<{
-    productId: string;
+  const { idOrSlug = "", slug = "" } = useParams<{
+    idOrSlug: string;
     slug: string;
   }>();
   const navigate = useNavigate();
-  const { product, loading } = useProductDetails(productId, slug);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!slug || !idOrSlug) return;
+      setLoading(true);
+      try {
+        let p;
+        if (isObjectId(idOrSlug)) {
+          p = await getProductById(idOrSlug);
+          // لو عنده slug نحول لعنوان مقروء مرّة واحدة
+          if (!cancelled && p?.slug) {
+            navigate(
+              `/store/${encodeURIComponent(slug)}/product/${encodeURIComponent(
+                p.slug
+              )}`,
+              { replace: true }
+            );
+            return;
+          }
+        } else {
+          p = await getPublicProductBySlug(slug, idOrSlug);
+        }
+        if (!cancelled) setProduct(p);
+      } catch (e) {
+        if (!cancelled) setProduct(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, idOrSlug, navigate]);
+
   const { addItem } = useCart();
   const { items } = useCart();
   const cartCount = items.reduce((t, i) => t + i.quantity, 0);
@@ -94,20 +131,18 @@ export function ProductDetailsPage() {
   );
   const isDemo =
     slug === "demo" || new URLSearchParams(location.search).has("demo");
-    const { handleError } = useErrorHandler();
+  const { handleError } = useErrorHandler();
 
   const [sessionId] = useState<string>(() => getSessionId());
   const localCustomer = getLocalCustomer() as CustomerInfo;
-  const {
-    merchant,
-    storefront,
-    categories,
-    
-  } = useStoreData(slug, isDemo, handleError);
-
+  const { merchant, storefront, categories } = useStoreData(
+    slug,
+    isDemo,
+    handleError
+  );
 
   // عند جلب المنتج، جهّز سمات افتراضية
-  useMemo(() => {
+  useEffect(() => {
     if (!product) return;
     const init: Record<string, string> = {};
     const attrs = (product as any).attributes as
@@ -140,154 +175,153 @@ export function ProductDetailsPage() {
 
   return (
     <Box>
-
-{merchant && (
+      {merchant && (
         <StoreNavbar
           merchant={merchant}
           storefront={storefront ?? ({} as any)}
         />
       )}
-  
-    <Box
-      sx={{
-        maxWidth: "lg",
-        mx: "auto",
-        py: { xs: 2, sm: 3, md: 4 },
-        px: { xs: 1, sm: 2, md: 4 },
-        bgcolor: "#fff",
-      }}
-    >
-  
-      <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-        <IconButton 
-          onClick={() => navigate(-1)} 
-          sx={{ 
-            mb: { xs: 1, sm: 2 },
-            p: { xs: 1, sm: 1.5 }
-          }}
-        >
-          <ArrowBack sx={{ mr: 1, fontSize: { xs: '1.2rem', sm: '1.5rem' } }} /> 
-          <Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-            العودة
-          </Typography>
-        </IconButton>
-      </Box>
-      <FloatingCartButton
-        count={cartCount}
-        onClick={() => {
-          console.log("Cart button clicked, setting openCart to true");
-          console.log("Current merchant:", merchant);
-          console.log("Current openCart state:", openCart);
-          setOpenCart(true);
-        }}
-      />
-
-      {trail && (
-        <Typography 
-          variant="body2" 
-          color="text.secondary" 
-          sx={{ 
-            mb: { xs: 1, sm: 1.5 },
-            fontSize: { xs: '0.75rem', sm: '0.875rem' }
-          }}
-        >
-          {trail}
-        </Typography>
-      )}
 
       <Box
         sx={{
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          gap: { xs: 2, sm: 3, md: 4 },
-          mb: { xs: 4, sm: 5, md: 6 },
+          maxWidth: "lg",
+          mx: "auto",
+          py: { xs: 2, sm: 3, md: 4 },
+          px: { xs: 1, sm: 2, md: 4 },
+          bgcolor: "#fff",
         }}
       >
-        <Gallery
-          images={product.images}
-          status={product.status}
-          lowQuantity={product.lowQuantity}
-          name={product.name}
+        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+          <IconButton
+            onClick={() => navigate(-1)}
+            sx={{
+              mb: { xs: 1, sm: 2 },
+              p: { xs: 1, sm: 1.5 },
+            }}
+          >
+            <ArrowBack
+              sx={{ mr: 1, fontSize: { xs: "1.2rem", sm: "1.5rem" } }}
+            />
+            <Typography sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
+              العودة
+            </Typography>
+          </IconButton>
+        </Box>
+        <FloatingCartButton
+          count={cartCount}
+          onClick={() => {
+            console.log("Cart button clicked, setting openCart to true");
+            console.log("Current merchant:", merchant);
+            console.log("Current openCart state:", openCart);
+            setOpenCart(true);
+          }}
         />
 
-        {/* التفاصيل النصية */}
+        {trail && (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              mb: { xs: 1, sm: 1.5 },
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+            }}
+          >
+            {trail}
+          </Typography>
+        )}
+
         <Box
           sx={{
-            flex: 1,
-            minWidth: 0,
             display: "flex",
-            flexDirection: "column",
+            flexDirection: { xs: "column", md: "row" },
+            gap: { xs: 2, sm: 3, md: 4 },
+            mb: { xs: 4, sm: 5, md: 6 },
           }}
         >
-          <Typography
-            variant="h3"
-            fontWeight="bold"
-            sx={{ 
-              mb: { xs: 1.5, sm: 2 }, 
-              fontSize: { xs: "1.4rem", sm: "1.6rem", md: "2.2rem" },
-              lineHeight: { xs: 1.3, sm: 1.4, md: 1.2 }
+          <Gallery
+            images={product.images}
+            status={product.status}
+            lowQuantity={product.lowQuantity}
+            name={product.name}
+          />
+
+          {/* التفاصيل النصية */}
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            {product.name}
-          </Typography>
+            <Typography
+              variant="h3"
+              fontWeight="bold"
+              sx={{
+                mb: { xs: 1.5, sm: 2 },
+                fontSize: { xs: "1.4rem", sm: "1.6rem", md: "2.2rem" },
+                lineHeight: { xs: 1.3, sm: 1.4, md: 1.2 },
+              }}
+            >
+              {product.name}
+            </Typography>
 
-          <PriceSection
-            price={product.price}
-            offer={product.offer}
-            currency={currency}
-          />
+            <PriceSection
+              price={product.price}
+              offer={product.offer}
+              currency={currency}
+            />
 
-          <Typography 
-            sx={{ 
-              mb: { xs: 3, sm: 4 }, 
-              color: "text.secondary", 
-              lineHeight: 1.6,
-              fontSize: { xs: '0.875rem', sm: '1rem' }
-            }}
-          >
-            {product.description || "لا يوجد وصف متوفر لهذا المنتج."}
-          </Typography>
+            <Typography
+              sx={{
+                mb: { xs: 3, sm: 4 },
+                color: "text.secondary",
+                lineHeight: 1.6,
+                fontSize: { xs: "0.875rem", sm: "1rem" },
+              }}
+            >
+              {product.description || "لا يوجد وصف متوفر لهذا المنتج."}
+            </Typography>
 
-          <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
+            <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
 
-          <AttributesSection
-            attributes={product.attributes}
-            selected={selectedAttrs}
-            onSelect={(k, v) => setSelectedAttrs((s) => ({ ...s, [k]: v }))}
-          />
+            <AttributesSection
+              attributes={product.attributes}
+              selected={selectedAttrs}
+              onSelect={(k, v) => setSelectedAttrs((s) => ({ ...s, [k]: v }))}
+            />
 
-          <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
+            <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
 
-          <QuantityPicker
-            value={quantity}
-            onChange={setQuantity}
-            max={product.quantity || 999}
-          />
+            <QuantityPicker
+              value={quantity}
+              onChange={setQuantity}
+              max={product.quantity || 999}
+            />
 
-          <ActionBar onAddToCart={handleAddToCart} canBuy={canBuy} />
+            <ActionBar onAddToCart={handleAddToCart} canBuy={canBuy} />
 
-          <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
+            <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
+          </Box>
         </Box>
+        {merchant && (
+          <CartDialog
+            open={openCart}
+            onClose={() => {
+              console.log("Closing cart dialog");
+              setOpenCart(false);
+            }}
+            merchantId={merchant._id}
+            sessionId={sessionId}
+            defaultCustomer={localCustomer}
+            onOrderSuccess={(orderId) =>
+              navigate(`/store/${slug}/order/${orderId}`)
+            }
+          />
+        )}
+        <DetailsTabs specs={product.specsBlock || []} />
       </Box>
-      {merchant && (
-        <CartDialog
-          open={openCart}
-          onClose={() => {
-            console.log("Closing cart dialog");
-            setOpenCart(false);
-          }}
-          merchantId={merchant._id}
-          sessionId={sessionId}
-          defaultCustomer={localCustomer}
-          onOrderSuccess={(orderId) =>
-            navigate(`/store/${slug}/order/${orderId}`)
-          }
-        />
-      )}
-      <DetailsTabs specs={product.specsBlock || []} />
-    </Box>
-    {merchant && <Footer merchant={merchant} categories={categories} />}
-
+      {merchant && <Footer merchant={merchant} categories={categories} />}
     </Box>
   );
 }

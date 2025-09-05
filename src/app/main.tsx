@@ -1,3 +1,4 @@
+import "../monitor/web-vitals";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -11,16 +12,18 @@ import { CartProvider } from "@/context/CartContext";
 import createCache from "@emotion/cache";
 import stylisRTLPlugin from "stylis-plugin-rtl";
 import { CacheProvider } from "@emotion/react";
-import * as Sentry from "@sentry/react";
+import * as Sentry from "@sentry/browser";
 import AppProviders from "@/app/providers/QueryClientProvider";
 import { AppErrorIntegration } from "@/shared/errors";
 
-const cacheRtl = createCache({ key: "muirtl", stylisPlugins: [stylisRTLPlugin], prepend: true });
+const cacheRtl = createCache({
+  key: "muirtl",
+  stylisPlugins: [stylisRTLPlugin],
+  prepend: true,
+});
 
 Sentry.init({
-  dsn: "https://YOUR_SENTRY_DSN",
-  integrations: [Sentry.browserTracingIntegration()],
-  tracesSampleRate: 1.0,
+  dsn: "https://521e7203fa6643f898092a8ffe74e79a@errors.kaleem-ai.com/2",
 });
 
 document.documentElement.setAttribute("dir", "rtl");

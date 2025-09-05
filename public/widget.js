@@ -343,9 +343,13 @@
 
     const loadHistory = async (silent) => {
       try {
-        const res = await fetch(`${apiBaseUrl}/messages/session/${sessionId}`, {
-          headers,
-        });
+        if (!SLUG) return;
+        const res = await fetch(
+          `${apiBaseUrl}/messages/public/${SLUG}/webchat/${sessionId}`,
+          {
+            headers,
+          }
+        );
         if (!res.ok) {
           if (!silent) msgs.innerHTML = "";
           return;
@@ -460,8 +464,10 @@
       pollTimer = setInterval(async () => {
         if (panel.classList.contains("hidden")) return;
         try {
+          if (!SLUG) return;
+          // لا تحاول النداء بدون slug
           const res = await fetch(
-            `${apiBaseUrl}/messages/session/${sessionId}`,
+            `${apiBaseUrl}/messages/public/${SLUG}/webchat/${sessionId}`,
             { headers }
           );
           if (!res.ok) return;
@@ -527,8 +533,7 @@
     };
 
     autoOpen();
-    startPolling();
-
+    if (SLUG) startPolling();
     // Public events
     window.dispatchEvent(
       new CustomEvent("kaleem:widget:ready", {

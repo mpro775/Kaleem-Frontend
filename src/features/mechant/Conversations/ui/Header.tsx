@@ -70,13 +70,13 @@ const shortenSessionId = (sessionId?: string) => {
 };
 
 // 🧠 اسم محادثة ذكي
-const getConversationName = (sessionId?: string, channel?: ChannelType) => {
-  const channelLabel = getChannelLabel(channel);
+const getConversationName = (sessionId?: string) => {
+  const channelLabel = "";
   if (!sessionId) return "اختر محادثة";
   if (sessionId.includes("customer") || sessionId.includes("user")) {
     return `عميل ${channelLabel}`;
   }
-  return `${channelLabel} - ${shortenSessionId(sessionId)}`;
+  return `${shortenSessionId(sessionId)}`;
 };
 
 type HeaderProps = {
@@ -85,6 +85,8 @@ type HeaderProps = {
   onToggleHandover: (v: boolean) => void;
   onBack?: () => void;
   channel?: ChannelType;
+  showSessionId?: boolean; // ← جديد
+
   rightActions?: React.ReactNode; // إن أردت إضافة أزرار جانبية لاحقًا
 };
 
@@ -100,7 +102,7 @@ export default function Header({
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const name = getConversationName(selectedSession, channel);
+  const name = getConversationName("محادثة");
   const chColor = getChannelColor(theme, channel);
 
   return (
@@ -248,31 +250,7 @@ export default function Header({
                 mt: 0.5,
                 minWidth: 0,
               }}
-            >
-              <Chip
-                size="small"
-                label={getChannelLabel(channel)}
-                variant="outlined"
-                sx={{
-                  height: 22,
-                  fontWeight: 700,
-                  borderColor: alpha(chColor, 0.6),
-                  color: chColor,
-                  backgroundColor: alpha(chColor, 0.08),
-                  "& .MuiChip-label": { px: 1.25, fontSize: "0.7rem" },
-                }}
-              />
-              {selectedSession ? (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ fontSize: ".72rem" }}
-                  noWrap
-                >
-                  {shortenSessionId(selectedSession)}
-                </Typography>
-              ) : null}
-            </Box>
+            ></Box>
           </Box>
         </Box>
 

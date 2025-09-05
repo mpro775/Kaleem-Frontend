@@ -60,7 +60,7 @@ const BASE_MENU: MenuItem[] = [
   {
     label: "الفئات",
     icon: <FiBox />,
-    path: "/dashboard/category",
+    path: "/dashboard/categories",
     featureKey: "storeService",
   },
   {

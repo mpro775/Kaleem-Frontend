@@ -1,11 +1,6 @@
 // src/pages/onboarding/SyncPage.tsx
 import { useEffect, useState } from "react";
-import {
-  Button,
-  Typography,
-  CircularProgress,
-  Alert,
-} from "@mui/material";
+import { Button, Typography, CircularProgress, Alert } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -26,17 +21,22 @@ export default function SyncPage() {
 
   useEffect(() => {
     (async () => {
-      if (!token) return;
+      if (!token || !user?.merchantId) return;
       try {
         const st = await getIntegrationsStatus(token);
         const connected = st.salla?.connected || st.zid?.connected;
-        if (!connected)
+        if (connected) {
+          // لو callback أطلق الخلفية بالفعل، ممكن تكتفي بعرض الحالة فقط
+          // أو تشغّل الآن يدويًا (اختياري):
+          // await handleSync();
+        } else {
           setStatusText("لم يتم ربط مزود خارجي بعد. يمكنك المتابعة لاحقًا.");
+        }
       } catch {
         /* تجاهل */
       }
     })();
-  }, [token]);
+  }, [token, user?.merchantId]);
 
   const handleSync = async () => {
     if (!user?.merchantId || !token) return;

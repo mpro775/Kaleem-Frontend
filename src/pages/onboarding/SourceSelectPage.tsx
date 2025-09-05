@@ -11,7 +11,7 @@ import {
   Alert,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE } from "@/context/config";
 import OnboardingLayout from "@/app/layout/OnboardingLayout";
@@ -33,7 +33,6 @@ const isExternal = (s: IntegrationsStatus): s is ExternalStatus =>
   s.productSource === "salla" || s.productSource === "zid";
 
 export default function SourceSelectPage() {
-
   const navigate = useNavigate();
   const { user, token } = useAuth();
 
@@ -51,6 +50,7 @@ export default function SourceSelectPage() {
     () => ({ Authorization: `Bearer ${token}` }),
     [token]
   );
+  const location = useLocation();
 
   const stopPolling = () => {
     if (pollTimer.current) {
@@ -59,7 +59,14 @@ export default function SourceSelectPage() {
     }
   };
   useEffect(() => () => stopPolling(), []);
-
+  useEffect(() => {
+    const p = new URLSearchParams(location.search);
+    if (p.get("install") === "zid") {
+      setSource("zid");
+      handleContinue(); // يبدأ الربط فورًا
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const setProductSource = async (src: Source) => {
     if (!user?.merchantId) return;
     await axios.patch(
@@ -87,18 +94,32 @@ export default function SourceSelectPage() {
     setError(null);
     try {
       setSaving(true);
-      await setProductSource(source);
 
+      // ✅ غيّر المصدر فقط عندما يكون internal
       if (source === "internal") {
+        await setProductSource(source);
         navigate("/dashboard");
         return;
       }
 
+      // ✅ لمزودي الخارج (زد/سلة): لا نغير المصدر هنا
       setConnecting(source);
       const url = `${API_BASE}/integrations/${source}/connect`;
-      window.open(url, "_blank", "noopener,noreferrer");
+      const popup = window.open(url, "_blank", "noopener,noreferrer");
 
       await fetchStatus(source);
+      // (اختياري) لو أضفنا postMessage من الكولباك، نسمعه هنا لإغلاق البولنغ أسرع
+      const onMsg = (e: MessageEvent) => {
+        if (e.origin !== window.location.origin) return;
+        if (e.data?.provider === source && e.data?.connected) {
+          stopPolling();
+          setConnecting(null);
+          popup?.close?.();
+          navigate("/onboarding/sync");
+        }
+      };
+      window.addEventListener("message", onMsg);
+
       pollTimer.current = window.setInterval(async () => {
         const st = await fetchStatus(source);
         const ok =
@@ -106,6 +127,7 @@ export default function SourceSelectPage() {
           (source === "salla" ? !!st.salla?.connected : !!st.zid?.connected);
         if (ok) {
           stopPolling();
+          window.removeEventListener("message", onMsg);
           setConnecting(null);
           navigate("/onboarding/sync");
         }

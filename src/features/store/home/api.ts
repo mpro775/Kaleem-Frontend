@@ -28,7 +28,26 @@ export async function fetchProducts(merchantId: string, limit = 200) {
     return [];
   }
 }
+export const isObjectId = (s: string) => /^[a-f\d]{24}$/i.test(s);
 
+export async function getProductById(id: string) {
+  const { data } = await axiosInstance.get(
+    `/products/${encodeURIComponent(id)}`
+  );
+  return data;
+}
+
+export async function getPublicProductBySlug(
+  storeSlug: string,
+  productSlug: string
+) {
+  const { data } = await axiosInstance.get(
+    `/products/public/${encodeURIComponent(
+      storeSlug
+    )}/product/${encodeURIComponent(productSlug)}`
+  );
+  return data;
+}
 export async function fetchCategories(merchantId: string) {
   try {
     const { data } = await axiosInstance.get<Category[]>("/categories", {

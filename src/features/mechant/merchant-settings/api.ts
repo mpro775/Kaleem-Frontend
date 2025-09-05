@@ -23,6 +23,7 @@ export const updateMerchantInfo = async (
     "businessDescription",
     "addresses",
     "workingHours",
+
     "returnPolicy",
     "exchangePolicy",
     "shippingPolicy",

@@ -20,35 +20,60 @@ import AuthLayout from "@/auth/AuthLayout";
 import GradientIcon from "@/shared/ui/GradientIcon";
 import { useErrorHandler, applyServerFieldErrors } from "@/shared/errors";
 import { useForm } from "react-hook-form";
+import { useLocation, Link as RouterLink } from "react-router-dom";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-interface LoginFormData {
-  email: string;
-  password: string;
-}
+const forbidsHtml = (v: string) => !/<[^>]*>/.test(v) && !/[<>]/.test(v);
+const sanitize = (v: string) => v.replace(/<[^>]*>/g, "").replace(/[<>]/g, "");
 
+const LoginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("بريد إلكتروني غير صحيح")
+    .refine(forbidsHtml, "ممنوع إدخال وسوم HTML"),
+  password: z
+    .string()
+    .min(8, "كلمة المرور يجب أن تكون 8 أحرف على الأقل")
+    // إن رغبت بمنع المسافات والرموز الخطرة:
+    .refine((v) => !/\s/.test(v), "كلمة المرور لا يجب أن تحتوي مسافات")
+    .refine((v) => !/[<>"'`\\]/.test(v), "ممنوع استخدام الرموز < > \" ' ` \\"),
+});
+
+type LoginFormData = z.infer<typeof LoginSchema>;
 export default function LoginPage() {
   const theme = useTheme();
   const { login } = useAuth();
   const { handleError } = useErrorHandler();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const rawRedirect = params.get("redirect");
+
   const {
     register,
     handleSubmit,
     setError,
-    formState: { errors }
-  } = useForm<LoginFormData>();
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(LoginSchema),
+  });
 
   const handleLogin = async (data: LoginFormData) => {
     try {
       setLoading(true);
       const { accessToken, user } = await loginAPI(data.email, data.password);
       login(user, accessToken);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // إذا كان الخطأ يحتوي على أخطاء حقول، قم بتطبيقها
-      if (err.fields) {
-        applyServerFieldErrors(err.fields, setError);
+      if (err instanceof Error && "fields" in err) {
+        applyServerFieldErrors(
+          (err as { fields: Record<string, string[]> }).fields,
+          setError
+        );
       } else {
         // عرض رسالة خطأ عامة
         handleError(err);
@@ -57,7 +82,9 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
+  const signUpHref = rawRedirect
+    ? `/signup?redirect=${encodeURIComponent(rawRedirect)}`
+    : "/signup";
   return (
     <AuthLayout
       title={
@@ -82,18 +109,27 @@ export default function LoginPage() {
         dir="rtl"
       >
         <TextField
-          {...register('email', { 
-            required: 'البريد الإلكتروني مطلوب',
+          {...register("email", {
+            required: "البريد الإلكتروني مطلوب",
             pattern: {
               value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-              message: 'بريد إلكتروني غير صحيح'
-            }
+              message: "بريد إلكتروني غير صحيح",
+            },
           })}
           label="البريد الإلكتروني"
           fullWidth
           sx={{ mb: 3 }}
           error={!!errors.email}
-          helperText={errors.email?.message || ''}
+          onChange={(e) => {
+            const v = sanitize(e.target.value);
+            e.target.value = v;
+          }}
+          helperText={errors.email?.message || ""}
+          inputProps={{
+            inputMode: "email",
+            autoCapitalize: "none",
+            maxLength: 254,
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start" aria-hidden>
@@ -109,19 +145,27 @@ export default function LoginPage() {
         />
 
         <TextField
-          {...register('password', { 
-            required: 'كلمة المرور مطلوبة',
+          {...register("password", {
+            required: "كلمة المرور مطلوبة",
             minLength: {
               value: 6,
-              message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
-            }
+              message: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+            },
           })}
+          onChange={(e) => {
+            // لا نعدّل كلمة المرور (حتى لا نفسدها)، لكن إن رغبت بإزالة الوسوم فقط:
+            const v = e.target.value
+              .replace(/<[^>]*>/g, "")
+              .replace(/[<>]/g, "");
+            e.target.value = v;
+          }}
+          inputProps={{ maxLength: 128 }}
           label="كلمة المرور"
           type={showPassword ? "text" : "password"}
           fullWidth
           sx={{ mb: 4 }}
           error={!!errors.password}
-          helperText={errors.password?.message || ''}
+          helperText={errors.password?.message || ""}
           autoComplete="current-password"
           InputProps={{
             startAdornment: (
@@ -189,12 +233,32 @@ export default function LoginPage() {
         <Typography
           variant="body2"
           align="center"
-          sx={{ mt: 3, color: "text.secondary" }}
+          sx={{ mt: 2, color: "text.secondary" }}
+        >
+          <Link
+            component={RouterLink}
+            to="/forgot-password"
+            underline="hover"
+            color="primary"
+          >
+            نسيت كلمة المرور؟
+          </Link>
+        </Typography>
+
+        <Typography
+          variant="body2"
+          align="center"
+          sx={{ mt: 2, color: "text.secondary" }}
         >
           ليس لديك حساب؟{" "}
-          <Link href="/signup" underline="hover" color="primary">
+          <Link
+            component={RouterLink}
+            to={signUpHref}
+            underline="hover"
+            color="primary"
+          >
             أنشئ حسابًا الآن
-          </Link>
+          </Link>{" "}
         </Typography>
       </Box>
     </AuthLayout>
