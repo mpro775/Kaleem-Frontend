@@ -67,7 +67,7 @@ jobs:
         run: npm run test:performance
         
       - name: 💾 حفظ نتائج الأداء
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-performance-${{ matrix.node-version }}
           path: test-performance/
@@ -176,7 +176,7 @@ jobs:
           echo "- بناء المشروع" >> deploy-report.md
           
       - name: 💾 حفظ تقرير النشر
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: deploy-report
           path: deploy-report.md
