@@ -47,7 +47,7 @@ jobs:
         run: npm run test:coverage
         
       - name: 💾 حفظ جميع النتائج
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: nightly-test-results
           path: |
@@ -74,7 +74,7 @@ jobs:
           echo "- اختبارات التغطية" >> nightly-report.md
           
       - name: 💾 حفظ التقرير
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: nightly-report
           path: nightly-report.md
